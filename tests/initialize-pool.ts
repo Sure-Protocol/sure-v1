@@ -83,7 +83,7 @@ describe("Initialize Sure Pool",() => {
         )
 
         // Create Poool
-        await program.rpc.createPool(insuranceFee,range_size,name,smartContractToInsure.publicKey,{
+        await program.rpc.createPool(insuranceFee,range_size,name,{
             accounts:{
                 pool:poolPDA,
                 vault: vaultPDA,
