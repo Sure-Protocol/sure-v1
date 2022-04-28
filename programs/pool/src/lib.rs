@@ -1,4 +1,5 @@
 pub mod utils;
+use anchor_lang::accounts::loader::Loader;
 use anchor_lang::prelude::*;
 use anchor_lang::context::Context;
 use anchor_spl::token::{Mint,TokenAccount,Token};
@@ -20,9 +21,9 @@ pub mod sure_pool {
     /// * ctx - initialize the manager
     ///
     pub fn initialize_pool_manager(ctx: Context<InitializePoolManager>) -> Result<()> {
-        let mut pool_manager = &mut ctx.accounts.manager;
+        let pool_manager = &mut ctx.accounts.manager;
         pool_manager.owner = ctx.accounts.initial_manager.key();
-        pool_manager.bump = *ctx.bumps.get("sure_pool_manager").unwrap();
+        pool_manager.bump = *ctx.bumps.get("manager").unwrap();
 
         emit!(
             utils::events::InitializedManager{
@@ -39,22 +40,22 @@ pub mod sure_pool {
     /// # Arguments 
     /// * ctx: 
     /// * insurance_fee: 
-    pub fn create_pool(ctx: Context<CreatePool>,insurance_fee:i32,range_size:i32,name: String,
-        smart_contract: Pubkey) -> Result<()> {
+    pub fn create_pool(ctx: Context<CreatePool>,insurance_fee:i32,range_size:i32,name: String,smart_contract: Pubkey) -> Result<()> {
 
         let liquidity_token = &mut ctx.accounts.token;
         
-        // Check that the token is USDC
-        require!(liquidity_token.key() == USDC.key(),utils::errors::SureError::InvalidMint);
+        // Only allow for USDC 
+        // Must be mocked in tests. 
+        //require!(liquidity_token.key() == USDC.key(),utils::errors::SureError::InvalidMint);
+        
         // Range size should be less than 100. Meaning that the premium should be less than 100%
         require!(range_size < 100*100 && range_size > 0,utils::errors::SureError::InvalidRangeSize);
         
-
         // Get pool account
-        let mut pool_account = &mut ctx.accounts.pool;
+        let pool_account = &mut ctx.accounts.pool;
        
         // Set up pool account 
-        pool_account.bump = *ctx.bumps.get("sure-insurance-pool").unwrap();
+        pool_account.bump = *ctx.bumps.get("pool").unwrap();
         pool_account.token = liquidity_token.key();
         pool_account.insurance_fee=insurance_fee;
         pool_account.range_size = range_size;
@@ -167,7 +168,7 @@ pub struct PoolAccount {
 }
 
 impl PoolAccount{
-    pub const SPACE:usize = 22;
+    pub const SPACE:usize = 1+32+4+4+4+8+8+8+4+200+32+32+1;
 }
 
 
@@ -182,40 +183,53 @@ pub struct CreatePool<'info> {
         space = 8 + PoolAccount::SPACE, 
         payer = pool_creator,
         seeds = [
-            &SURE_PRIMARY_POOL_SEED.as_bytes(),
+            SURE_PRIMARY_POOL_SEED.as_bytes(),
             token.key().as_ref(),
-            smart_contract.key().as_ref(),
+            insured_token_account.key().to_bytes().as_ref(),
         ],
         bump
     )]
     pub pool: Account<'info, PoolAccount>,
 
-    // Initialized vault to hold the pool token
+    // Assume the contract being hacked is a token account
+    /// CHECK: This accounts represents the executable contract 
+    /// that is to be insured. 
+    #[account(
+        constraint = insured_token_account.executable == false
+    )]
+    pub insured_token_account: AccountInfo<'info>,
+
+    // // Initialized vault to hold the pool token
     #[account(
         init,
         payer = pool_creator,
-        seeds = [&SURE_ASSOCIATED_TOKEN_ACCOUNT_SEED.as_bytes(), pool.key().as_ref(),token.key().as_ref()],
+        seeds = [
+            SURE_ASSOCIATED_TOKEN_ACCOUNT_SEED.as_bytes(), 
+            pool.key().as_ref(),
+            token.key().as_ref()
+        ],
         bump,
         token::mint = token,
         token::authority = vault
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
 
-    /// Pool creator
+    // /// Pool creator
     #[account(mut)]
     pub pool_creator: Signer<'info>,
 
     /// Token to be deposited into the pool
     pub token: Account<'info,Mint>,
 
-    /// Provide the system program
-    pub system_program: Program<'info,System>,
-
     /// Sysvar for Associated Token Account
     pub rent: Sysvar<'info, Rent>,
 
     // Token program
     pub token_program: Program<'info, Token>,
+
+    /// Provide the system program
+    pub system_program: Program<'info,System>,
+
 }
 
 
