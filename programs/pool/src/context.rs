@@ -49,7 +49,7 @@ pub struct CreatePool<'info> {
     )]
     pub insured_token_account: AccountInfo<'info>,
 
-    // // Initialized vault to hold the pool token
+    // Initialized vault to hold the pool token
     #[account(
         init,
         payer = pool_creator,
@@ -64,7 +64,7 @@ pub struct CreatePool<'info> {
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
 
-    // /// Pool creator
+    /// Pool creator
     #[account(mut)]
     pub pool_creator: Signer<'info>,
 
@@ -79,5 +79,22 @@ pub struct CreatePool<'info> {
 
     /// Provide the system program
     pub system_program: Program<'info,System>,
+
+}
+
+/// Deposit Liquidity into an exisitng pool
+#[derive(Accounts)]
+pub struct DepositLiquidity<'info>{
+    /// Liquidity provider 
+    #[account(mut)]
+    pub liquidity_provider: Signer<'info>,
+
+    /// Pool to provide liquidity to 
+    #[account(mut)]
+    pub pool:  Account<'info, PoolAccount>,
+
+    // Token program that executes the transfer
+    pub token_account: Program<'info,Token>, 
+
 
 }

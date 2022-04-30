@@ -7,17 +7,18 @@ use anchor_lang::prelude::*;
 use anchor_lang::context::Context;
 
 
-use anchor_spl::mint::USDC;
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod sure_pool {
+
     use super::*;
     // ---------- Pool Management ---------------------------
     // Initialize Manager Owner
     // The pool owner is responsible for managing the pool.
 
     /// Initialize the pool manager
+    /// NOTE: might not need a dedicated pool manager
     ///
     /// # Arguments
     ///
@@ -68,7 +69,7 @@ pub mod sure_pool {
         pool_account.range_size = range_size;
         pool_account.ranges = 0; 
         pool_account.liquidity = 0;
-        pool_account.free_liquidity = 0;
+        pool_account.active_liquidity = 0;
         pool_account.name=name;
         pool_account.premium_rate = 0;
         pool_account.smart_contract = ctx.accounts.insured_token_account.key();
@@ -81,6 +82,17 @@ pub mod sure_pool {
                 smart_contract: ctx.accounts.insured_token_account.key()
             }
         );
+        Ok(())
+    }
+
+    /// Deposit liquidity into pool
+    /// Let any user deposit tokens into the vault associated 
+    /// with the given pool
+    /// 
+    /// # Argument
+    /// * ctx: 
+    /// 
+    pub fn deposit_liquidity(ctx:Context<DepositLiquidity>,amount: u64) -> Result<()> {
         Ok(())
     }
 }

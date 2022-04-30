@@ -42,7 +42,7 @@ pub struct PoolAccount {
     pub liquidity: u64, // 8 bytes
 
     /// Available Liquidity in the pool
-    pub free_liquidity: u64, // 8 bytes 
+    pub active_liquidity: u64, // 8 bytes 
 
     /// Current premium rate in basis points (0.01%). 
     pub premium_rate: u64, // 8 bytes
@@ -65,15 +65,21 @@ impl PoolAccount{
     pub const SPACE:usize = 1+32+4+4+4+8+8+8+4+200+32+32+1;
 }
 
-/// Deposit Liquidity
-/// allows any user to deposit liquidity into a range of premiums 
-/// in return for NFTs representing the positions
-#[derive(Accounts)]
-pub struct DepositLiquidity<'info>{
-    /// Liquidity Provider is also the signer of the transaction
-    #[account(mut)]
-    pub liquidity_provider: Signer<'info>,
 
-    /// Pool to provide liquidity to
-    pub pool: Account<'info,PoolAccount>
+/// Tick acount (PDA) is used to hold information about 
+/// the liquidity at a current tick
+#[account]
+#[derive(Default)]
+pub struct Tick{
+    /// The bump identity of the PDA
+    pub bump: u8, // 1 byte
+
+    /// The active liquidity at the tick
+    pub liquidity: u64, // 8bytes
+
+    /// The tick in basis points
+    pub tick: u32, // 8bytes 
+
+    /// Boolean representing whether the liquidity is active
+    pub active: bool, // 1 byte 
 }
