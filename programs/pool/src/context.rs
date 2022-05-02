@@ -1,5 +1,7 @@
 
 
+use std::thread::AccessError;
+
 use anchor_lang::prelude::*;
 use crate::states::{pool::{PoolManager,PoolAccount,LiquidityPosition,Tick}, owner::ProtocolOwner, contract::InsuranceContract};
 use anchor_spl::{token::{Mint,TokenAccount,Token}, associated_token::AssociatedToken};
@@ -160,7 +162,7 @@ pub struct DepositLiquidity<'info>{
     )]
     pub nft_mint: Box<Account<'info,Mint>>,
 
-    /// Account to deposit NFTs
+    /// Account to deposit NFT into
     #[account(
         init,
         associated_token::mint = nft_mint,
@@ -184,6 +186,7 @@ pub struct DepositLiquidity<'info>{
 }
 
 
+
 /// Redeem liquidity 
 /// 
 #[derive(Accounts)]
@@ -197,6 +200,10 @@ pub struct RedeemLiquidity<'info> {
     )] 
     pub nft: Box<Account<'info,TokenAccount>>,
 
+    /// Mint of the NFT 
+    #[account(mut)]
+    pub nft_mint: Account<'info,Mint>,
+
     /// Liquidity position
     #[account(mut)]
     pub liquidity_position: Account<'info,LiquidityPosition>,
@@ -208,7 +215,11 @@ pub struct RedeemLiquidity<'info> {
     pub vault_account: Box<Account<'info,TokenAccount>>,
 
     /// Sure Protocol Pool Account 
+    #[account(mut)]
     pub pool: Account<'info, PoolAccount>,
+
+    /// Sure owner
+    pub protocol_owner: AccountLoader<'info,ProtocolOwner>,
 
 }
 

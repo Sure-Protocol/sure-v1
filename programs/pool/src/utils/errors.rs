@@ -14,4 +14,7 @@ pub enum SureError {
 
     #[msg("Invalid Amount")]
     InvalidAmount,
+
+    #[msg("All of the liquidity is used")]
+    LiquidityFilled,
 }

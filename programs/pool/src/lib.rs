@@ -1,8 +1,10 @@
 pub mod utils;
 pub mod context;
 pub mod states;
+pub mod modules;
 use context::*;
 use crate::states::*;
+use crate::utils::errors::*;
 
 use anchor_lang::prelude::*;
 use anchor_spl::*;
@@ -209,9 +211,36 @@ pub mod sure_pool {
 
         // _______________ Validation __________________
         // * Check that the 
+        let liquidity_position = &ctx.accounts.liquidity_position;
+        require!(liquidity_position.used_liquidity < liquidity_position.liquidity,SureError::LiquidityFilled);
+
+
 
         // _______________ Functionality _______________
-        // # 1. Transfer 
+        // # 1. Find the available liquidity
+        let available_liquidity = liquidity_position.liquidity - liquidity_position.used_liquidity;
+
+        // # 2. Burn nft 
+        token::burn(CpiContext::new(
+            ctx.accounts.token_account.to_account_info().clone(), 
+            token::Burn{
+                mint: ctx.accounts.nft_mint.to_account_info().clone(),
+                from: ctx.accounts.nft.to_account_info().clone(),
+                authority: ctx.accounts.nft_holder.to_account_info().clone()
+                }), 1)?;
+        
+        // # 3 Transfer liquidity back to nft holder
+        token::transfer(
+            CpiContext::new_with_signer(ctx.accounts.token_account.to_account_info().clone(), token::Transfer{
+                from: ctx.accounts.vault_account.to_account_info().clone(),
+                to: ctx.accounts.nft_holder.to_account_info().clone(),
+                authority: ctx.accounts.vault_account.to_account_info().clone(),
+            }, &[&[&[ctx.accounts.protocol_owner.load()?.bump] as &[u8]]])
+            , available_liquidity)?;
+
+        // # 4 create new liquidity position based on remaining liquidity 
+        // Need custom method for creating liquidity positon and mint NFT 
+
         Ok(())
     }
 
