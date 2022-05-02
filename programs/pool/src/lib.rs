@@ -2,17 +2,45 @@ pub mod utils;
 pub mod context;
 pub mod states;
 use context::*;
+use crate::states::*;
 
 use anchor_lang::prelude::*;
-use anchor_lang::context::Context;
+use anchor_spl::*;
 
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod sure_pool {
-
     use super::*;
+
+    // ---------- Sure Protocol Management ------------------
+    // Everything regarding the management of the Sure protocol
+
+    /// Initialize protocol
+    /// Set protocol owner and other metadata necessary to 
+    /// initialize the protocol.__rust_force_expr!
+    /// 
+    /// # Arguments
+    /// 
+    /// * ctx: 
+    /// 
+    pub fn initialize_protocol(ctx: Context<Initialize>) -> Result<()> {
+        let protocol_owner = &mut ctx.accounts.protocol_owner.load_init()?;
+        protocol_owner.bump = *ctx.bumps.get("protocol_owner").unwrap();
+        protocol_owner.owner = ctx.accounts.owner.key();
+
+
+        emit!(
+            owner::ChangeProtocolOwner{
+                owner: ctx.accounts.owner.key(),
+                old_owner: Pubkey::default(),
+            }
+        );
+
+        Ok(())
+    }
+
     // ---------- Pool Management ---------------------------
     // Initialize Manager Owner
     // The pool owner is responsible for managing the pool.
@@ -91,9 +119,133 @@ pub mod sure_pool {
     /// 
     /// # Argument
     /// * ctx: 
-    /// 
-    pub fn deposit_liquidity(ctx:Context<DepositLiquidity>,amount: u64) -> Result<()> {
+    /// * tick (bp): Tick to provide liquidity at 
+    /// * amount: Amount of liquidity to place at given tick
+    pub fn deposit_liquidity(ctx:Context<DepositLiquidity>,tick: u32, amount: u64) -> Result<()> {
+         
+        // ___________________ Validation ____________________________
+        // #### Check input arguments
+
+        // tick must be greater than 0 and less than 100 .
+        require!(tick > 0 && tick < 100,utils::errors::SureError::InvalidTick);
+
+        require!(amount > 0, utils::errors::SureError::InvalidAmount);
+
+        // Check that the correct vault is provided
+        let pool_vault_pb = &ctx.accounts.pool.vault;
+        let token_vault = &ctx.accounts.token_vault.to_account_info();
+        require!(pool_vault_pb.key() == token_vault.key(),utils::errors::SureError::InvalidMint);
+
+        // The existence of a liquidity position should be checked by anchor. 
+
+
+
+        // _________________ Functionality _________________________
+
+        // # Mint NFT to represent liquidity position
+        token::mint_to(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone()
+                , token::MintTo {
+                    mint: ctx.accounts.nft_mint.to_account_info().clone(),
+                    to: ctx.accounts.nft_account.to_account_info().clone(),
+                    authority: ctx.accounts.protocol_owner.to_account_info().clone()
+                },
+                &[&[&[ctx.accounts.protocol_owner.load()?.bump] as &[u8]]])
+            , 1)?;
+
+        // # Transfer tokens from liquidity provider account into vault 
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info().clone(),
+                 token::Transfer{
+                     from: ctx.accounts.liquidity_provider_account.to_account_info().clone(),
+                     to:   ctx.accounts.token_vault.to_account_info().clone(),
+                     authority: ctx.accounts.liquidity_provider.to_account_info(),
+                 }
+                ),
+        amount)?;
+
+        // TODO Add metaplex data to the NFT mint. 
+
+
+        // # Save state in Sure 
+        let liquidity_position = &mut ctx.accounts.liquidity_position;
+        liquidity_position.bump = *ctx.bumps.get("liquidity_position").unwrap();
+        liquidity_position.liquidity = amount;
+        liquidity_position.token_mint = ctx.accounts.token_program.key();
+        liquidity_position.used_liquidity = 0;
+        liquidity_position.pool = ctx.accounts.pool.key();
+        liquidity_position.nft_mint = ctx.accounts.nft_mint.key();
+        liquidity_position.tick = tick;
+        liquidity_position.created_at = Clock::get()?.unix_timestamp;
+
+        // Update Liquidity Pool
+        let liquidity_pool = &mut ctx.accounts.pool;
+        liquidity_pool.liquidity += amount;
+
+        emit!(
+           pool::NewLiquidityPosition{
+                tick: tick,
+                liquidity: amount
+            }
+        );
+
         Ok(())
+    }
+
+    /// Redeem liquidity
+    /// Holders of the LP NFT can burn it in return for liquidity 
+    /// However, it takes about 5 days to extract the liquidity
+    /// so that there isn't a draw on liquidity. 
+    /// 
+    /// If some of the liquidity is active then it can only be withdrawn 
+    /// if there is free liquidity in the tick pool. 
+    /// 
+    /// # Arguments
+    /// * ctx
+    ///
+    pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>) -> Result<()> {
+
+        // _______________ Validation __________________
+        // * Check that the 
+
+        // _______________ Functionality _______________
+        // # 1. Transfer 
+        Ok(())
+    }
+
+
+    /// Buy insurance 
+    /// A buyer should be able to easily buy insurance buy paying a yearly 
+    /// premium
+    /// 
+    /// 
+    /// # Arguments
+    /// * ctx
+    /// 
+    pub fn buy_insurance(ctx: Context<BuyInsurance>) -> Result<()> {
+
+         // _______________ Validation __________________
+        // * Check that the 
+
+        // _______________ Functionality _______________
+        // # 1. 
+        Ok(())
+    }
+
+    /// Initialize Tick
+    /// If there has never been provided liquidity at a position then a 
+    /// new tick have to be created. 
+    /// 
+    /// Will called when depositing liquidity 
+    /// 
+    ///  # Argument
+    /// * ctx: 
+    pub fn initialize_tick(ctx: Context<InitializeTick>) -> Result<()> {
+    
+        Ok(())
+
     }
 }
 

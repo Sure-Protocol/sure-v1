@@ -1,4 +1,7 @@
-use anchor_lang::prelude::*;
+use std::thread::AccessError;
+
+use anchor_lang::{prelude::*, solana_program::account_info::Account};
+use anchor_spl::token::TokenAccount;
 
 /// Account describing the pool manager
 /// 
@@ -78,8 +81,55 @@ pub struct Tick{
     pub liquidity: u64, // 8bytes
 
     /// The tick in basis points
-    pub tick: u32, // 8bytes 
+    pub tick: u32, // 8 bytes 
 
     /// Boolean representing whether the liquidity is active
     pub active: bool, // 1 byte 
 }
+
+/// Liquidity Position holds information about a given 
+/// token position
+/// Each token position references an NFT mint 
+#[account]
+#[derive(Default)]
+pub struct LiquidityPosition {
+    /// Bump Identity
+    pub bump: u8, // 1byte
+
+    /// The amount of liquidity provided in lamports 
+    pub liquidity: u64, // 8 bytes
+
+    /// the amount of liquidity used
+    pub used_liquidity: u64, // 8 bytes
+
+    /// Liquidity Pool 
+    pub pool: Pubkey, // 32 bytes
+
+    /// Mint of token provided
+    pub token_mint: Pubkey, // 32 bytes
+    
+    /// NFT mint. The mint representing the position
+    /// The NFT is the owner of the position. 
+    pub nft_mint: Pubkey, // 32 bytes
+
+    /// Time at liquidity position creation
+    pub created_at: i64, // 8 bytes,
+
+    /// The tick that the liquidity is at 
+    pub tick: u32, // 4 bytes
+}
+
+impl LiquidityPosition{
+    pub const SPACE:usize = 1 + 8 +8 + 32 + 32 + 32 + 8 + 4;
+}
+
+#[event]
+pub struct NewLiquidityPosition {
+    pub tick: u32,
+    pub liquidity: u64,
+}
+
+
+
+
+
