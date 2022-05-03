@@ -96,6 +96,7 @@ describe("Initialize Sure Pool",() => {
         await program.rpc.createPool(insuranceFee,tick_spacing,name,{
             accounts:{
                 pool:poolPDA,
+                protocolOwner: provider.wallet.publicKey,
                 vault: vaultPDA,
                 poolCreator:provider.wallet.publicKey,
                 token: tokenMint,
@@ -109,6 +110,15 @@ describe("Initialize Sure Pool",() => {
 
         const newPool = await program.account.poolAccount.fetch(poolPDA)
         assert.equal(newPool.tickSpacing,tick_spacing)
+    }),
+    it("deposit liquidity into pool at a given tick",async () => {
+        let premium_rate = 300; // basis points
+        let amount = 1_000_000; // 
 
+        await program.rpc.depositLiquidity(premium_rate,amount,{
+            accounts: {
+                protocolOwner: provider.wallet.publicKey,
+            }
+        })
     })
 })

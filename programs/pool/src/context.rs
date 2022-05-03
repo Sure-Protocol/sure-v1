@@ -58,6 +58,14 @@ pub struct InitializePoolManager<'info> {
 
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
+
+    /// Pool creator
+    #[account(mut)]
+    pub pool_creator: Signer<'info>,
+
+    /// Protocol owner 
+    pub protocol_owner: AccountLoader<'info,ProtocolOwner>,
+
     #[account(
         init,
         space = 8 + PoolAccount::SPACE, 
@@ -93,10 +101,6 @@ pub struct CreatePool<'info> {
         token::authority = vault
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
-
-    /// Pool creator
-    #[account(mut)]
-    pub pool_creator: Signer<'info>,
 
     /// Token to be deposited into the pool
     pub token: Account<'info,Mint>,

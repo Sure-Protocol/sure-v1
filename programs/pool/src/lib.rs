@@ -83,6 +83,9 @@ pub mod sure_pool {
         let liquidity_token = &mut ctx.accounts.token;
         
         // ________________ Validation ________________
+        // Only allow the owner of the protocol to create pools
+        let protocol_owner = &ctx.accounts.protocol_owner.load()?;
+        require!(ctx.accounts.pool_creator.key() == protocol_owner.owner,SureError::InvalidPoolCreator);
 
         // Only allow for USDC 
         // Must be mocked in tests. 
