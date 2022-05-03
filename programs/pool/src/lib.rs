@@ -241,8 +241,6 @@ pub mod sure_pool {
             }, &[&[&[ctx.accounts.protocol_owner.load()?.bump] as &[u8]]])
             , available_liquidity)?;
 
-
-
         Ok(())
     }
 

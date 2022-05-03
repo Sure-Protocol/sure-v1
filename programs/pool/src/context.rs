@@ -57,7 +57,6 @@ pub struct InitializePoolManager<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(smart_contract: Pubkey)]
 pub struct CreatePool<'info> {
     #[account(
         init,

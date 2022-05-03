@@ -42,7 +42,6 @@ impl Tick {
         liquidity_position.next_liquidity_position = Pubkey::default();
         liquidity_position.previous_liquidity_position = previous_last_liquidity_position;
         
-        
         Ok(())
     }
 

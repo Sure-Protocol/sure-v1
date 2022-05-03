@@ -16,6 +16,7 @@ describe("Initialize Sure Pool",() => {
     const program = anchor.workspace.SurePool as Program<SurePool>
     const POOL_SEED =anchor.utils.bytes.utf8.encode("sure-insurance-pool")
     const TOKEN_VAULT_SEED = anchor.utils.bytes.utf8.encode("sure-ata")
+    const SURE_BITMAP = anchor.utils.bytes.utf8.encode("sure-bitmap")
    
 
     it("create Sure pool manager",async () => {
@@ -46,7 +47,7 @@ describe("Initialize Sure Pool",() => {
         const fromAirdropSig = await connection.requestAirdrop(minterWallet.publicKey,LAMPORTS_PER_SOL);
         await connection.confirmTransaction(fromAirdropSig)
         const insuranceFee = 0
-        const range_size = 1
+        const tick_spacing= 1 // tick size in basispoints
         const name = "my awesome sure pool"
 
         // Create a random mint for testing
@@ -82,8 +83,17 @@ describe("Initialize Sure Pool",() => {
             program.programId
         )
 
+        const [bitmapPDA,bitmapBum] = await PublicKey.findProgramAddress(
+            [
+                SURE_BITMAP,
+                poolPDA.toBytes(),
+                tokenMint.toBytes(),
+            ],
+            program.programId,
+        )
+
         // Create Poool
-        await program.rpc.createPool(insuranceFee,range_size,name,{
+        await program.rpc.createPool(insuranceFee,tick_spacing,name,{
             accounts:{
                 pool:poolPDA,
                 vault: vaultPDA,
@@ -91,13 +101,14 @@ describe("Initialize Sure Pool",() => {
                 token: tokenMint,
                 insuredTokenAccount: smartContractToInsure.publicKey,
                 rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+                bitmap:bitmapPDA,
                 tokenProgram: TOKEN_PROGRAM_ID,
                 systemProgram: SystemProgram.programId,
             }
         })
 
         const newPool = await program.account.poolAccount.fetch(poolPDA)
-        assert.equal(newPool.rangeSize,range_size)
+        assert.equal(newPool.tickSpacing,tick_spacing)
 
     })
 })
