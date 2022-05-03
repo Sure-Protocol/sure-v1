@@ -2,10 +2,12 @@ pub mod utils;
 pub mod context;
 pub mod states;
 pub mod modules;
+
 use context::*;
 use crate::states::*;
 use crate::utils::errors::*;
-
+use crate::states::bitmap::*;
+use anchor_lang::solana_program;
 use anchor_lang::prelude::*;
 use anchor_spl::*;
 
@@ -76,7 +78,7 @@ pub mod sure_pool {
     /// * insurance_fee: fee taken on each insurance bought. In basis points (1bp = 0.01%)
     /// * range_size: The size of the ranges in which users can provide insurance
     /// * name: [optional] Name of the pool
-    pub fn create_pool(ctx: Context<CreatePool>,insurance_fee:i32,range_size:i32,name: String) -> Result<()> {
+    pub fn create_pool(ctx: Context<CreatePool>,insurance_fee:u16,tick_spacing:u16,name: String) -> Result<()> {
 
         let liquidity_token = &mut ctx.accounts.token;
         
@@ -87,8 +89,12 @@ pub mod sure_pool {
         //require!(liquidity_token.key() == USDC.key(),utils::errors::SureError::InvalidMint);
         
         // Range size should be less than 100. Meaning that the premium should be less than 100%
-        require!(range_size < 100*100 && range_size > 0,utils::errors::SureError::InvalidRangeSize);
+        require!(tick_spacing < 100*100 && tick_spacing > 0,utils::errors::SureError::InvalidRangeSize);
         
+        // Bitmap
+        let bitmap = &mut ctx.accounts.bitmap;
+        bitmap.bump = *ctx.bumps.get("bitmap").unwrap();
+
         // Get pool account
         let pool_account = &mut ctx.accounts.pool;
        
@@ -96,8 +102,7 @@ pub mod sure_pool {
         pool_account.bump = *ctx.bumps.get("pool").unwrap();
         pool_account.token = liquidity_token.key();
         pool_account.insurance_fee=insurance_fee;
-        pool_account.range_size = range_size;
-        pool_account.ranges = 0; 
+        pool_account.tick_spacing = tick_spacing;
         pool_account.liquidity = 0;
         pool_account.active_liquidity = 0;
         pool_account.name=name;
@@ -105,6 +110,7 @@ pub mod sure_pool {
         pool_account.smart_contract = ctx.accounts.insured_token_account.key();
         pool_account.locked=false;
         pool_account.vault = ctx.accounts.vault.key();
+        pool_account.bitmap = bitmap.key();
 
         emit!(
             utils::events::InitializedPool{
@@ -123,7 +129,7 @@ pub mod sure_pool {
     /// * ctx: 
     /// * tick (bp): Tick to provide liquidity at 
     /// * amount: Amount of liquidity to place at given tick
-    pub fn deposit_liquidity(ctx:Context<DepositLiquidity>,tick: u32, amount: u64) -> Result<()> {
+    pub fn deposit_liquidity(ctx:Context<DepositLiquidity>,tick: u16, amount: u64) -> Result<()> {
          
         // ___________________ Validation ____________________________
         // #### Check input arguments
@@ -144,7 +150,7 @@ pub mod sure_pool {
 
         // _________________ Functionality _________________________
 
-        // # Mint NFT to represent liquidity position
+        // # 1. Mint NFT to represent liquidity position
         token::mint_to(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info().clone()
@@ -156,7 +162,7 @@ pub mod sure_pool {
                 &[&[&[ctx.accounts.protocol_owner.load()?.bump] as &[u8]]])
             , 1)?;
 
-        // # Transfer tokens from liquidity provider account into vault 
+        // # 2. Transfer tokens from liquidity provider account into vault 
         token::transfer(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info().clone(),
@@ -170,8 +176,7 @@ pub mod sure_pool {
 
         // TODO Add metaplex data to the NFT mint. 
 
-
-        // # Save state in Sure 
+        // # 3.  Save liqudity position
         let liquidity_position = &mut ctx.accounts.liquidity_position;
         liquidity_position.bump = *ctx.bumps.get("liquidity_position").unwrap();
         liquidity_position.liquidity = amount;
@@ -181,13 +186,21 @@ pub mod sure_pool {
         liquidity_position.nft_mint = ctx.accounts.nft_mint.key();
         liquidity_position.tick = tick;
         liquidity_position.created_at = Clock::get()?.unix_timestamp;
+            
+        // 4. Update bitmap to include the new liquidity position 
+        let tick_spacing = ctx.accounts.pool.tick_spacing;
+        let is_tick_initialized = ctx.accounts.bitmap.is_initialized(tick, tick_spacing);
+        if !is_tick_initialized{
+            ctx.accounts.bitmap.flip_bit(tick, tick_spacing)
+        }
 
-        // Update Liquidity Pool
-        let liquidity_pool = &mut ctx.accounts.pool;
-        liquidity_pool.liquidity += amount;
+        // 5. Update tick with new liquidity position
+        let tick_account = &mut ctx.accounts.tick_account;
+        tick_account.liquidity += amount;
+
 
         emit!(
-           pool::NewLiquidityPosition{
+           liquidity::NewLiquidityPosition{
                 tick: tick,
                 liquidity: amount
             }
@@ -196,6 +209,7 @@ pub mod sure_pool {
         Ok(())
     }
 
+    
     /// Redeem liquidity
     /// Holders of the LP NFT can burn it in return for liquidity 
     /// However, it takes about 5 days to extract the liquidity
@@ -210,26 +224,15 @@ pub mod sure_pool {
     pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>) -> Result<()> {
 
         // _______________ Validation __________________
-        // * Check that the 
-        let liquidity_position = &ctx.accounts.liquidity_position;
+        let liquidity_position = &mut ctx.accounts.liquidity_position;
         require!(liquidity_position.used_liquidity < liquidity_position.liquidity,SureError::LiquidityFilled);
-
-
 
         // _______________ Functionality _______________
         // # 1. Find the available liquidity
         let available_liquidity = liquidity_position.liquidity - liquidity_position.used_liquidity;
-
-        // # 2. Burn nft 
-        token::burn(CpiContext::new(
-            ctx.accounts.token_account.to_account_info().clone(), 
-            token::Burn{
-                mint: ctx.accounts.nft_mint.to_account_info().clone(),
-                from: ctx.accounts.nft.to_account_info().clone(),
-                authority: ctx.accounts.nft_holder.to_account_info().clone()
-                }), 1)?;
+        liquidity_position.liquidity = liquidity_position.used_liquidity;
         
-        // # 3 Transfer liquidity back to nft holder
+        // # 2 Transfer liquidity back to nft holder
         token::transfer(
             CpiContext::new_with_signer(ctx.accounts.token_account.to_account_info().clone(), token::Transfer{
                 from: ctx.accounts.vault_account.to_account_info().clone(),
@@ -238,28 +241,27 @@ pub mod sure_pool {
             }, &[&[&[ctx.accounts.protocol_owner.load()?.bump] as &[u8]]])
             , available_liquidity)?;
 
-        // # 4 create new liquidity position based on remaining liquidity 
-        // Need custom method for creating liquidity positon and mint NFT 
+
 
         Ok(())
     }
 
 
     /// Buy insurance 
-    /// A buyer should be able to easily buy insurance buy paying a yearly 
+    /// A buyer should select an amount to insure and the smart contract should 
     /// premium
     /// 
     /// 
     /// # Arguments
     /// * ctx
     /// 
-    pub fn buy_insurance(ctx: Context<BuyInsurance>) -> Result<()> {
+    pub fn buy_insurance(ctx: Context<BuyInsurance>,amount: u64) -> Result<()> {
 
          // _______________ Validation __________________
         // * Check that the 
 
         // _______________ Functionality _______________
-        // # 1. 
+        // # 1. Find 
         Ok(())
     }
 

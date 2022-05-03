@@ -1,6 +1,8 @@
 use anchor_lang::{prelude::*};
 use anchor_spl::*;
 
+use crate::states::liquidity::LiquidityPosition;
+
 /// Basic struct containing all data
 /// necessary to create new liquidity position
 pub struct ProvideLiquidity<'info> {
@@ -11,6 +13,8 @@ pub struct ProvideLiquidity<'info> {
     pub protocol_owner_bump: u8,
 
     pub vault: AccountInfo<'info>,
+
+    pub liquidity_position: Account<'info,LiquidityPosition>
 }
 
 impl ProvideLiquidity<'_> {
@@ -56,7 +60,11 @@ impl ProvideLiquidity<'_> {
         Ok(())
     }
 
-    pub fn update_liquidity_state(&self,amount:u64) -> Result<()> {
+    pub fn update_liquidity_state(&mut self,amount:u64) -> Result<()> {
+        let liquidity_position = &mut self.liquidity_position;
+
+        // Add liquidity position to stack
+        
         Ok(())
     }
 

@@ -1,9 +1,9 @@
 
 
-use std::thread::AccessError;
-
 use anchor_lang::prelude::*;
-use crate::states::{pool::{PoolManager,PoolAccount,LiquidityPosition,Tick}, owner::ProtocolOwner, contract::InsuranceContract};
+use crate::states::{pool::{PoolManager,PoolAccount},
+tick::Tick, 
+owner::ProtocolOwner, contract::InsuranceContract, bitmap::BitMap,liquidity};
 use anchor_spl::{token::{Mint,TokenAccount,Token}, associated_token::AssociatedToken};
 
 pub const SURE_PRIMARY_POOL_SEED: &str = "sure-insurance-pool";
@@ -11,6 +11,7 @@ pub const SURE_ASSOCIATED_TOKEN_ACCOUNT_SEED: &str = "sure-ata";
 pub const SURE_LIQUIDITY_POSITION: &str = "sure-lp";
 pub const SURE_PROTOCOL_OWNER: &str = "sure-protocol-owner";
 pub const SURE_INSURANCE_CONTRACT: &str ="sure-insurance-contract";
+pub const SURE_BITMAP: &str = "sure-bitmap";
 
 
 /// Initialize Sure Protocol 
@@ -104,6 +105,21 @@ pub struct CreatePool<'info> {
     /// Sysvar for Associated Token Account
     pub rent: Sysvar<'info, Rent>,
 
+    /// Bitmap 
+    /// Keep track of ticks used to provide liquidity at
+    #[account(
+        init,
+        space = 8 + BitMap::SPACE,
+        payer = pool_creator,
+        seeds = [
+            SURE_BITMAP.as_bytes(), 
+            pool.key().as_ref(),
+            token.key().as_ref()
+        ],
+        bump,
+    )]
+    pub bitmap: Account<'info,BitMap>,
+
     // Token program
     pub token_program: Program<'info, Token>,
 
@@ -114,7 +130,7 @@ pub struct CreatePool<'info> {
 
 /// Deposit Liquidity into an exisitng pool
 #[derive(Accounts)]
-#[instruction(tick: u32, bump: u8)]
+#[instruction(tick: u16, bump: u8)]
 pub struct DepositLiquidity<'info>{
     /// Liquidity provider 
     #[account(mut)]
@@ -135,7 +151,6 @@ pub struct DepositLiquidity<'info>{
     #[account(mut)]
     pub token_vault: Account<'info,PoolAccount>,
 
-    
     /// Create Liquidity position
     /// HASH: [sure-lp,liquidity-provider,pool,token,tick]
     #[account(
@@ -143,15 +158,15 @@ pub struct DepositLiquidity<'info>{
         payer = liquidity_provider,
         seeds = [
             SURE_LIQUIDITY_POSITION.as_bytes(),
-            pool.key().as_ref(),
-            token_vault.key().as_ref(),
-            tick.to_le_bytes().as_ref(),
-            nft_mint.key().as_ref(), // NFT points to liquidity position
+            // pool.key().as_ref(),
+            // token_vault.key().as_ref(),
+            // tick.to_le_bytes().as_ref(),
+            // nft_mint.key().as_ref(), // NFT points to liquidity position
         ],
-        space = 8 + LiquidityPosition::SPACE,
+        space = 8 + liquidity::LiquidityPosition::SPACE,
         bump,
     )]
-    pub liquidity_position: Account<'info,LiquidityPosition>,
+    pub liquidity_position: Account<'info, liquidity::LiquidityPosition>,
 
     // NFT minting
     #[account(
@@ -171,9 +186,18 @@ pub struct DepositLiquidity<'info>{
     )]
     pub nft_account: Box<Account<'info,TokenAccount>>,
 
+    /// Bitmap representing liquidity at 
+    /// different ticks
+    #[account(mut)]
+    pub bitmap: Account<'info,BitMap>,
 
-     /// Sysvar for token mint and ATA creation
-     pub rent: Sysvar<'info, Rent>,
+    /// Tick contains information on liquidity at 
+    /// one specific tick
+    #[account(mut)]
+    pub tick_account: Account<'info,Tick>, 
+
+    /// Sysvar for token mint and ATA creation
+    pub rent: Sysvar<'info, Rent>,
 
     // Token program that executes the transfer
     pub token_program: Program<'info,Token>,
@@ -186,7 +210,20 @@ pub struct DepositLiquidity<'info>{
 }
 
 
+#[derive(Accounts)]
+pub struct UpdateTickPosition<'info> {
+    /// Pays for the update
+    pub signer: Signer<'info>,
 
+    /// Tick account
+    #[account(mut)]
+    pub tick: Account<'info,Tick>,
+
+    /// Liquidity Position
+    #[account(mut)]
+    pub liquidity_position: Account<'info,liquidity::LiquidityPosition>
+
+}
 /// Redeem liquidity 
 /// 
 #[derive(Accounts)]
@@ -206,7 +243,7 @@ pub struct RedeemLiquidity<'info> {
 
     /// Liquidity position
     #[account(mut)]
-    pub liquidity_position: Account<'info,LiquidityPosition>,
+    pub liquidity_position: Account<'info,liquidity::LiquidityPosition>,
 
     /// Token account to recieve the tokens at
     pub token_account: Box<Account<'info,TokenAccount>>,
