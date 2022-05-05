@@ -113,11 +113,13 @@ describe("Initialize Sure Pool",() => {
     }),
     it("deposit liquidity into pool at a given tick",async () => {
         let premium_rate = 300; // basis points
-        let amount = 1_000_000; // 
+        let amount = 1_000_000; // amount to draw from account
+            
 
         await program.rpc.depositLiquidity(premium_rate,amount,{
             accounts: {
                 protocolOwner: provider.wallet.publicKey,
+
             }
         })
     })

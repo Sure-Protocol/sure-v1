@@ -1,5 +1,7 @@
 
 
+use std::thread::AccessError;
+
 use anchor_lang::prelude::*;
 use crate::states::{pool::{PoolManager,PoolAccount},
 tick::Tick, 
@@ -210,8 +212,19 @@ pub struct DepositLiquidity<'info>{
 
     /// Program to create an ATA for receiving position NFT
     pub associated_token_program: Program<'info, AssociatedToken>,
+
 }
 
+
+/// Update Tick liquidity positions
+/// 
+// #[derive(Accounts)]
+// pub struct UpdateTickLiquidityPositions<'info> {
+//     /// Bump seed for accounts
+//     pub bump: u8, // 1 bytes
+
+//     pub tick: Account<'info,Tick>
+// }
 
 #[derive(Accounts)]
 pub struct UpdateTickPosition<'info> {

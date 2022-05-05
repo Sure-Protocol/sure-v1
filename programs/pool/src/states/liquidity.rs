@@ -36,11 +36,8 @@ pub struct LiquidityPosition {
     /// The tick that the liquidity is at 
     pub tick: u16, // 2 bytes
 
-    // Previous liquidity
-    pub previous_liquidity_position: Pubkey,
-
-    // Next Liquidity 
-    pub next_liquidity_position: Pubkey,
+    /// Outstanding Rewards
+    pub outstanding_rewards: u32,
 
 }
 

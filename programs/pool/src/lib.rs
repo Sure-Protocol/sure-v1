@@ -189,15 +189,9 @@ pub mod sure_pool {
         liquidity_position.nft_mint = ctx.accounts.nft_mint.key();
         liquidity_position.tick = tick;
         liquidity_position.created_at = Clock::get()?.unix_timestamp;
-            
-        // 4. Update bitmap to include the new liquidity position 
-        let tick_spacing = ctx.accounts.pool.tick_spacing;
-        let is_tick_initialized = ctx.accounts.bitmap.is_initialized(tick, tick_spacing);
-        if !is_tick_initialized{
-            ctx.accounts.bitmap.flip_bit(tick, tick_spacing)
-        }
+        
 
-        // 5. Update tick with new liquidity position
+        // 4. Update tick with new liquidity position
         let tick_account = &mut ctx.accounts.tick_account;
         tick_account.liquidity += amount;
 
@@ -211,6 +205,16 @@ pub mod sure_pool {
 
         Ok(())
     }
+
+    /// Update Rewards
+    /// 
+    /// Crank for updating the rewards for each liquidity position in the 
+    /// tick liquidity
+    /// 
+    /// # Arguments
+    /// * ctx: 
+    /// 
+    //pub fn update_rewards_in_tick(ctx: )
 
     
     /// Redeem liquidity
