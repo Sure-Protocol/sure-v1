@@ -3,7 +3,7 @@ use std::thread::AccessError;
 use crate::states::{
     bitmap::BitMap,
     contract::InsuranceContract,
-    liquidity,
+    liquidity::{self, LiquidityPosition},
     owner::ProtocolOwner,
     pool::{PoolAccount, PoolManager},
     tick::Tick,
@@ -82,7 +82,7 @@ pub struct CreatePool<'info> {
         ],
         bump
     )]
-    pub pool: Account<'info, PoolAccount>,
+    pub pool: Box<Account<'info, PoolAccount>>,
 
     // Assume the contract being hacked is a token account
     /// CHECK: This accounts represents the executable contract
@@ -108,7 +108,7 @@ pub struct CreatePool<'info> {
     pub vault: Box<Account<'info, TokenAccount>>,
 
     /// Token to be deposited into the pool
-    pub token: Account<'info, Mint>,
+    pub token: Box<Account<'info, Mint>>,
 
     /// Sysvar for Associated Token Account
     pub rent: Sysvar<'info, Rent>,
@@ -126,7 +126,7 @@ pub struct CreatePool<'info> {
         ],
         bump,
     )]
-    pub bitmap: Account<'info, BitMap>,
+    pub bitmap: Box<Account<'info, BitMap>>,
 
     // Token program
     pub token_program: Program<'info, Token>,
@@ -152,11 +152,11 @@ pub struct DepositLiquidity<'info> {
 
     /// Pool to provide liquidity to
     #[account(mut)]
-    pub pool: Account<'info, PoolAccount>,
+    pub pool: Box<Account<'info, PoolAccount>>,
 
     /// Pool Vault account to deposit liquidity to
     #[account(mut)]
-    pub token_vault: Account<'info, PoolAccount>,
+    pub token_vault: Box<Account<'info, PoolAccount>>,
 
     /// Create Liquidity position
     /// HASH: [sure-lp,liquidity-provider,pool,token,tick]
@@ -170,10 +170,10 @@ pub struct DepositLiquidity<'info> {
             tick.to_le_bytes().as_ref(),
             nft_mint.key().as_ref()
         ],
-        space = 8 + liquidity::LiquidityPosition::SPACE,
+        space = 8 + LiquidityPosition::SPACE,
         bump,
     )]
-    pub liquidity_position: Account<'info, liquidity::LiquidityPosition>,
+    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
 
     // NFT minting
     #[account(
@@ -196,12 +196,12 @@ pub struct DepositLiquidity<'info> {
     /// Bitmap representing liquidity at
     /// different ticks
     #[account(mut)]
-    pub bitmap: Account<'info, BitMap>,
+    pub bitmap: Box<Account<'info, BitMap>>,
 
     /// Tick contains information on liquidity at
     /// one specific tick
     #[account(mut)]
-    pub tick_account: Account<'info, Tick>,
+    pub tick_account: Box<Account<'info, Tick>>,
 
     /// Sysvar for token mint and ATA creation
     pub rent: Sysvar<'info, Rent>,
@@ -223,11 +223,11 @@ pub struct UpdateTickPosition<'info> {
 
     /// Tick account
     #[account(mut)]
-    pub tick: Account<'info, Tick>,
+    pub tick: Box<Account<'info, Tick>>,
 
     /// Liquidity Position
     #[account(mut)]
-    pub liquidity_position: Account<'info, liquidity::LiquidityPosition>,
+    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
 }
 /// Redeem liquidity
 ///
@@ -248,7 +248,7 @@ pub struct RedeemLiquidity<'info> {
 
     /// Liquidity position
     #[account(mut)]
-    pub liquidity_position: Account<'info, liquidity::LiquidityPosition>,
+    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
 
     /// Token account to recieve the tokens at
     pub token_account: Box<Account<'info, TokenAccount>>,
@@ -258,7 +258,7 @@ pub struct RedeemLiquidity<'info> {
 
     /// Sure Protocol Pool Account
     #[account(mut)]
-    pub pool: Account<'info, PoolAccount>,
+    pub pool: Box<Account<'info, PoolAccount>>,
 
     /// Sure owner
     pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
@@ -279,7 +279,7 @@ pub struct BuyInsurance<'info> {
     pub buyer: Signer<'info>,
 
     /// Pool to buy from
-    pub pool: Account<'info, PoolAccount>,
+    pub pool: Box<Account<'info, PoolAccount>>,
 
     /// Insurance Position
     #[account(
@@ -292,7 +292,7 @@ pub struct BuyInsurance<'info> {
         ],
         bump,
     )]
-    pub insurance_contract: Account<'info, InsuranceContract>,
+    pub insurance_contract: Box<Account<'info, InsuranceContract>>,
 
     /// System Contract used to create accounts
     pub system_program: Program<'info, System>,
