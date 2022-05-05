@@ -267,7 +267,7 @@ pub struct RedeemLiquidity<'info> {
 #[derive(Accounts)]
 pub struct InitializeTick<'info> {
     /// Create tick
-    pub tick: Account<'info, Tick>,
+    pub tick: Box<Account<'info, Tick>>,
 }
 
 /// Buy Insurance Request

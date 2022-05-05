@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 use std::fmt::{self};
 use std::{error::Error, fmt::Display, fmt::Formatter, result::Result};
 
-pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: u64 = 1024;
+pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: u64 = 4;
 pub const SECONDS_IN_A_YEAR: i64 = 31556926;
 /// Tick acount (PDA) is used to hold information about
 /// the liquidity at a current tick
