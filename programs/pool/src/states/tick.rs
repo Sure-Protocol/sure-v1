@@ -43,6 +43,16 @@ pub struct Tick{
     pub last_liquidity_position_idx: u64, // 2 bytes
 }
 
+pub trait TickTrait {
+    fn add_liquidity(&mut self, id: u64,size: u64) -> Result<(),TickError>;
+    fn remove_liquidity(&mut self, id: u64) -> Result<(),TickError>;
+    fn increase_rewards(&mut self) -> Result<(),TickError>;
+    fn get_rewards(&mut self,id: u64) -> Result<u64,TickError>;
+    fn withdraw_rewards(&mut self,id:u64) -> Result<(),TickError>;
+    fn update_callback(&mut self) -> Result<(),TickError>;
+}
+
+
 #[derive(Debug)]
 pub struct TickError {
     pub cause: String,
@@ -57,7 +67,8 @@ impl Display for TickError {
     }
 }
 
-impl Tick {
+
+impl TickTrait for Tick {
 
     /// Add liquidity
     /// 
@@ -69,7 +80,7 @@ impl Tick {
     /// # Arguments
     /// * id: The id in the liquidity position seed
     /// * size: the size of the liquidity added
-   pub fn add_liquidity(&mut self, id: u64,size: u64) -> Result<(),TickError>{
+    fn add_liquidity(&mut self, id: u64,size: u64) -> Result<(),TickError>{
        if (MAX_NUMBER_OF_LIQUIDITY_POSITIONS-1) == self.last_liquidity_position_idx {
            return Err(TickError{cause: "no liquidity spots left".to_string()})
        }
@@ -99,8 +110,8 @@ impl Tick {
    /// 
    /// # Arguments
    /// * id: The id in the liquidity position seed
-   ///  
-   pub fn remove_liquidity(&mut self, id: u64) -> Result<(),TickError> {
+   ///
+   fn remove_liquidity(&mut self, id: u64) -> Result<(),TickError> {
         let idx = self.find_liquidity_position_idx(id);
         if self.liquidity_position_rewards[idx] != 0 {
             return Err(TickError{cause: "rewards should be withdrawn".to_string()})
@@ -125,7 +136,6 @@ impl Tick {
             self.active=false;
         }
 
-        
         Ok(())
    }
 
@@ -135,7 +145,7 @@ impl Tick {
    /// 
    /// # Arguments
    /// * Tick
-   pub fn increase_rewards(&mut self) -> Result<(),TickError> {
+   fn increase_rewards(&mut self) -> Result<(),TickError> {
     let mut cumulative_liquidity = 0;
     let mut idx = 0;
     while cumulative_liquidity < self.used_liquidity {
@@ -160,13 +170,13 @@ impl Tick {
    /// * Tick
    /// * id: The id in the liquidity position seed
    /// 
-   pub fn get_rewards(&mut self,id: u64) -> Result<u64,TickError> {
+   fn get_rewards(&mut self,id: u64) -> Result<u64,TickError> {
         let idx = self.find_liquidity_position_idx(id);
         
         Ok(self.liquidity_position_rewards[idx])
    }
-
-   pub fn withdraw_rewards(&mut self,id:u64) -> Result<(),TickError> {
+   
+   fn withdraw_rewards(&mut self,id:u64) -> Result<(),TickError> {
         let idx = self.find_liquidity_position_idx(id);
         
         self.liquidity_position_rewards[idx] = 0;
@@ -174,7 +184,28 @@ impl Tick {
    }
 
 
-   // ____________ Internal functions ___________________ // 
+
+   /// Update Callback
+   /// this function should be called each time a
+   ///  - write
+   ///  - update 
+   /// has occurred. Its only function is to update the last 
+   /// updated field to the current unix timestamp provided by
+   /// the solana runtime. 
+   /// 
+   /// # Arguments
+   /// * self: Tick account
+   fn update_callback(&mut self) -> Result<(),TickError>{
+    self.last_updated = self.get_unix_timestamp()?;
+    Ok(())
+}
+
+
+  
+}
+
+impl Tick {
+ // ____________ Internal functions ___________________ // 
    /// Calculate reward for a liquidity position
    /// 
    /// # Arguments
@@ -203,20 +234,6 @@ impl Tick {
        self.liquidity_position_idx.iter().position(|&idx| idx == id).unwrap()
    }
 
-   /// Update Callback
-   /// this function should be called each time a
-   ///  - write
-   ///  - update 
-   /// has occurred. Its only function is to update the last 
-   /// updated field to the current unix timestamp provided by
-   /// the solana runtime. 
-   /// 
-   /// # Arguments
-   /// * self: Tick account
-   pub fn update_callback(&mut self) -> Result<(),TickError>{
-       self.last_updated = self.get_unix_timestamp()?;
-       Ok(())
-   }
 
    /// Get Unix Timestamp
    /// Simple helper function to the the timestamp 
@@ -263,15 +280,13 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn add_liquidity() {
-        // INitialize 
+    fn initialize_tick() -> Tick {
         let time = SystemTime::now().duration_since(time::UNIX_EPOCH).unwrap().as_secs() as i64;
         let init_liq_idx = [0;(MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)];
         let init_liq_size =[0;(MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)];
         let init_liq_rewards = [0;(MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)];
         let last_liq= 0;
-        let mut tick = Tick {
+        Tick {
             bump: 1,
             liquidity: 0,
             used_liquidity: 0,
@@ -282,7 +297,12 @@ mod tests {
             liquidity_position_rewards: init_liq_rewards,
             liquidity_position_size: init_liq_size,
             last_liquidity_position_idx: last_liq,
-        };
+        }
+    }
+    #[test]
+    fn add_remove_liquidity() {
+        // INitialize 
+        let mut tick = initialize_tick();
 
         // Add liquidity 
         tick.add_liquidity(356, 1_000).unwrap();
@@ -301,7 +321,7 @@ mod tests {
         assert_eq!(tick.liquidity_position_idx[0],0);
         assert_eq!(tick.liquidity_position_rewards[0],0);
         assert_eq!(tick.active,false);
-
-
     }
+
+
 }
