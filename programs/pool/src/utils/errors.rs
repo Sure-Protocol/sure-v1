@@ -17,4 +17,10 @@ pub enum SureError {
 
     #[msg("All of the liquidity is used")]
     LiquidityFilled,
+
+    #[msg("Invalid Pool creator provided. Are you sure you are the protocol owner?")]
+    InvalidPoolCreator,
+
+    #[msg("Could not provide liquidity")]
+    CouldNotProvideLiquidity,
 }
