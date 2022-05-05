@@ -1,48 +1,47 @@
-///! Liquidity positions 
+///! Liquidity positions
 ///!
-
-
 use anchor_lang::prelude::*;
-// Liquidity Position holds information about a given 
+// Liquidity Position holds information about a given
 /// token position
-/// Each token position references an NFT mint 
-/// 
-/// At each tick liquidity 
+/// Each token position references an NFT mint
+///
+/// At each tick liquidity
 #[account]
 #[derive(Default)]
 pub struct LiquidityPosition {
     /// Bump Identity
     pub bump: u8, // 1byte
 
-    /// The amount of liquidity provided in lamports 
+    /// The amount of liquidity provided in lamports
     pub liquidity: u64, // 8 bytes
 
     /// the amount of liquidity used
     pub used_liquidity: u64, // 8 bytes
 
-    /// Liquidity Pool 
+    /// Liquidity Pool
     pub pool: Pubkey, // 32 bytes
 
     /// Mint of token provided
     pub token_mint: Pubkey, // 32 bytes
-    
+
     /// NFT mint. The mint representing the position
-    /// The NFT is the owner of the position. 
+    /// The NFT is the owner of the position.
     pub nft_mint: Pubkey, // 32 bytes
 
     /// Time at liquidity position creation
     pub created_at: i64, // 8 bytes,
 
-    /// The tick that the liquidity is at 
+    pub tick_id: u64,
+
+    /// The tick that the liquidity is at
     pub tick: u16, // 2 bytes
 
     /// Outstanding Rewards
     pub outstanding_rewards: u32,
-
 }
 
-impl LiquidityPosition{
-    pub const SPACE:usize = 1 + 8 +8 + 32 + 32 + 32 + 8 + 4;
+impl LiquidityPosition {
+    pub const SPACE: usize = 1 + 8 + 8 + 32 + 32 + 32 + 8 + 4;
 }
 
 #[event]

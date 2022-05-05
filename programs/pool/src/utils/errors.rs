@@ -20,4 +20,7 @@ pub enum SureError {
 
     #[msg("Invalid Pool creator provided. Are you sure you are the protocol owner?")]
     InvalidPoolCreator,
+
+    #[msg("Could not provide liquidity")]
+    CouldNotProvideLiquidity,
 }

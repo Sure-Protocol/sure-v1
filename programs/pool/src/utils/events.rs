@@ -8,10 +8,8 @@ pub struct InitializedManager {
 }
 
 #[event]
-pub struct InitializedPool{
+pub struct InitializedPool {
     #[index]
     pub name: String,
     pub smart_contract: Pubkey,
 }
-
-

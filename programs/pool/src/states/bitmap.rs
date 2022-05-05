@@ -1,10 +1,10 @@
-use std::ops::BitXor;
 use anchor_lang::prelude::*;
 use primitive_types::U256;
+use std::ops::BitXor;
 
 use crate::accounts;
 /// Bitmap used to keep track of liquidity at each tick
-/// 
+///
 #[account]
 pub struct BitMap {
     /// Bump
@@ -12,16 +12,15 @@ pub struct BitMap {
 
     pub word_pos: i16, // 2 bytes
 
-    /// Map 
-    pub word: [u64; 4], // 8*4 = 32 bytes 
+    /// Map
+    pub word: [u64; 4], // 8*4 = 32 bytes
 }
 
 #[derive(Accounts)]
 pub struct UpdateBitmap<'info> {
     #[account(mut)]
-    pub bitmap: Account<'info,BitMap>
+    pub bitmap: Account<'info, BitMap>,
 }
-
 
 pub struct NextBit {
     pub next: u8,
@@ -39,7 +38,7 @@ pub struct Position {
 pub fn position(tick_ratio: u16) -> Position {
     Position {
         word_pos: (tick_ratio >> 8) as i16,
-        bit_pos: (tick_ratio % 256) as u8, 
+        bit_pos: (tick_ratio % 256) as u8,
     }
 }
 
@@ -54,33 +53,33 @@ pub fn most_significant_bit(x: U256) -> u8 {
 }
 
 impl BitMap {
+    pub const SPACE: usize = 1 + 2 + 32;
 
-    pub const SPACE:usize = 1 + 2 + 32;
-
-    pub fn flip_bit(&mut self,tick: u16, tick_spacing: u16) {
-        let tick_ratio = tick/tick_spacing;
+    pub fn flip_bit(&mut self, tick: u16, tick_spacing: u16) {
+        let tick_ratio = tick / tick_spacing;
         let current_position = position(tick_ratio);
         let mask = U256::from(1 as i16) << current_position.bit_pos;
         let word = U256(self.word);
         self.word = word.bitxor(mask).0;
     }
 
-    pub fn is_initialized(&self,tick:u16, tick_spacing: u16) -> bool{
-        let tick_ratio = tick/tick_spacing;
-        let Position{word_pos,bit_pos} = position(tick_ratio);
+    pub fn is_initialized(&self, tick: u16, tick_spacing: u16) -> bool {
+        let tick_ratio = tick / tick_spacing;
+        let Position { word_pos, bit_pos } = position(tick_ratio);
 
-        let next_bit = self.next_initialized_tick(tick, tick_spacing,true);
+        let next_bit = self.next_initialized_tick(tick, tick_spacing, true);
         next_bit.next == bit_pos && next_bit.initialized
     }
 
-    pub fn next_initialized_tick(&self,tick: u16, tick_spacing: u16,lte: bool) -> NextBit {
-        let tick_ratio = tick/tick_spacing;
+    pub fn next_initialized_tick(&self, tick: u16, tick_spacing: u16, lte: bool) -> NextBit {
+        let tick_ratio = tick / tick_spacing;
 
         if lte {
-            let Position{word_pos,bit_pos} = position(tick_ratio);
+            let Position { word_pos, bit_pos } = position(tick_ratio);
             let word = U256::from(word_pos);
             // all the 1s at or to the right of the current bit_pos
-            let mask = (U256::from(1 as i16) << bit_pos) - (1 as i16) + (U256::from(1 as i16) << bit_pos);
+            let mask =
+                (U256::from(1 as i16) << bit_pos) - (1 as i16) + (U256::from(1 as i16) << bit_pos);
             let masked = word & mask;
             let initialized = masked != U256::default();
 
@@ -93,7 +92,7 @@ impl BitMap {
 
             NextBit { next, initialized }
         } else {
-            let Position{word_pos,bit_pos} = position(tick_ratio-1);
+            let Position { word_pos, bit_pos } = position(tick_ratio - 1);
             let word = U256::from(word_pos);
             // all the 1s at or to the left of the bit_pos
             let mask = !((U256::from(1 as i16) << bit_pos) - (1 as i16));

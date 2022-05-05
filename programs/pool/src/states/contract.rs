@@ -1,6 +1,5 @@
 ///! Insurance contract representing the proof
 ///! that a user has insurance
-
 use anchor_lang::prelude::*;
 
 /// Contract
