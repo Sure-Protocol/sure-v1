@@ -130,6 +130,12 @@ impl TickTrait for Tick {
             });
         }
 
+        if size == 0 {
+            return Err(TickError {
+                cause: "size must be > 0".to_string(),
+            });
+        }
+
         // Update the tick liquidity
         self.liquidity += size;
 
@@ -335,6 +341,23 @@ impl Tick {
         self.liquidity_position_idx
             .iter()
             .any(|&id_candidate| id_candidate == id)
+    }
+
+    fn is_available_liquidity(&self) -> bool {
+        self.liquidity > self.used_liquidity
+    }
+
+    pub fn find_idx_of_available_liquidity(&self) -> Result<usize, TickError> {
+        let mut used_amount = 0;
+        for (idx, _elem) in self.liquidity_position_size.iter().enumerate() {
+            used_amount += self.liquidity_position_size[idx];
+            if used_amount > self.used_liquidity {
+                return Ok(idx)
+            } 
+        }
+        Err(TickError {
+            cause: "No available liquidity in Tick ".to_string(),
+        })
     }
 }
 

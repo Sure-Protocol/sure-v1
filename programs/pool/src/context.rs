@@ -278,8 +278,13 @@ pub struct BuyInsurance<'info> {
     #[account(mut)]
     pub buyer: Signer<'info>,
 
+    pub buyer_token_account: Box<Account<'info, TokenAccount>>,
+
     /// Pool to buy from
     pub pool: Box<Account<'info, PoolAccount>>,
+
+    /// Tick to buy from
+    pub tick: AccountLoader<'info, Tick>,
 
     /// Insurance Position
     #[account(

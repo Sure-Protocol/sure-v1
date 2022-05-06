@@ -23,4 +23,8 @@ pub enum SureError {
 
     #[msg("Could not provide liquidity")]
     CouldNotProvideLiquidity,
+
+
+    #[msg("Not enough liquidity")]
+    NotEnoughLiquidity,
 }

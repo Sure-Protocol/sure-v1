@@ -293,7 +293,36 @@ pub mod sure_pool {
         // * Check that the
 
         // _______________ Functionality _______________
-        // # 1. Find
+        // Buys liquidity (within a tick) 
+        // # 1. Iterate across positions + ticks, marking as bought until you find a matching amount
+        // # 2.  
+        let mut tick = ctx.accounts.tick.load_mut()?;
+        let mut idx = tick.find_idx_of_available_liquidity().unwrap();
+
+        let mut bought_liquidity: u64 = 0;
+
+        // iterate until we have all the ticks we need to handle the buy
+        while idx < tick.last_liquidity_position_idx as usize {
+
+            bought_liquidity += tick.liquidity_position_size[idx];
+            if bought_liquidity >= amount { break }
+
+            idx += 1;
+            // if there is not enough liquidity
+            if idx > tick.last_liquidity_position_idx as usize {
+                return Err(error!(SureError::NotEnoughLiquidity))
+            }
+        }
+
+        // set last position
+        tick.last_liquidity_position_idx = idx as u8;
+        // set used liquidity
+        tick.used_liquidity += amount; //TODO: partial
+
+        // TODO: mint contract 
+
+        // TODO: token transfer into 
+
         Ok(())
     }
 
