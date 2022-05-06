@@ -4,7 +4,7 @@ pub mod states;
 pub mod utils;
 
 use crate::states::bitmap::*;
-use crate::states::tick::TickTrait;
+use crate::states::tick;
 use crate::states::*;
 use crate::utils::errors::*;
 use anchor_lang::prelude::*;
@@ -16,6 +16,8 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod sure_pool {
+
+    use crate::states::tick::TickTrait;
 
     use super::*;
 
@@ -141,7 +143,7 @@ pub mod sure_pool {
         ctx: Context<DepositLiquidity>,
         tick: u16,
         amount: u64,
-        liquidity_position_id: u64,
+        liquidity_position_id: u8,
     ) -> Result<()> {
         // ___________________ Validation ____________________________
         // #### Check input arguments
@@ -211,7 +213,9 @@ pub mod sure_pool {
         liquidity_position.tick_id = liquidity_position_id;
 
         // 3. Update tick with new liquidity position
-        let tick_account = &mut ctx.accounts.tick_account;
+        let tick_account_state =
+            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+        let mut tick_account = tick_account_state.load_mut()?;
         match tick_account.add_liquidity(liquidity_position_id, amount) {
             Ok(_) => (),
             Err(_) => return Err(error!(SureError::CouldNotProvideLiquidity)),

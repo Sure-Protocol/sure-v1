@@ -6,11 +6,12 @@ use anchor_lang::prelude::*;
 use std::fmt::{self};
 use std::{error::Error, fmt::Display, fmt::Formatter, result::Result};
 
-pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: u64 = 4;
+pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: u64 = 256;
 pub const SECONDS_IN_A_YEAR: i64 = 31556926;
 /// Tick acount (PDA) is used to hold information about
 /// the liquidity at a current tick
-#[account]
+
+#[account(zero_copy)]
 pub struct Tick {
     /// The bump identity of the PDA
     pub bump: u8, // 1 byte
@@ -31,7 +32,7 @@ pub struct Tick {
     pub active: bool, // 1 byte
 
     /// Ids of liquidity positions
-    pub liquidity_position_idx: [u64; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)], // 2048*4 = 8192 bytes, 8kb
+    pub liquidity_position_idx: [u8; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)], // 2048*4 = 8192 bytes, 8kb
 
     /// Liquidity Provided for each id
     pub liquidity_position_size: [u64; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)],
@@ -45,14 +46,14 @@ pub struct Tick {
 }
 
 pub trait TickTrait {
-    fn get_new_id(&self) -> u64;
+    fn get_new_id(&self) -> u8;
     fn buy_insurance(&mut self, size: u64) -> Result<(), TickError>;
     fn exit_insurance(&mut self, size: u64) -> Result<(), TickError>;
-    fn add_liquidity(&mut self, id: u64, size: u64) -> Result<(), TickError>;
-    fn remove_liquidity(&mut self, id: u64) -> Result<(), TickError>;
+    fn add_liquidity(&mut self, id: u8, size: u64) -> Result<(), TickError>;
+    fn remove_liquidity(&mut self, id: u8) -> Result<(), TickError>;
     fn increase_rewards(&mut self) -> Result<(), TickError>;
-    fn get_rewards(&mut self, id: u64) -> Result<u64, TickError>;
-    fn withdraw_rewards(&mut self, id: u64) -> Result<(), TickError>;
+    fn get_rewards(&mut self, id: u8) -> Result<u64, TickError>;
+    fn withdraw_rewards(&mut self, id: u8) -> Result<(), TickError>;
     fn update_callback(&mut self) -> Result<(), TickError>;
 }
 
@@ -70,7 +71,7 @@ impl Display for TickError {
 }
 
 impl TickTrait for Tick {
-    fn get_new_id(&self) -> u64 {
+    fn get_new_id(&self) -> u8 {
         let mut idx = 1;
         while self.is_id_taken(idx) {
             idx += 1;
@@ -122,7 +123,7 @@ impl TickTrait for Tick {
     /// # Arguments
     /// * id: The id in the liquidity position seed
     /// * size: the size of the liquidity added
-    fn add_liquidity(&mut self, id: u64, size: u64) -> Result<(), TickError> {
+    fn add_liquidity(&mut self, id: u8, size: u64) -> Result<(), TickError> {
         if (MAX_NUMBER_OF_LIQUIDITY_POSITIONS - 1) == self.last_liquidity_position_idx {
             return Err(TickError {
                 cause: "no liquidity spots left".to_string(),
@@ -159,7 +160,7 @@ impl TickTrait for Tick {
     /// # Arguments
     /// * id: The id in the liquidity position seed
     ///
-    fn remove_liquidity(&mut self, id: u64) -> Result<(), TickError> {
+    fn remove_liquidity(&mut self, id: u8) -> Result<(), TickError> {
         let idx = self.find_liquidity_position_idx(id);
         if self.liquidity_position_rewards[idx] != 0 {
             return Err(TickError {
@@ -226,13 +227,13 @@ impl TickTrait for Tick {
     /// * Tick
     /// * id: The id in the liquidity position seed
     ///
-    fn get_rewards(&mut self, id: u64) -> Result<u64, TickError> {
+    fn get_rewards(&mut self, id: u8) -> Result<u64, TickError> {
         let idx = self.find_liquidity_position_idx(id);
 
         Ok(self.liquidity_position_rewards[idx])
     }
 
-    fn withdraw_rewards(&mut self, id: u64) -> Result<(), TickError> {
+    fn withdraw_rewards(&mut self, id: u8) -> Result<(), TickError> {
         let idx = self.find_liquidity_position_idx(id);
 
         self.liquidity_position_rewards[idx] = 0;
@@ -281,7 +282,7 @@ impl Tick {
     /// * self: Tick
     /// * id: the id in the liquidity position seed
     ///
-    fn find_liquidity_position_idx(&self, id: u64) -> usize {
+    fn find_liquidity_position_idx(&self, id: u8) -> usize {
         self.liquidity_position_idx
             .iter()
             .position(|&idx| idx == id)
@@ -315,7 +316,7 @@ impl Tick {
     /// * self: Tick Account
     /// * id: the id in the liquidity position seed
     ///
-    fn percentage_liquidity_used(&self, id: u64) -> Result<f64, TickError> {
+    fn percentage_liquidity_used(&self, id: u8) -> Result<f64, TickError> {
         let mut cummulative_liquidity = 0;
         let mut idx = 0;
         while id != self.liquidity_position_idx[idx] {
@@ -330,7 +331,7 @@ impl Tick {
         Ok(remaining_liquidity as f64 / self.liquidity_position_size[idx] as f64)
     }
 
-    fn is_id_taken(&self, id: u64) -> bool {
+    fn is_id_taken(&self, id: u8) -> bool {
         self.liquidity_position_idx
             .iter()
             .any(|&id_candidate| id_candidate == id)
@@ -372,16 +373,16 @@ mod tests {
         let mut tick = initialize_tick();
 
         // Add liquidity
-        tick.add_liquidity(356, 1_000).unwrap();
+        tick.add_liquidity(244, 1_000).unwrap();
         println!("liquidity pos: {:?}", tick.liquidity_position_size);
         assert_eq!(tick.last_liquidity_position_idx, 1);
         assert_eq!(tick.liquidity, 1_000);
         assert_eq!(tick.liquidity_position_size[0], 1_000);
-        assert_eq!(tick.liquidity_position_idx[0], 356);
+        assert_eq!(tick.liquidity_position_idx[0], 244);
         assert_eq!(tick.liquidity_position_rewards[0], 0);
 
         // Remove liquidity
-        tick.remove_liquidity(356).unwrap();
+        tick.remove_liquidity(244).unwrap();
         assert_eq!(tick.last_liquidity_position_idx, 0);
         assert_eq!(tick.liquidity, 0);
         assert_eq!(tick.liquidity_position_size[0], 0);
@@ -395,12 +396,12 @@ mod tests {
         let mut tick = initialize_tick();
 
         // Add liquidity
-        tick.add_liquidity(356, 1_000).unwrap();
+        tick.add_liquidity(244, 1_000).unwrap();
         println!("liquidity pos: {:?}", tick.liquidity_position_size);
         assert_eq!(tick.last_liquidity_position_idx, 1);
         assert_eq!(tick.liquidity, 1_000);
         assert_eq!(tick.liquidity_position_size[0], 1_000);
-        assert_eq!(tick.liquidity_position_idx[0], 356);
+        assert_eq!(tick.liquidity_position_idx[0], 244);
         assert_eq!(tick.liquidity_position_rewards[0], 0);
 
         /// Buy insurance

@@ -31,7 +31,8 @@ pub struct LiquidityPosition {
     /// Time at liquidity position creation
     pub created_at: i64, // 8 bytes,
 
-    pub tick_id: u64,
+    /// Id in the tick pool
+    pub tick_id: u8,
 
     /// The tick that the liquidity is at
     pub tick: u16, // 2 bytes

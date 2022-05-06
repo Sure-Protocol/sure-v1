@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
-use std::ops::BitXor;
 use std::io;
+use std::ops::BitXor;
 
 use crate::accounts;
 use crate::utils::uint::U256;

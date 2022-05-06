@@ -201,7 +201,7 @@ pub struct DepositLiquidity<'info> {
     /// Tick contains information on liquidity at
     /// one specific tick
     #[account(mut)]
-    pub tick_account: Box<Account<'info, Tick>>,
+    pub tick_account: AccountLoader<'info, Tick>,
 
     /// Sysvar for token mint and ATA creation
     pub rent: Sysvar<'info, Rent>,
@@ -223,7 +223,7 @@ pub struct UpdateTickPosition<'info> {
 
     /// Tick account
     #[account(mut)]
-    pub tick: Box<Account<'info, Tick>>,
+    pub tick: AccountLoader<'info, Tick>,
 
     /// Liquidity Position
     #[account(mut)]
@@ -267,7 +267,7 @@ pub struct RedeemLiquidity<'info> {
 #[derive(Accounts)]
 pub struct InitializeTick<'info> {
     /// Create tick
-    pub tick: Box<Account<'info, Tick>>,
+    pub tick: AccountLoader<'info, Tick>,
 }
 
 /// Buy Insurance Request
