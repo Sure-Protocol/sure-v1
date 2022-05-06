@@ -1,8 +1,10 @@
 use anchor_lang::prelude::*;
-use primitive_types::U256;
 use std::ops::BitXor;
+use std::io;
 
 use crate::accounts;
+use crate::utils::uint::U256;
+
 /// Bitmap used to keep track of liquidity at each tick
 ///
 #[account]
