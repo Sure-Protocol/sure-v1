@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 use std::fmt::{self};
 use std::{error::Error, fmt::Display, fmt::Formatter, result::Result};
 
-pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: u64 = 256;
+pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: u8 = u8::MAX;
 pub const SECONDS_IN_A_YEAR: i64 = 31556926;
 /// Tick acount (PDA) is used to hold information about
 /// the liquidity at a current tick
@@ -36,13 +36,13 @@ pub struct Tick {
 
     /// Liquidity Provided for each id
     pub liquidity_position_size: [u64; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)],
-    /// 8192 bytes
 
     /// rewards
     pub liquidity_position_rewards: [u64; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)], // 8192 bytes
 
     /// index of last liquidity position in the lp array
-    pub last_liquidity_position_idx: u64, // 2 bytes
+    /// TODO: Switch out for bitmap
+    pub last_liquidity_position_idx: u8, // 2 bytes
 }
 
 pub trait TickTrait {
@@ -124,7 +124,7 @@ impl TickTrait for Tick {
     /// * id: The id in the liquidity position seed
     /// * size: the size of the liquidity added
     fn add_liquidity(&mut self, id: u8, size: u64) -> Result<(), TickError> {
-        if (MAX_NUMBER_OF_LIQUIDITY_POSITIONS - 1) == self.last_liquidity_position_idx {
+        if (MAX_NUMBER_OF_LIQUIDITY_POSITIONS) == (self.last_liquidity_position_idx+1) {
             return Err(TickError {
                 cause: "no liquidity spots left".to_string(),
             });
@@ -171,7 +171,7 @@ impl TickTrait for Tick {
         let current_idx = idx;
 
         let max_number_of_liquidity_positions_as_usize =
-            (MAX_NUMBER_OF_LIQUIDITY_POSITIONS - 1) as usize;
+            (MAX_NUMBER_OF_LIQUIDITY_POSITIONS) as usize;
         while self.liquidity_position_idx[current_idx] != 0
             && current_idx < max_number_of_liquidity_positions_as_usize
         {
