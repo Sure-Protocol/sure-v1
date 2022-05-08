@@ -23,4 +23,7 @@ pub enum SureError {
 
     #[msg("Could not provide liquidity")]
     CouldNotProvideLiquidity,
+
+    #[msg("Not empty Tick account")]
+    TickAccountNotEmpty,
 }

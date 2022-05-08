@@ -1,4 +1,3 @@
-use std::thread::AccessError;
 
 use crate::states::{
     bitmap::BitMap,
@@ -6,13 +5,14 @@ use crate::states::{
     liquidity::{self, LiquidityPosition},
     owner::ProtocolOwner,
     pool::{PoolAccount, PoolManager},
-    tick::Tick,
+    tick::{Tick,TickTrait},
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
 };
+use std::mem::size_of;
 
 pub const SURE_PRIMARY_POOL_SEED: &str = "sure-insurance-pool";
 pub const SURE_ASSOCIATED_TOKEN_ACCOUNT_SEED: &str = "sure-ata";
@@ -20,6 +20,7 @@ pub const SURE_LIQUIDITY_POSITION: &str = "sure-lp";
 pub const SURE_PROTOCOL_OWNER: &str = "sure-protocol-owner";
 pub const SURE_INSURANCE_CONTRACT: &str = "sure-insurance-contract";
 pub const SURE_BITMAP: &str = "sure-bitmap";
+pub const SURE_TICK_SEED: &str = "sure-tick";
 
 /// Initialize Sure Protocol
 /// by setting the owner of the protocol
@@ -256,6 +257,9 @@ pub struct RedeemLiquidity<'info> {
     /// Pool Vault to transfer tokens from
     pub vault_account: Box<Account<'info, TokenAccount>>,
 
+    #[account(mut)]
+    pub tick_account: AccountLoader<'info, Tick>,
+
     /// Sure Protocol Pool Account
     #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
@@ -265,9 +269,41 @@ pub struct RedeemLiquidity<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(pool: Pubkey,token: Pubkey,tick_bp: u64)]
 pub struct InitializeTick<'info> {
-    /// Create tick
-    pub tick: AccountLoader<'info, Tick>,
+    /// Signer of the transaction
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    
+    /// Create tick account
+    #[account(
+        init, 
+        payer = creator,
+        seeds = [
+            SURE_TICK_SEED.as_bytes(),
+            pool.key().as_ref(),
+            token.key().as_ref(),
+            tick_bp.to_le_bytes().as_ref()
+        ],
+        bump,
+        space = 8 + size_of::<Tick>()
+    )]
+    pub tick_account: AccountLoader<'info, Tick>,
+
+    /// System program required to make changes
+    pub system_program: Program<'info,System>
+}
+
+#[derive(Accounts)]
+pub struct CloseTick<'info> {
+    // Account to receive remaining rent
+    pub recipient: Box<Account<'info,TokenAccount>>,
+
+    #[account(
+        mut,
+        close = recipient,
+    )]
+    pub tick_account: AccountLoader<'info,Tick>,
 }
 
 /// Buy Insurance Request

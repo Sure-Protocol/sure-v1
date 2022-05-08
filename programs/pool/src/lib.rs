@@ -216,10 +216,15 @@ pub mod sure_pool {
         let tick_account_state =
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let mut tick_account = tick_account_state.load_mut()?;
+        
         match tick_account.add_liquidity(liquidity_position_id, amount) {
             Ok(_) => (),
             Err(_) => return Err(error!(SureError::CouldNotProvideLiquidity)),
         }
+       match tick_account.update_callback() {
+           Ok(_) => (),
+           Err(err) => return Err(error!(err))
+       };
 
         emit!(liquidity::NewLiquidityPosition {
             tick: tick,
@@ -240,9 +245,8 @@ pub mod sure_pool {
     //pub fn update_rewards_in_tick(ctx: )
 
     /// Redeem liquidity
-    /// Holders of the LP NFT can burn it in return for liquidity
-    /// However, it takes about 5 days to extract the liquidity
-    /// so that there isn't a draw on liquidity.
+    /// A holder can redeem liquidity that is not in use.
+    /// position is used can redeem the unused liquidity. 
     ///
     /// If some of the liquidity is active then it can only be withdrawn
     /// if there is free liquidity in the tick pool.
@@ -252,18 +256,20 @@ pub mod sure_pool {
     ///
     pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>) -> Result<()> {
         // _______________ Validation __________________
-        let liquidity_position = &mut ctx.accounts.liquidity_position;
-        require!(
-            liquidity_position.used_liquidity < liquidity_position.liquidity,
-            SureError::LiquidityFilled
-        );
+        let liquidity_position = &ctx.accounts.liquidity_position;
+        
+        let tick_account_state =
+        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+        let mut tick_account = tick_account_state.load_mut()?;
+
+        let free_liquidity = tick_account.free_liquidity(liquidity_position.tick_id);
+        require!(free_liquidity > 0,SureError::LiquidityFilled);
 
         // _______________ Functionality _______________
         // # 1. Find the available liquidity
-        let available_liquidity = liquidity_position.liquidity - liquidity_position.used_liquidity;
-        liquidity_position.liquidity = liquidity_position.used_liquidity;
+    
 
-        // # 2 Transfer liquidity back to nft holder
+        // # 2 Transfer excess liquidity back to nft holder
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_account.to_account_info().clone(),
@@ -274,9 +280,11 @@ pub mod sure_pool {
                 },
                 &[&[&[ctx.accounts.protocol_owner.load()?.bump] as &[u8]]],
             ),
-            available_liquidity,
+            free_liquidity,
         )?;
 
+        // # 3 Update tick poo
+        tick_account.remove_liquidity(liquidity_position.tick_id);
         Ok(())
     }
 
@@ -305,7 +313,31 @@ pub mod sure_pool {
     ///
     ///  # Argument
     /// * ctx:
-    pub fn initialize_tick(ctx: Context<InitializeTick>) -> Result<()> {
+    pub fn initialize_tick(ctx: Context<InitializeTick>,_pool:Pubkey,_token:Pubkey,tick_bp: u64) -> Result<()> {
+        let tick_account_state =
+        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+        let mut tick_account = tick_account_state.load_mut()?;
+        
+        // Initialize account
+        tick_account.initialize( *ctx.bumps.get("tick_account").unwrap(), tick_bp)?;
+
+        Ok(())
+    }
+
+    /// Close tick
+    /// closes tick account if there is no more liquidity in the account
+    /// 
+    /// # Arguments
+    /// * ctx
+    /// 
+    pub fn close_tick(ctx: Context<CloseTick>) -> Result<()> {
+        let tick_account_state =
+        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+        let tick_account = tick_account_state.load_mut()?;
+
+        if !tick_account.is_empty() {
+            return Err(error!(SureError::TickAccountNotEmpty))
+        }
         Ok(())
     }
 }
