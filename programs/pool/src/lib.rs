@@ -262,7 +262,7 @@ pub mod sure_pool {
         AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let mut tick_account = tick_account_state.load_mut()?;
 
-        let free_liquidity = tick_account.free_liquidity(liquidity_position.tick_id);
+        let free_liquidity = tick_account.available_liquidity(liquidity_position.tick_id);
         require!(free_liquidity > 0,SureError::LiquidityFilled);
 
         // _______________ Functionality _______________
@@ -335,7 +335,7 @@ pub mod sure_pool {
         AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let tick_account = tick_account_state.load_mut()?;
 
-        if !tick_account.is_empty() {
+        if !tick_account.is_pool_empty() {
             return Err(error!(SureError::TickAccountNotEmpty))
         }
         Ok(())
