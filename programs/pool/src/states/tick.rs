@@ -6,12 +6,17 @@ use anchor_lang::prelude::*;
 use std::fmt::{self};
 use std::{error::Error, fmt::Display, fmt::Formatter, result::Result};
 
+use crate::utils::bitmap::C256;
 use crate::utils::errors;
+use crate::utils::uint::U256;
 
 pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: u8 = u8::MAX;
 pub const SECONDS_IN_A_YEAR: i64 = 31556926;
 /// Tick acount (PDA) is used to hold information about
 /// the liquidity at a current tick
+
+
+
 
 #[account(zero_copy)]
 pub struct Tick {
@@ -42,9 +47,7 @@ pub struct Tick {
     /// rewards
     pub liquidity_position_rewards: [u64; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)], // 8192 bytes
 
-    /// index of last liquidity position in the lp array
-    /// TODO: Switch out for bitmap for faster search
-    pub last_liquidity_position_idx: u8, // 2 bytes
+    pub last_liquidity_position_idx: u8,
 }
 
 impl Tick {
@@ -62,7 +65,6 @@ impl Tick {
         self.liquidity_position_idx = [0;MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
         self.liquidity_position_accumulated = [0;MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
         self.liquidity_position_rewards = [0;MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
-        self.last_liquidity_position_idx = 0;
 
         Ok(())
 
@@ -177,7 +179,7 @@ impl TickTrait for Tick {
 
         // Update the tick liquidity
         self.liquidity += size;
-        let mut  liquidity_accumulated:u64 = 0;
+        let mut liquidity_accumulated:u64 = 0;
         let next_liquidity_idx = if self.active {
             liquidity_accumulated = self.liquidity_position_accumulated[self.last_liquidity_position_idx as usize];
             (self.last_liquidity_position_idx + 1) as usize
@@ -226,10 +228,11 @@ impl TickTrait for Tick {
         // If only parts of position is in use, remove the part that 
         // is not active 
         let liquidity_position_size = self.liquidity_position(idx as u8);
+        println!("Liquidity position size: {}",liquidity_position_size);
         let current_idx = idx;
 
         let max_number_of_liquidity_positions_as_usize =
-            (MAX_NUMBER_OF_LIQUIDITY_POSITIONS) as usize;
+            (MAX_NUMBER_OF_LIQUIDITY_POSITIONS-1) as usize;
 
         while self.liquidity_position_idx[current_idx] != 0
             && current_idx < max_number_of_liquidity_positions_as_usize
@@ -445,7 +448,7 @@ impl Tick {
         if id > 0{
             self.liquidity_position_accumulated[id as usize] - self.liquidity_position_accumulated[id as usize -1]
         }else {
-            0
+            self.liquidity_position_accumulated[id as usize]
         }
     }
 
@@ -462,8 +465,17 @@ impl Tick {
             self.liquidity_position_rewards[current_index + 1];
 
         // Accumulated position
-        let next_diff = self.liquidity_position_accumulated[current_index+1]-self.liquidity_position_accumulated[current_index];
-        self.liquidity_position_accumulated[current_index] = self.liquidity_position_accumulated[current_index-1]+next_diff;
+        if self.liquidity_position_accumulated[current_index+1] == 0 {
+            self.liquidity_position_accumulated[current_index] = 0;
+        }else {
+            let next_diff = self.liquidity_position_accumulated[current_index+1]-self.liquidity_position_accumulated[current_index];
+            
+            if idx > 0 {
+                self.liquidity_position_accumulated[current_index] = self.liquidity_position_accumulated[current_index-1]+next_diff;
+            }else {
+                self.liquidity_position_accumulated[current_index] = next_diff;
+            }
+        }
     }
 
     
@@ -474,6 +486,8 @@ impl Tick {
 #[cfg(test)]
 mod tests {
     use std::time::{self, SystemTime};
+
+    use crate::utils::bitmap::C256;
 
     use super::*;
 
@@ -498,6 +512,20 @@ mod tests {
             liquidity_position_accumulated: init_liq_size,
             last_liquidity_position_idx: last_liq,
         }
+    }
+
+    #[test] 
+    fn shift_position() {
+        let mut tick = initialize_tick();
+        tick.add_liquidity(0, 1000).unwrap();
+        let id: u8 = 0;
+        assert_eq!(tick.liquidity_position_accumulated[id as usize],1000);
+        println!("accumulated: {:?}",tick.liquidity_position_accumulated);
+        println!(
+            "cool: {:?}",tick.liquidity_position_accumulated[id as usize +1]
+        );
+        tick.shift_liquidity_position_left_by1(id);
+        println!("accumulated shifted: {:?}",tick.liquidity_position_accumulated);
     }
 
     #[test]
