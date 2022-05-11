@@ -2,6 +2,6 @@
 pub mod events;
 
 // Custom Error codes
-pub mod errors;
 pub mod bitmap;
+pub mod errors;
 pub mod uint;

@@ -5,19 +5,19 @@ pub mod utils;
 
 use crate::states::bitmap::*;
 use crate::states::tick;
+use crate::states::tick::TickTrait;
 use crate::states::*;
 use crate::utils::errors::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_spl::*;
 use context::*;
+use vipers::prelude::*;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod sure_pool {
-
-    use crate::states::tick::TickTrait;
 
     use super::*;
 
@@ -34,7 +34,7 @@ pub mod sure_pool {
     ///
     pub fn initialize_protocol(ctx: Context<Initialize>) -> Result<()> {
         let protocol_owner = &mut ctx.accounts.protocol_owner.load_init()?;
-        protocol_owner.bump = *ctx.bumps.get("protocol_owner").unwrap();
+        protocol_owner.bump = unwrap_bump!(ctx, "protocol_owner");
         protocol_owner.owner = ctx.accounts.owner.key();
 
         emit!(owner::ChangeProtocolOwner {
@@ -139,18 +139,13 @@ pub mod sure_pool {
     /// * tick (bp): Tick to provide liquidity at
     /// * amount: Amount of liquidity to place at given tick
     /// * liquidity_position_id: should be an id that is currently not in the tick pool
-    pub fn deposit_liquidity(
-        ctx: Context<DepositLiquidity>,
-        tick: u16,
-        amount: u64,
-        liquidity_position_id: u8,
-    ) -> Result<()> {
+    pub fn deposit_liquidity(ctx: Context<DepositLiquidity>, tick: u64, amount: u64) -> Result<()> {
         // ___________________ Validation ____________________________
         // #### Check input arguments
 
-        // tick must be greater than 0 and less than 100 .
+        // tick must be greater than 0 and less than 1,000 bp .
         require!(
-            tick > 0 && tick < 100,
+            tick > 0 && tick < 1_000,
             utils::errors::SureError::InvalidTick
         );
         require!(amount > 0, utils::errors::SureError::InvalidAmount);
@@ -200,6 +195,12 @@ pub mod sure_pool {
 
         // TODO Add metaplex data to the NFT mint.
 
+        // Load tick account state
+        let tick_account_state =
+            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+        let mut tick_account = tick_account_state.load_mut()?;
+        let new_id = tick_account.get_new_id();
+
         // # 2.  Save liqudity position
         let liquidity_position = &mut ctx.accounts.liquidity_position;
         liquidity_position.bump = *ctx.bumps.get("liquidity_position").unwrap();
@@ -210,21 +211,14 @@ pub mod sure_pool {
         liquidity_position.nft_mint = ctx.accounts.nft_mint.key();
         liquidity_position.tick = tick;
         liquidity_position.created_at = Clock::get()?.unix_timestamp;
-        liquidity_position.tick_id = liquidity_position_id;
+        liquidity_position.tick_id = new_id;
 
-        // 3. Update tick with new liquidity position
-        let tick_account_state =
-            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
-        let mut tick_account = tick_account_state.load_mut()?;
-        
-        match tick_account.add_liquidity(liquidity_position_id, amount) {
-            Ok(_) => (),
-            Err(_) => return Err(error!(SureError::CouldNotProvideLiquidity)),
-        }
-       match tick_account.update_callback() {
-           Ok(_) => (),
-           Err(err) => return Err(error!(err))
-       };
+        //3. Update tick with new liquidity position
+
+        tick_account
+            .add_liquidity(new_id, amount)
+            .map_err(|e| e.to_anchor_error())?;
+        tick_account.update_callback()?;
 
         emit!(liquidity::NewLiquidityPosition {
             tick: tick,
@@ -246,7 +240,7 @@ pub mod sure_pool {
 
     /// Redeem liquidity
     /// A holder can redeem liquidity that is not in use.
-    /// position is used can redeem the unused liquidity. 
+    /// position is used can redeem the unused liquidity.
     ///
     /// If some of the liquidity is active then it can only be withdrawn
     /// if there is free liquidity in the tick pool.
@@ -257,17 +251,16 @@ pub mod sure_pool {
     pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>) -> Result<()> {
         // _______________ Validation __________________
         let liquidity_position = &ctx.accounts.liquidity_position;
-        
+
         let tick_account_state =
-        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let mut tick_account = tick_account_state.load_mut()?;
 
         let free_liquidity = tick_account.available_liquidity(liquidity_position.tick_id);
-        require!(free_liquidity > 0,SureError::LiquidityFilled);
+        require!(free_liquidity > 0, SureError::LiquidityFilled);
 
         // _______________ Functionality _______________
         // # 1. Find the available liquidity
-    
 
         // # 2 Transfer excess liquidity back to nft holder
         token::transfer(
@@ -313,30 +306,33 @@ pub mod sure_pool {
     ///
     ///  # Argument
     /// * ctx:
-    pub fn initialize_tick(ctx: Context<InitializeTick>,_pool:Pubkey,_token:Pubkey,tick_bp: u64) -> Result<()> {
-        let tick_account_state =
-        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
-        let mut tick_account = tick_account_state.load_mut()?;
-        
+    pub fn initialize_tick(
+        ctx: Context<InitializeTick>,
+        _pool: Pubkey,
+        _token: Pubkey,
+        tick_bp: u64,
+    ) -> Result<()> {
+        let mut tick_account = ctx.accounts.tick_account.load_init()?;
+
         // Initialize account
-        tick_account.initialize( *ctx.bumps.get("tick_account").unwrap(), tick_bp)?;
+        tick_account.initialize(*ctx.bumps.get("tick_account").unwrap(), tick_bp)?;
 
         Ok(())
     }
 
     /// Close tick
     /// closes tick account if there is no more liquidity in the account
-    /// 
+    ///
     /// # Arguments
     /// * ctx
-    /// 
+    ///
     pub fn close_tick(ctx: Context<CloseTick>) -> Result<()> {
         let tick_account_state =
-        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let tick_account = tick_account_state.load_mut()?;
 
         if !tick_account.is_pool_empty() {
-            return Err(error!(SureError::TickAccountNotEmpty))
+            return Err(error!(SureError::TickAccountNotEmpty));
         }
         Ok(())
     }

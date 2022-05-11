@@ -1,18 +1,19 @@
-
 use crate::states::{
     bitmap::BitMap,
     contract::InsuranceContract,
     liquidity::{self, LiquidityPosition},
     owner::ProtocolOwner,
     pool::{PoolAccount, PoolManager},
-    tick::{Tick,TickTrait},
+    tick::{Tick, TickTrait},
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
 };
+
 use std::mem::size_of;
+use vipers::{assert_is_ata, prelude::*};
 
 pub const SURE_PRIMARY_POOL_SEED: &str = "sure-insurance-pool";
 pub const SURE_ASSOCIATED_TOKEN_ACCOUNT_SEED: &str = "sure-ata";
@@ -21,6 +22,8 @@ pub const SURE_PROTOCOL_OWNER: &str = "sure-protocol-owner";
 pub const SURE_INSURANCE_CONTRACT: &str = "sure-insurance-contract";
 pub const SURE_BITMAP: &str = "sure-bitmap";
 pub const SURE_TICK_SEED: &str = "sure-tick";
+pub const SURE_NFT_MINT_SEED: &str = "sure-nft";
+pub const SURE_TOKEN_ACCOUNT_SEED: &str = "sure-token-account";
 
 /// Initialize Sure Protocol
 /// by setting the owner of the protocol
@@ -44,10 +47,17 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
+impl<'info> Validate<'info> for Initialize<'info> {
+    fn validate(&self) -> Result<()> {
+        Ok(())
+    }
+}
+
 #[derive(Accounts)]
 pub struct InitializePoolManager<'info> {
     // Account for keeping track of the pool manager
-    #[account(init,
+    #[account(
+        init,
         payer= initial_manager,
         space = 8 + PoolManager::POOL_MANAGER_SIZE,
         seeds = [b"sure-pool-manager"],
@@ -63,6 +73,13 @@ pub struct InitializePoolManager<'info> {
     pub system_program: Program<'info, System>,
 }
 
+impl<'info> Validate<'info> for InitializePoolManager<'info> {
+    fn validate(&self) -> Result<()> {
+        assert_keys_eq!(self.manager.owner, self.initial_manager);
+        Ok(())
+    }
+}
+
 #[derive(Accounts)]
 pub struct CreatePool<'info> {
     /// Pool creator
@@ -70,6 +87,7 @@ pub struct CreatePool<'info> {
     pub pool_creator: Signer<'info>,
 
     /// Protocol owner
+    /// !!!ISSUE
     pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
 
     #[account(
@@ -111,9 +129,6 @@ pub struct CreatePool<'info> {
     /// Token to be deposited into the pool
     pub token: Box<Account<'info, Mint>>,
 
-    /// Sysvar for Associated Token Account
-    pub rent: Sysvar<'info, Rent>,
-
     /// Bitmap
     /// Keep track of ticks used to provide liquidity at
     #[account(
@@ -129,6 +144,9 @@ pub struct CreatePool<'info> {
     )]
     pub bitmap: Box<Account<'info, BitMap>>,
 
+    /// Sysvar for Associated Token Account
+    pub rent: Sysvar<'info, Rent>,
+
     // Token program
     pub token_program: Program<'info, Token>,
 
@@ -136,9 +154,25 @@ pub struct CreatePool<'info> {
     pub system_program: Program<'info, System>,
 }
 
+impl<'info> Validate<'info> for CreatePool<'info> {
+    fn validate(&self) -> Result<()> {
+        // To start, only the protocol owner can create a pool
+        assert_keys_eq!(self.pool_creator, self.protocol_owner);
+        //
+        assert_keys_eq!(self.pool.token, self.token);
+        //
+        assert_keys_eq!(self.pool.bitmap, self.bitmap);
+        //
+        assert_keys_eq!(self.pool.smart_contract, self.insured_token_account);
+        assert_keys_eq!(self.pool.vault, self.vault);
+
+        Ok(())
+    }
+}
+
 /// Deposit Liquidity into an exisitng pool
 #[derive(Accounts)]
-#[instruction(tick: u16, bump: u8,liquidity_position_id: u64)]
+#[instruction(tick: u64)]
 pub struct DepositLiquidity<'info> {
     /// Liquidity provider
     #[account(mut)]
@@ -147,7 +181,7 @@ pub struct DepositLiquidity<'info> {
     /// Protocol owner as the authority of mints
     pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
 
-    /// Account to credit
+    /// Associated token accoun to credit
     #[account(mut)]
     pub liquidity_provider_account: Box<Account<'info, TokenAccount>>,
 
@@ -157,7 +191,18 @@ pub struct DepositLiquidity<'info> {
 
     /// Pool Vault account to deposit liquidity to
     #[account(mut)]
-    pub token_vault: Box<Account<'info, PoolAccount>>,
+    pub token_vault: Box<Account<'info, TokenAccount>>,
+
+    // NFT minting
+    #[account(
+        init,
+        seeds = [SURE_NFT_MINT_SEED.as_ref()],
+        bump,
+        mint::decimals = 0,
+        mint::authority = protocol_owner,
+        payer = liquidity_provider,
+    )]
+    pub nft_mint: Box<Account<'info, Mint>>,
 
     /// Create Liquidity position
     /// HASH: [sure-lp,liquidity-provider,pool,token,tick]
@@ -176,20 +221,16 @@ pub struct DepositLiquidity<'info> {
     )]
     pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
 
-    // NFT minting
-    #[account(
-        init,
-        mint::decimals = 0,
-        mint::authority = protocol_owner,
-        payer = liquidity_provider,
-    )]
-    pub nft_mint: Box<Account<'info, Mint>>,
-
     /// Account to deposit NFT into
     #[account(
         init,
-        associated_token::mint = nft_mint,
-        associated_token::authority = liquidity_provider,
+        seeds =
+        [
+            SURE_TOKEN_ACCOUNT_SEED.as_bytes().as_ref()
+        ],
+        bump,
+        token::mint = nft_mint,
+        token::authority = liquidity_provider_account,
         payer = liquidity_provider,
     )]
     pub nft_account: Box<Account<'info, TokenAccount>>,
@@ -217,6 +258,19 @@ pub struct DepositLiquidity<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
+impl<'info> Validate<'info> for DepositLiquidity<'info> {
+    fn validate(&self) -> Result<()> {
+        assert_is_zero_token_account!(self.nft_account);
+
+        // Check correct vault
+        assert_keys_eq!(self.pool.vault, self.token_vault);
+
+        // check the same bitmap
+        assert_keys_eq!(self.pool.bitmap, self.bitmap);
+        Ok(())
+    }
+}
+
 #[derive(Accounts)]
 pub struct UpdateTickPosition<'info> {
     /// Pays for the update
@@ -230,8 +284,9 @@ pub struct UpdateTickPosition<'info> {
     #[account(mut)]
     pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
 }
+
 /// Redeem liquidity
-///
+/// Allow holder of NFT to redeem liquidity from pool
 #[derive(Accounts)]
 pub struct RedeemLiquidity<'info> {
     /// Holder of the LP NFT
@@ -274,10 +329,10 @@ pub struct InitializeTick<'info> {
     /// Signer of the transaction
     #[account(mut)]
     pub creator: Signer<'info>,
-    
+
     /// Create tick account
     #[account(
-        init, 
+        init,
         payer = creator,
         seeds = [
             SURE_TICK_SEED.as_bytes(),
@@ -286,24 +341,24 @@ pub struct InitializeTick<'info> {
             tick_bp.to_le_bytes().as_ref()
         ],
         bump,
-        space = 8 + size_of::<Tick>()
+        space = 8 + size_of::<Tick>(),
     )]
     pub tick_account: AccountLoader<'info, Tick>,
 
     /// System program required to make changes
-    pub system_program: Program<'info,System>
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
 pub struct CloseTick<'info> {
     // Account to receive remaining rent
-    pub recipient: Box<Account<'info,TokenAccount>>,
+    pub recipient: Box<Account<'info, TokenAccount>>,
 
     #[account(
         mut,
         close = recipient,
     )]
-    pub tick_account: AccountLoader<'info,Tick>,
+    pub tick_account: AccountLoader<'info, Tick>,
 }
 
 /// Buy Insurance Request

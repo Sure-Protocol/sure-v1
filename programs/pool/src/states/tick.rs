@@ -1,20 +1,17 @@
+use crate::utils::errors;
+use anchor_lang::prelude::Clock;
 ///! Tick contains methods to manage tick pool
 ///! tick will not manage the premium pool but rather keep
 ///! track of the potential rewards.
 ///!
 use anchor_lang::prelude::*;
-use anchor_lang::prelude::Clock;
 use std::fmt::{self};
 use std::{error::Error, fmt::Display, fmt::Formatter, result::Result};
-use crate::utils::errors;
 
-pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: u8 = u8::MAX;
-pub const SECONDS_IN_A_YEAR: i64 = 31556926;
+pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: usize = 255;
+pub const SECONDS_IN_A_YEAR: usize = 31556926;
 /// Tick acount (PDA) is used to hold information about
 /// the liquidity at a current tick
-
-
-
 
 #[account(zero_copy)]
 pub struct Tick {
@@ -28,7 +25,7 @@ pub struct Tick {
     pub used_liquidity: u64, // 8 bytes
 
     /// last slot the tick was updated on
-    pub last_updated: i64,
+    pub last_updated: i64, // 8 bytes
 
     /// The tick in basis points
     pub tick: u64, // 8 bytes
@@ -37,53 +34,52 @@ pub struct Tick {
     pub active: bool, // 1 byte
 
     /// Ids of liquidity positions
-    pub liquidity_position_id: [u8; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)], // 2048*4 = 8192 bytes, 8kb
+    pub liquidity_position_id: [u8; MAX_NUMBER_OF_LIQUIDITY_POSITIONS], // 1*255 =255
 
     /// Accumulation of Liquidity Provided
-    pub liquidity_position_accumulated: [u64; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)],
+    pub liquidity_position_accumulated: [u64; MAX_NUMBER_OF_LIQUIDITY_POSITIONS], // 8*255 =
 
     /// rewards
-    pub liquidity_position_rewards: [u64; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)], // 8192 bytes
+    pub liquidity_position_rewards: [u64; MAX_NUMBER_OF_LIQUIDITY_POSITIONS], // 8*255
 
-    pub last_liquidity_position_idx: u8,
+    pub last_liquidity_position_idx: u8, // 1
 }
 
 impl Tick {
-    pub fn validate(&self) -> Result<(),errors::SureError> {
+    pub fn validate(&self) -> Result<(), errors::SureError> {
         Ok(())
     }
 
-    pub fn initialize(&mut self,bump: u8,tick_bp: u64) -> Result<(),error::Error> {
+    pub fn initialize(&mut self, bump: u8, tick_bp: u64) -> Result<(), error::Error> {
         self.bump = bump;
         self.liquidity = 0;
         self.used_liquidity = 0;
         self.last_updated = Clock::get()?.unix_timestamp;
         self.tick = tick_bp;
         self.active = true;
-        self.liquidity_position_id = [0;MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
-        self.liquidity_position_accumulated = [0;MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
-        self.liquidity_position_rewards = [0;MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
+        self.liquidity_position_id = [0; MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
+        self.liquidity_position_accumulated = [0; MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
+        self.liquidity_position_rewards = [0; MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
 
         Ok(())
-
     }
- }
+}
 
 /// TickTrait is the implementation needed for the Tick Account
-/// 
-/// # Note: 
+///
+/// # Note:
 /// * id: Is the Id that maps to the liquidity position id array
 /// * idx: Is the usize index in the liquidity position arrays
 pub trait TickTrait {
-    // util methods 
+    // util methods
     fn get_new_id(&self) -> u8;
     fn update_callback(&mut self) -> Result<(), TickAnchorError>;
     fn is_pool_empty(&self) -> bool;
 
     // Liquidity Management
-    fn add_liquidity(&mut self, id: u8, size: u64) -> Result<(), TickError>; 
+    fn add_liquidity(&mut self, id: u8, size: u64) -> Result<(), TickError>;
     fn remove_liquidity(&mut self, id: u8) -> Result<(), TickError>;
-    fn available_liquidity(&mut self,id: u8) -> u64;
+    fn available_liquidity(&mut self, id: u8) -> u64;
     fn increase_rewards(&mut self) -> Result<(), TickError>;
     fn get_current_reward(&mut self, id: u8) -> Result<u64, TickError>;
     fn withdraw_rewards(&mut self, id: u8) -> Result<(), TickError>;
@@ -93,9 +89,7 @@ pub trait TickTrait {
     fn exit_insurance(&mut self, size: u64) -> Result<(), TickError>;
 }
 
-
-
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum TickError {
     NotEnoughLiquidity,
     CannotExitInsurancePosition,
@@ -126,8 +120,7 @@ impl Display for TickError {
 }
 
 impl TickTrait for Tick {
-
-    /// Get new id 
+    /// Get new id
     /// generates a new id for a liquidity position
     fn get_new_id(&self) -> u8 {
         let mut idx = 1;
@@ -182,14 +175,14 @@ impl TickTrait for Tick {
     /// * id: The id in the liquidity position seed
     /// * size: the size of the liquidity added
     fn add_liquidity(&mut self, new_id: u8, liquidity_size: u64) -> Result<(), TickError> {
-        if (MAX_NUMBER_OF_LIQUIDITY_POSITIONS) == (self.last_liquidity_position_idx+1) {
+        if (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as u8) == (self.last_liquidity_position_idx + 1) {
             return Err(TickError::NoMoreLiquiditySpots);
         }
 
         // Update the tick liquidity
         self.liquidity += liquidity_size;
         let new_idx = self.last_liquidity_position_idx;
-        self.add_to_accumulated_positions(new_idx as usize,liquidity_size);
+        self.add_to_accumulated_positions(new_idx as usize, liquidity_size);
 
         self.active = true;
         self.last_liquidity_position_idx += 1;
@@ -213,38 +206,38 @@ impl TickTrait for Tick {
     fn remove_liquidity(&mut self, id: u8) -> Result<(), TickError> {
         let idx = self.find_liquidity_position_idx(id);
         if self.liquidity_position_rewards[idx] != 0 {
-            return Err(TickError::RewardsMustBeWithdrawn );
+            return Err(TickError::RewardsMustBeWithdrawn);
         }
 
-        // Check if 100% of position is in use 
+        // Check if 100% of position is in use
         let accumulated_position = self.liquidity_position_accumulated[idx as usize];
         if self.used_liquidity >= accumulated_position {
-            return Err(TickError::LiquidityPositionInUse)
+            return Err(TickError::LiquidityPositionInUse);
         }
 
-        // If only parts of position is in use, remove the part that 
-        // is not active 
+        // If only parts of position is in use, remove the part that
+        // is not active
         let liquidity_position_size = self.liquidity_position(idx);
 
-        // Can withdraw available liquidity 
+        // Can withdraw available liquidity
         let available_liquidity = self.available_liquidity(id);
-        println!("available_liquidity: {}",available_liquidity);
+        println!("available_liquidity: {}", available_liquidity);
 
         // If only parts of the position is used, free available liquidity
         if available_liquidity < liquidity_position_size {
-            let liquidity_change = liquidity_position_size-available_liquidity;
+            let liquidity_change = liquidity_position_size - available_liquidity;
             self.subtract_from_accumulated_positions(idx, liquidity_change)
-        }else {
+        } else {
             // If all liquidity is available, free it all
             self.shift_liquidity_position_left_by1(idx);
             self.last_liquidity_position_idx -= 1;
         }
         self.liquidity -= available_liquidity;
 
-        if self.liquidity == 0{
-            self.active=false;
+        if self.liquidity == 0 {
+            self.active = false;
         }
-        
+
         self.update_callback();
         Ok(())
     }
@@ -291,8 +284,8 @@ impl TickTrait for Tick {
     }
 
     /// Withdraw Rewards
-    /// empties rewards struct 
-    /// 
+    /// empties rewards struct
+    ///
     /// # Arguments
     /// * ctx: Tick account
     /// * id: the liquidity position identifier
@@ -315,53 +308,53 @@ impl TickTrait for Tick {
     ///
     /// # Arguments
     /// * self: Tick account
-    /// 
+    ///
     fn update_callback(&mut self) -> Result<(), TickAnchorError> {
         self.last_updated = match self.get_unix_timestamp() {
             Ok(res) => res,
-            Err(err) => return Err(err.to_anchor_error())
+            Err(err) => return Err(err.to_anchor_error()),
         };
         Ok(())
     }
 
     /// Available liquidity
-    /// calculates the amount of liquidity for the given 
+    /// calculates the amount of liquidity for the given
     /// position that is not in use
-    /// 
+    ///
     /// # Arguments
     /// * id: Liquidity Position id
-    /// 
-    fn available_liquidity(&mut self,id: u8) -> u64 {
+    ///
+    fn available_liquidity(&mut self, id: u8) -> u64 {
         let idx = self.find_liquidity_position_idx(id);
-        // All liquidity is used 
+        // All liquidity is used
         if self.used_liquidity >= self.liquidity_position_accumulated[idx] {
-            return 0
+            return 0;
         }
 
         // Size of the liquidity position
         let liquidity_position_size = self.liquidity_position(idx);
         let mut liquidity_used_in_position = self.used_liquidity;
-        if idx > 0{
-            liquidity_used_in_position = self.used_liquidity - self.liquidity_position_accumulated[idx-1];
+        if idx > 0 {
+            liquidity_used_in_position =
+                self.used_liquidity - self.liquidity_position_accumulated[idx - 1];
         }
-        
-        // Parts of the liquidity is used 
+
+        // Parts of the liquidity is used
         if liquidity_used_in_position > 0 {
-            return liquidity_position_size - liquidity_used_in_position
+            return liquidity_position_size - liquidity_used_in_position;
         }
 
         self.update_callback();
 
-        return liquidity_position_size
+        return liquidity_position_size;
     }
 
-    fn is_pool_empty(&self) -> bool{
+    fn is_pool_empty(&self) -> bool {
         self.used_liquidity == 0 && self.liquidity == 0 && !self.active
     }
 }
 
 impl Tick {
-
     // ____________ Internal functions ___________________ //
     /// Calculate reward for a liquidity position
     ///
@@ -405,8 +398,8 @@ impl Tick {
         let last_updated = match Clock::get() {
             Ok(clock) => clock.unix_timestamp,
             Err(err) => {
-                println!("Error is what: {}",err);
-                return Err(TickError::CouldNotGetTickTimestamp )
+                println!("Error is what: {}", err);
+                return Err(TickError::CouldNotGetTickTimestamp);
             }
         };
         Ok(last_updated)
@@ -423,15 +416,16 @@ impl Tick {
     fn percentage_liquidity_used(&self, idx: usize) -> Result<f64, TickError> {
         // [1000,1400,2400]
         // 1300
-        if self.liquidity_position_accumulated[idx] > self.used_liquidity{
+        if self.liquidity_position_accumulated[idx] > self.used_liquidity {
             if self.liquidity_position_accumulated[idx] > self.used_liquidity {
-                return Ok(0.0)
+                return Ok(0.0);
             }
-            let liquidity_provided = self.liquidity_position_accumulated[idx] - self.liquidity_position_accumulated[idx];
+            let liquidity_provided =
+                self.liquidity_position_accumulated[idx] - self.liquidity_position_accumulated[idx];
             let liquidity_used = self.used_liquidity - self.liquidity_position_accumulated[idx];
-            return Ok(liquidity_used as f64 / liquidity_provided as f64)
+            return Ok(liquidity_used as f64 / liquidity_provided as f64);
         }
-        return Ok(100.0)
+        return Ok(100.0);
     }
 
     fn is_id_taken(&self, id: u8) -> bool {
@@ -440,63 +434,61 @@ impl Tick {
             .any(|&id_candidate| id_candidate == id)
     }
 
-    fn liquidity_position(&self,idx:usize) -> u64 {
-        if idx > 0{
-            self.liquidity_position_accumulated[idx as usize] - self.liquidity_position_accumulated[idx as usize -1]
-        }else {
+    fn liquidity_position(&self, idx: usize) -> u64 {
+        if idx > 0 {
+            self.liquidity_position_accumulated[idx as usize]
+                - self.liquidity_position_accumulated[idx as usize - 1]
+        } else {
             self.liquidity_position_accumulated[idx as usize]
         }
     }
 
     fn get_remaining_liquidity(&self) -> u64 {
-        self.used_liquidity - self.liquidity_position_accumulated[self.last_liquidity_position_idx as usize]
+        self.used_liquidity
+            - self.liquidity_position_accumulated[self.last_liquidity_position_idx as usize]
     }
 
-    fn subtract_from_accumulated_positions(&mut self,from_idx: usize,liquidity: u64) {
-        for i in [from_idx,MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize -1]{
+    fn subtract_from_accumulated_positions(&mut self, from_idx: usize, liquidity: u64) {
+        for i in [from_idx, MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize - 1] {
             self.liquidity_position_accumulated[i as usize] -= liquidity
         }
     }
 
-    fn add_to_accumulated_positions(&mut self,from_idx: usize,liquidity: u64) {
-        for i in [from_idx,MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize-1]{
+    fn add_to_accumulated_positions(&mut self, from_idx: usize, liquidity: u64) {
+        for i in [from_idx, MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize - 1] {
             self.liquidity_position_accumulated[i as usize] += liquidity
         }
     }
 
-
     fn shift_liquidity_position_left_by1(&mut self, idx: usize) {
         let current_index = idx as usize;
-        self.liquidity_position_id[current_index] = self.liquidity_position_id[current_index+ 1];
-        
+        self.liquidity_position_id[current_index] = self.liquidity_position_id[current_index + 1];
+
         // Update rewards
         self.liquidity_position_rewards[current_index] =
             self.liquidity_position_rewards[current_index + 1];
 
         // Accumulated position
-        if self.liquidity_position_accumulated[current_index+1] == 0 {
+        if self.liquidity_position_accumulated[current_index + 1] == 0 {
             self.liquidity_position_accumulated[current_index] = 0;
-        }else {
-            let next_diff = self.liquidity_position_accumulated[current_index+1]-self.liquidity_position_accumulated[current_index];
-            
+        } else {
+            let next_diff = self.liquidity_position_accumulated[current_index + 1]
+                - self.liquidity_position_accumulated[current_index];
+
             if idx > 0 {
-                self.liquidity_position_accumulated[current_index] = self.liquidity_position_accumulated[current_index-1]+next_diff;
-            }else {
+                self.liquidity_position_accumulated[current_index] =
+                    self.liquidity_position_accumulated[current_index - 1] + next_diff;
+            } else {
                 self.liquidity_position_accumulated[current_index] = next_diff;
             }
         }
     }
-
-    
-
-  
 }
 
 #[cfg(test)]
 mod tests {
-    use std::time::{ SystemTime,UNIX_EPOCH};
     use super::*;
-
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn initialize_tick() -> Tick {
         let time = SystemTime::now()
@@ -521,18 +513,19 @@ mod tests {
         }
     }
 
-    #[test] 
+    #[test]
     fn shift_position() {
         let mut tick = initialize_tick();
         tick.add_liquidity(0, 1000).unwrap();
         let idx = 0;
-        assert_eq!(tick.liquidity_position_accumulated[idx],1000);
-        println!("accumulated: {:?}",tick.liquidity_position_accumulated);
-        println!(
-            "cool: {:?}",tick.liquidity_position_accumulated[idx +1]
-        );
+        assert_eq!(tick.liquidity_position_accumulated[idx], 1000);
+        println!("accumulated: {:?}", tick.liquidity_position_accumulated);
+        println!("cool: {:?}", tick.liquidity_position_accumulated[idx + 1]);
         tick.shift_liquidity_position_left_by1(idx);
-        println!("accumulated shifted: {:?}",tick.liquidity_position_accumulated);
+        println!(
+            "accumulated shifted: {:?}",
+            tick.liquidity_position_accumulated
+        );
     }
 
     #[test]
@@ -551,8 +544,8 @@ mod tests {
 
         tick.increase_rewards();
         let reward = tick.get_current_reward(244).unwrap();
-        assert_eq!(reward,0);    
-        
+        assert_eq!(reward, 0);
+
         // Remove liquidity
         tick.remove_liquidity(244).unwrap();
         assert_eq!(tick.last_liquidity_position_idx, 0);
@@ -561,9 +554,6 @@ mod tests {
         assert_eq!(tick.liquidity_position_id[0], 0);
         assert_eq!(tick.liquidity_position_rewards[0], 0);
         assert_eq!(tick.active, false);
-
-
-
     }
 
     #[test]
@@ -584,44 +574,50 @@ mod tests {
         assert_eq!(tick.used_liquidity, 1_000);
 
         // Should not be possible to buy insurance if all the pool
-        // liquidity is used 
+        // liquidity is used
         let buy_insurance_res = tick.buy_insurance(1);
-        assert_eq!(TickError::NotEnoughLiquidity,buy_insurance_res.unwrap_err());
-        assert_eq!(tick.used_liquidity,1_000);
+        assert_eq!(
+            TickError::NotEnoughLiquidity,
+            buy_insurance_res.unwrap_err()
+        );
+        assert_eq!(tick.used_liquidity, 1_000);
 
-        // try to exit liquidity 
-        // Not possible as all the liquidity is used 
+        // try to exit liquidity
+        // Not possible as all the liquidity is used
         let remove_insurance = tick.remove_liquidity(244);
-        assert_eq!(TickError::LiquidityPositionInUse,remove_insurance.unwrap_err());
+        assert_eq!(
+            TickError::LiquidityPositionInUse,
+            remove_insurance.unwrap_err()
+        );
 
-        // Exit parts of the insurance 
+        // Exit parts of the insurance
         let _exit_insurance = tick.exit_insurance(500);
-        assert_eq!(tick.used_liquidity,1_000 - 500);
+        assert_eq!(tick.used_liquidity, 1_000 - 500);
 
         // Try to remove some liquidity
         let remove_insurance_2 = tick.remove_liquidity(244);
         let lp_available_liquidity = tick.available_liquidity(244);
-        assert_eq!(lp_available_liquidity,0)
+        assert_eq!(lp_available_liquidity, 0)
     }
 
     #[test]
-    fn generate_rewards(){
+    fn generate_rewards() {
         let mut tick = initialize_tick();
 
-        // Add liquidity 
+        // Add liquidity
         let id = tick.get_new_id();
         tick.add_liquidity(id, 1_000).unwrap();
 
         // Someone buys insurance
         let new_insurance_amount = 900;
         tick.buy_insurance(new_insurance_amount).unwrap();
-        assert_eq!(tick.used_liquidity,new_insurance_amount);
+        assert_eq!(tick.used_liquidity, new_insurance_amount);
 
         // Calculate rewarda
         tick.increase_rewards().unwrap();
 
         // Get reward
         let reward = tick.get_current_reward(id).unwrap();
-        println!("reward: {}",reward);
+        println!("reward: {}", reward);
     }
 }
