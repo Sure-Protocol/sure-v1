@@ -201,7 +201,7 @@ pub mod sure_pool {
         let mut tick_account = tick_account_state.load_mut()?;
         let new_id = tick_account.get_new_id();
 
-        // # 2.  Save liqudity position
+        // # 3.  Save liqudity position
         let liquidity_position = &mut ctx.accounts.liquidity_position;
         liquidity_position.bump = *ctx.bumps.get("liquidity_position").unwrap();
         liquidity_position.liquidity = amount;
@@ -213,8 +213,7 @@ pub mod sure_pool {
         liquidity_position.created_at = Clock::get()?.unix_timestamp;
         liquidity_position.tick_id = new_id;
 
-        //3. Update tick with new liquidity position
-
+        // # 4. Update tick with new liquidity position
         tick_account
             .add_liquidity(new_id, amount)
             .map_err(|e| e.to_anchor_error())?;

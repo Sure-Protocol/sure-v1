@@ -196,7 +196,9 @@ pub struct DepositLiquidity<'info> {
     // NFT minting
     #[account(
         init,
-        seeds = [SURE_NFT_MINT_SEED.as_ref()],
+        seeds = [
+            SURE_NFT_MINT_SEED.as_ref(),
+            ],
         bump,
         mint::decimals = 0,
         mint::authority = protocol_owner,
