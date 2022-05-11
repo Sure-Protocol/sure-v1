@@ -55,7 +55,7 @@ export const getTickPDA = async (poolPDA: PublicKey,tokenMint: PublicKey,tick:nu
     return tickAccountPDA
 }
 
-export const getNextTickPosition = async (poolPDA: PublicKey,tokenMint: PublicKey,tick:number): Promise<number> => {
+export const getTickPosition = async (poolPDA: PublicKey,tokenMint: PublicKey,tick:number): Promise<number> => {
     const tickPDA = await getTickPDA(poolPDA,tokenMint,tick);
     try {
         const tickAccount = await program.account.tick.fetch(tickPDA);
@@ -200,7 +200,7 @@ export const depositLiquidity = async (
     //  Generate tick
 
     const tickBN = new anchor.BN(tick)
-    const tickPosition = await getNextTickPosition(poolPDA,tokenMint,tick);
+    const tickPosition = await getTickPosition(poolPDA,tokenMint,tick);
     const nextTickPositionBN = new anchor.BN(tickPosition+1)
 
     // Generate nft accounts
