@@ -139,7 +139,12 @@ pub mod sure_pool {
     /// * tick (bp): Tick to provide liquidity at
     /// * amount: Amount of liquidity to place at given tick
     /// * liquidity_position_id: should be an id that is currently not in the tick pool
-    pub fn deposit_liquidity(ctx: Context<DepositLiquidity>, tick: u64, amount: u64) -> Result<()> {
+    pub fn deposit_liquidity(
+        ctx: Context<DepositLiquidity>,
+        tick: u64,
+        tick_pos: u64,
+        amount: u64,
+    ) -> Result<()> {
         // ___________________ Validation ____________________________
         // #### Check input arguments
 
@@ -205,7 +210,7 @@ pub mod sure_pool {
         let liquidity_position = &mut ctx.accounts.liquidity_position;
         liquidity_position.bump = *ctx.bumps.get("liquidity_position").unwrap();
         liquidity_position.liquidity = amount;
-        liquidity_position.token_mint = ctx.accounts.token_program.key();
+        liquidity_position.nft_account = ctx.accounts.nft_account.key();
         liquidity_position.used_liquidity = 0;
         liquidity_position.pool = ctx.accounts.pool.key();
         liquidity_position.nft_mint = ctx.accounts.nft_mint.key();

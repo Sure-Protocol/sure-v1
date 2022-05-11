@@ -10,7 +10,7 @@ export const TOKEN_VAULT_SEED = anchor.utils.bytes.utf8.encode("sure-ata")
 export const SURE_BITMAP = anchor.utils.bytes.utf8.encode("sure-bitmap")
 export const SURE_LIQUIDITY_POSITION = anchor.utils.bytes.utf8.encode("sure-lp");
 export const SURE_TICK_SEED = anchor.utils.bytes.utf8.encode("sure-tick")
-export const SURE_MINT_SEED = anchor.utils.bytes.utf8.encode("sure-nft");
+export const SURE_NFT_MINT_SEED = anchor.utils.bytes.utf8.encode("sure-nft");
 export const SURE_TOKEN_ACCOUNT_SEED = anchor.utils.bytes.utf8.encode("sure-token-account");
 
 
@@ -38,10 +38,7 @@ export const getBitmapPDA = async (poolPDA: PublicKey,token_mint: PublicKey,prog
     
 }
 
-/// Check if tick account exists for the pool, 
-/// if not, create the account. 
-
-export const createTickAccount = async (poolPDA: PublicKey,tokenMint: PublicKey,tickBpn: number,creator: PublicKey): Promise<PublicKey> => {
+export const getTickPDA = async (poolPDA: PublicKey,tokenMint: PublicKey,tickBpn:number): Promise<PublicKey> =>{
     let tickBp = new anchor.BN(tickBpn)
     const [tickAccountPDA,tickAccountBump] = await PublicKey.findProgramAddress(
         [
@@ -52,8 +49,27 @@ export const createTickAccount = async (poolPDA: PublicKey,tokenMint: PublicKey,
         ],
         program.programId,
     )
+    return tickAccountPDA
+}
+
+export const getNextTickPosition = async (poolPDA: PublicKey,tokenMint: PublicKey,tickBpn:number): Promise<number> => {
+    const tickPDA = await getTickPDA(poolPDA,tokenMint,tickBpn);
+    try {
+        const tickAccount = await program.account.tick.fetch(tickPDA);
+        return tickAccount.lastLiquidityPositionIdx
+    }catch(e){
+        throw new Error("Tick account does not exist. Cause: "+e)
+    }
+}
+
+/// Check if tick account exists for the pool, 
+/// if not, create the account. 
+
+export const createTickAccount = async (poolPDA: PublicKey,tokenMint: PublicKey,tickBpn: number,creator: PublicKey): Promise<PublicKey> => {
+    const tickAccountPDA = await getTickPDA(poolPDA,tokenMint,tickBpn);
 
    try{
+    let tickBp = new anchor.BN(tickBpn)
     await program.rpc.initializeTick(poolPDA,tokenMint,tickBp, {
         accounts: {
             creator:creator,
@@ -62,7 +78,7 @@ export const createTickAccount = async (poolPDA: PublicKey,tokenMint: PublicKey,
         },
     })
    } catch(e){
-       throw new Error(e)
+       throw new Error("Could not create tick account: " +e)
    }
 
    return tickAccountPDA

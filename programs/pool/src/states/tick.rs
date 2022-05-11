@@ -60,6 +60,7 @@ impl Tick {
         self.liquidity_position_id = [0; MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
         self.liquidity_position_accumulated = [0; MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
         self.liquidity_position_rewards = [0; MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
+        self.last_liquidity_position_idx = 0;
 
         Ok(())
     }

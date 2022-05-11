@@ -172,7 +172,7 @@ impl<'info> Validate<'info> for CreatePool<'info> {
 
 /// Deposit Liquidity into an exisitng pool
 #[derive(Accounts)]
-#[instruction(tick: u64)]
+#[instruction(tick: u64,tick_pos: u64)]
 pub struct DepositLiquidity<'info> {
     /// Liquidity provider
     #[account(mut)]
@@ -198,6 +198,10 @@ pub struct DepositLiquidity<'info> {
         init,
         seeds = [
             SURE_NFT_MINT_SEED.as_ref(),
+            pool.key().as_ref(),
+            token_vault.key().as_ref(),
+            tick.to_le_bytes().as_ref(),
+            tick_pos.to_le_bytes().as_ref(),
             ],
         bump,
         mint::decimals = 0,
@@ -213,10 +217,7 @@ pub struct DepositLiquidity<'info> {
         payer = liquidity_provider,
         seeds = [
             SURE_LIQUIDITY_POSITION.as_bytes(),
-            pool.key().as_ref(),
-            token_vault.key().as_ref(),
-            tick.to_le_bytes().as_ref(),
-            nft_mint.key().as_ref()
+            nft_account.key().as_ref()
         ],
         space = 8 + LiquidityPosition::SPACE,
         bump,
@@ -228,7 +229,11 @@ pub struct DepositLiquidity<'info> {
         init,
         seeds =
         [
-            SURE_TOKEN_ACCOUNT_SEED.as_bytes().as_ref()
+            SURE_TOKEN_ACCOUNT_SEED.as_bytes().as_ref(),
+            pool.key().as_ref(),
+            token_vault.key().as_ref(),
+            tick.to_le_bytes().as_ref(),
+            tick_pos.to_le_bytes().as_ref(),
         ],
         bump,
         token::mint = nft_mint,
@@ -260,18 +265,18 @@ pub struct DepositLiquidity<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-impl<'info> Validate<'info> for DepositLiquidity<'info> {
-    fn validate(&self) -> Result<()> {
-        assert_is_zero_token_account!(self.nft_account);
+// impl<'info> Validate<'info> for DepositLiquidity<'info> {
+//     fn validate(&self) -> Result<()> {
+//         assert_is_zero_token_account!(self.nft_account);
 
-        // Check correct vault
-        assert_keys_eq!(self.pool.vault, self.token_vault);
+//         // Check correct vault
+//         assert_keys_eq!(self.pool.vault, self.token_vault);
 
-        // check the same bitmap
-        assert_keys_eq!(self.pool.bitmap, self.bitmap);
-        Ok(())
-    }
-}
+//         // check the same bitmap
+//         assert_keys_eq!(self.pool.bitmap, self.bitmap);
+//         Ok(())
+//     }
+// }
 
 #[derive(Accounts)]
 pub struct UpdateTickPosition<'info> {
@@ -323,6 +328,19 @@ pub struct RedeemLiquidity<'info> {
 
     /// Sure owner
     pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
+}
+
+impl<'info> Validate<'info> for RedeemLiquidity<'info> {
+    fn validate(&self) -> Result<()> {
+        assert_is_zero_token_account!(self.nft);
+
+        // Check correct vault
+        assert_keys_eq!(self.pool.vault, self.vault_account);
+
+        // check the same bitmap
+        //assert_keys_eq!(self.pool.bitmap, self.bitmap);
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]

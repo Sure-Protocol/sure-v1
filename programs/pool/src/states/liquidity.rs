@@ -22,7 +22,7 @@ pub struct LiquidityPosition {
     pub pool: Pubkey, // 32 bytes
 
     /// Mint of token provided
-    pub token_mint: Pubkey, // 32 bytes
+    pub nft_account: Pubkey, // 32 bytes
 
     /// NFT mint. The mint representing the position
     /// The NFT is the owner of the position.
