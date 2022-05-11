@@ -344,7 +344,7 @@ impl<'info> Validate<'info> for RedeemLiquidity<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(pool: Pubkey,token: Pubkey,tick_bp: u64)]
+#[instruction(pool: Pubkey,token: Pubkey,tick: u64)]
 pub struct InitializeTick<'info> {
     /// Signer of the transaction
     #[account(mut)]
@@ -358,7 +358,7 @@ pub struct InitializeTick<'info> {
             SURE_TICK_SEED.as_bytes(),
             pool.key().as_ref(),
             token.key().as_ref(),
-            tick_bp.to_le_bytes().as_ref()
+            tick.to_le_bytes().as_ref()
         ],
         bump,
         space = 8 + size_of::<Tick>(),

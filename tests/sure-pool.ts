@@ -21,15 +21,15 @@ const program = anchor.workspace.SurePool as Program<SurePool>
 let token0: PublicKey;
 let minterWallet: anchor.web3.Keypair;
 let liqudityProviderWallet: anchor.web3.Keypair;
-let liquidityProviderWalletATAPubKey: PublicKey;
-let liquidityProviderWalletATAPubKey2: PublicKey;
+let walletATAPubkey: PublicKey;
+let liquidityProviderWalletATA: PublicKey;
 
 let vault0: PublicKey;
 
 const nftMint:anchor.web3.Keypair = new anchor.web3.Keypair();
 
 // PDAs
-let smartContractToInsure0: anchor.web3.Keypair;
+let protcolToInsure0: anchor.web3.Keypair;
 
 
 /// ============== TESTS ===========================
@@ -70,14 +70,14 @@ describe("Initialize Sure Pool",() => {
             minterWallet.publicKey,
         )
 
-        liquidityProviderWalletATAPubKey = await createAssociatedTokenAccount(
+        walletATAPubkey = await createAssociatedTokenAccount(
             connection,
             (wallet as NodeWallet).payer,
             token0,
             wallet.publicKey,    
         )
 
-        liquidityProviderWalletATAPubKey2 = await createAssociatedTokenAccount(
+        liquidityProviderWalletATA = await createAssociatedTokenAccount(
             connection,
             liqudityProviderWallet,
             token0,
@@ -100,7 +100,7 @@ describe("Initialize Sure Pool",() => {
             connection,
             minterWallet,
             minterWalletATA,
-            liquidityProviderWalletATAPubKey,
+            walletATAPubkey,
             minterWallet,
             1_000_000,
         )
@@ -109,7 +109,7 @@ describe("Initialize Sure Pool",() => {
             connection,
             minterWallet,
             minterWalletATA,
-            liquidityProviderWalletATAPubKey2,
+            liquidityProviderWalletATA,
             minterWallet,
             1_000_000,
         )
@@ -117,7 +117,7 @@ describe("Initialize Sure Pool",() => {
         // Validate transfer
         const liquidityProviderToken0ATA = await getAccount(
             connection,
-            liquidityProviderWalletATAPubKey,
+            walletATAPubkey,
         )
         assert.equal(liquidityProviderToken0ATA.owner.toBase58(),wallet.publicKey.toBase58())
         assert.equal(liquidityProviderToken0ATA.amount,1_000_000);
@@ -162,22 +162,14 @@ describe("Initialize Sure Pool",() => {
 
         
         // Smart contract that sure should insure. 
-        smartContractToInsure0 = anchor.web3.Keypair.generate()
+        protcolToInsure0 = anchor.web3.Keypair.generate()
 
         // Generate PDA for Sure Pool
-        const [poolPDA,poolBump] = await sureUtils.getPoolPDA(smartContractToInsure0.publicKey,token0,program);
+        const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,token0,program);
 
 
         // Generate PDA for token vault
-        const [vaultPDA,vaultBump] = await PublicKey.findProgramAddress(
-            [
-                sureUtils.TOKEN_VAULT_SEED,
-                poolPDA.toBytes(),
-                token0.toBytes(),
-            ],
-            program.programId
-        )
-        vault0 = vaultPDA;
+        vault0 = await sureUtils.getVaultPDA(poolPDA,token0)
 
         const [bitmapPDA,bitmapBum] = await sureUtils.getBitmapPDA(poolPDA,token0,program)
         let [protocolOwnerPDA,_] = await sureUtils.getProtocolOwner();
@@ -189,7 +181,7 @@ describe("Initialize Sure Pool",() => {
                 poolCreator:provider.wallet.publicKey,
                 protocolOwner:protocolOwnerPDA,
                 pool:poolPDA,
-                insuredTokenAccount: smartContractToInsure0.publicKey,
+                insuredTokenAccount: protcolToInsure0.publicKey,
                 vault: vault0,
                 token: token0,
                 bitmap:bitmapPDA,
@@ -205,7 +197,7 @@ describe("Initialize Sure Pool",() => {
     it("create tick account for pool",async () => {
         const tick = 340;
         const tickBN = new anchor.BN(tick)
-        const [poolPDA,poolBump] = await sureUtils.getPoolPDA(smartContractToInsure0.publicKey,token0,program);
+        const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,token0,program);
         const tickPDA = await sureUtils.getTickPDA(poolPDA,token0,tick);
         await program.rpc.initializeTick(poolPDA,token0,tickBN,{
             accounts: {
@@ -226,82 +218,102 @@ describe("Initialize Sure Pool",() => {
         let tick = 300; // 300bp tick
 
 
-        let tickBp = new anchor.BN(tick)
-        // Get next tick position
-        const [poolPDA,poolBump] = await sureUtils.getPoolPDA(smartContractToInsure0.publicKey,token0,program);
-        const tick_account = await sureUtils.createTickAccount(poolPDA,token0,tick,provider.wallet.publicKey)
+        // let tickBp = new anchor.BN(tick)
+        // // Get next tick position
+        // const [poolPDA,poolBump] = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,token0,program);
+        // const tick_account = await sureUtils.createTickAccount(poolPDA,token0,tick,provider.wallet.publicKey)
         
-        const nextTickPos = await sureUtils.getNextTickPosition(poolPDA,token0,tick)+1;
-        console.log("tick pos: ",nextTickPos)
+        // const nextTickPos = await sureUtils.getNextTickPosition(poolPDA,token0,tick)+1;
 
-        const tickPos = new anchor.BN(nextTickPos)
+        // const tickPos = new anchor.BN(nextTickPos)
        
-        const [bitmapPDA,bitmapBum] = await sureUtils.getBitmapPDA(poolPDA,token0,program)
-        let [protocolOwnerPDA,_] = await sureUtils.getProtocolOwner();
+        // const [bitmapPDA,bitmapBum] = await sureUtils.getBitmapPDA(poolPDA,token0,program)
+        // let [protocolOwnerPDA,_] = await sureUtils.getProtocolOwner();
        
-        const [nftAccountPDA,nftAccountBump] = await PublicKey.findProgramAddress(
-                [
-                    sureUtils.SURE_TOKEN_ACCOUNT_SEED,
-                    poolPDA.toBytes(),
-                    vault0.toBytes(),
-                    tickBp.toArrayLike(Buffer,"le",8),
-                    tickPos.toArrayLike(Buffer,"le",8)
-                ],
-                program.programId
-        )
+        // const [nftAccountPDA,nftAccountBump] = await PublicKey.findProgramAddress(
+        //         [
+        //             sureUtils.SURE_TOKEN_ACCOUNT_SEED,
+        //             poolPDA.toBytes(),
+        //             vault0.toBytes(),
+        //             tickBp.toArrayLike(Buffer,"le",8),
+        //             tickPos.toArrayLike(Buffer,"le",8)
+        //         ],
+        //         program.programId
+        // )
      
-        const [nftMintPDA,nftMintBump] = await PublicKey.findProgramAddress(
-            [
-                sureUtils.SURE_NFT_MINT_SEED,
-                poolPDA.toBytes(),
-                vault0.toBytes(),
-                tickBp.toArrayLike(Buffer,"le",8),
-                tickPos.toArrayLike(Buffer,"le",8)
-            ],
-            program.programId
-        )
+        // const [nftMintPDA,nftMintBump] = await PublicKey.findProgramAddress(
+        //     [
+        //         sureUtils.SURE_NFT_MINT_SEED,
+        //         poolPDA.toBytes(),
+        //         vault0.toBytes(),
+        //         tickBp.toArrayLike(Buffer,"le",8),
+        //         tickPos.toArrayLike(Buffer,"le",8)
+        //     ],
+        //     program.programId
+        // )
 
-        const [liquidityPositionPDA,liquidityPositionBump] = await PublicKey.findProgramAddress(
-            [
-                sureUtils.SURE_LIQUIDITY_POSITION,
-                nftAccountPDA.toBytes(),
-            ],
-            program.programId,
-        )
+        // const [liquidityPositionPDA,liquidityPositionBump] = await PublicKey.findProgramAddress(
+        //     [
+        //         sureUtils.SURE_LIQUIDITY_POSITION,
+        //         nftAccountPDA.toBytes(),
+        //     ],
+        //     program.programId,
+        // )
 
-        
-        try{
-            await program.rpc.depositLiquidity(tickBp,tickPos,(new anchor.BN(amount)),{
-                accounts:{
-                    liquidityProvider: wallet.publicKey,
-                    protocolOwner: protocolOwnerPDA,
-                    liquidityProviderAccount: liquidityProviderWalletATAPubKey,
-                    pool: poolPDA,
-                    tokenVault: vault0,
-                    nftMint: nftMintPDA,
-                    liquidityPosition: liquidityPositionPDA,
-                    nftAccount: nftAccountPDA,
-                    bitmap: bitmapPDA,
-                    tickAccount: tick_account,
-                    rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-                    tokenProgram: TOKEN_PROGRAM_ID,
-                    systemProgram: SystemProgram.programId,
-                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-                }
-            })
-        } catch(e){
-            console.log("res: ",e)
-        } 
+        // // Deposit liquidity as LP1
+        // try{
+        //     await program.rpc.depositLiquidity(tickBp,tickPos,(new anchor.BN(amount)),{
+        //         accounts:{
+        //             liquidityProvider: wallet.publicKey,
+        //             protocolOwner: protocolOwnerPDA,
+        //             liquidityProviderAccount: walletATAPubkey,
+        //             pool: poolPDA,
+        //             tokenVault: vault0,
+        //             nftMint: nftMintPDA,
+        //             liquidityPosition: liquidityPositionPDA,
+        //             nftAccount: nftAccountPDA,
+        //             bitmap: bitmapPDA,
+        //             tickAccount: tick_account,
+        //             rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        //             tokenProgram: TOKEN_PROGRAM_ID,
+        //             systemProgram: SystemProgram.programId,
+        //             associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        //         }
+        //     })
+        // } catch(e){
+        //     console.log("res: ",e)
+        // } 
 
     // TODO: Deposit some more liquidity from other LPs
     
-
+    try{
+        await sureUtils.depositLiquidity(
+        amount,
+        tick,
+        wallet.publicKey,
+        walletATAPubkey,
+        protcolToInsure0.publicKey,
+        token0
+        )
+    } catch(err) {
+        console.log("deposit liquidity error. Cause: ",err)
+    }
+    const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,token0,program);
+    const vaultPDA = await sureUtils.getVaultPDA(poolPDA,token0);
+    const tickPosition = await sureUtils.getNextTickPosition(poolPDA,token0,tick);
+    const nftAccountPDA = await sureUtils.getLPTokenAccountPDA(
+        poolPDA,
+        vaultPDA,
+        new anchor.BN(tick),
+        new anchor.BN(tickPosition+1)
+    )
     let nftAccount = await getAccount(
         connection,
         nftAccountPDA,
     )
     assert.equal(nftAccount.amount,1);
     /// Get liquidity position
+    const liquidityPositionPDA = await sureUtils.getLiquidityPositionPDA(nftAccountPDA);
     let liquidityPosition = await program.account.liquidityPosition.fetch(liquidityPositionPDA)
     assert.equal(liquidityPosition.nftAccount.toBase58(),nftAccountPDA.toBase58(),"nft account not equal to expected address")
     }),
