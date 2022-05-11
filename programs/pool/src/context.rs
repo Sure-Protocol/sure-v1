@@ -265,18 +265,18 @@ pub struct DepositLiquidity<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-// impl<'info> Validate<'info> for DepositLiquidity<'info> {
-//     fn validate(&self) -> Result<()> {
-//         assert_is_zero_token_account!(self.nft_account);
+impl<'info> Validate<'info> for DepositLiquidity<'info> {
+    fn validate(&self) -> Result<()> {
+        assert_is_zero_token_account!(self.nft_account);
 
-//         // Check correct vault
-//         assert_keys_eq!(self.pool.vault, self.token_vault);
+        // Check correct vault
+        assert_keys_eq!(self.pool.vault, self.token_vault);
 
-//         // check the same bitmap
-//         assert_keys_eq!(self.pool.bitmap, self.bitmap);
-//         Ok(())
-//     }
-// }
+        // check the same bitmap
+        assert_keys_eq!(self.pool.bitmap, self.bitmap);
+        Ok(())
+    }
+}
 
 #[derive(Accounts)]
 pub struct UpdateTickPosition<'info> {

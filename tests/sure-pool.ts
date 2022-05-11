@@ -20,7 +20,9 @@ const program = anchor.workspace.SurePool as Program<SurePool>
 /// Token for Sure Pool
 let token0: PublicKey;
 let minterWallet: anchor.web3.Keypair;
+let liqudityProviderWallet: anchor.web3.Keypair;
 let liquidityProviderWalletATAPubKey: PublicKey;
+let liquidityProviderWalletATAPubKey2: PublicKey;
 
 let vault0: PublicKey;
 
@@ -28,8 +30,6 @@ const nftMint:anchor.web3.Keypair = new anchor.web3.Keypair();
 
 // PDAs
 let smartContractToInsure0: anchor.web3.Keypair;
-
-/// ================ Methods ====================
 
 
 /// ============== TESTS ===========================
@@ -42,13 +42,15 @@ describe("Initialize Sure Pool",() => {
    
     it("initialize",async () => {
         minterWallet = anchor.web3.Keypair.generate();
+        liqudityProviderWallet = anchor.web3.Keypair.generate();
 
         // Airdrop 1 SOL into each wallet
-        const fromAirdropSig = await connection.requestAirdrop(minterWallet.publicKey,LAMPORTS_PER_SOL);
+        const fromAirdropSig = await connection.requestAirdrop(minterWallet.publicKey,10*LAMPORTS_PER_SOL);
         await connection.confirmTransaction(fromAirdropSig)
-        const airdropLP = await connection.requestAirdrop(wallet.publicKey,LAMPORTS_PER_SOL);
+        const airdropLP = await connection.requestAirdrop(wallet.publicKey,10*LAMPORTS_PER_SOL);
         await connection.confirmTransaction(airdropLP);
-        
+        const lpAirdrop = await connection.requestAirdrop(liqudityProviderWallet.publicKey,10*LAMPORTS_PER_SOL);
+        await connection.confirmTransaction(lpAirdrop);
         
         // Create a random mint for testing
         // TODO: The mint should have the same pubkey as USDC
@@ -75,6 +77,13 @@ describe("Initialize Sure Pool",() => {
             wallet.publicKey,    
         )
 
+        liquidityProviderWalletATAPubKey2 = await createAssociatedTokenAccount(
+            connection,
+            liqudityProviderWallet,
+            token0,
+            liqudityProviderWallet.publicKey,    
+        )
+
     
         // Mint initial supply to mint authority associated wallet account
         await mintTo(
@@ -83,7 +92,7 @@ describe("Initialize Sure Pool",() => {
             token0,
             minterWalletATA,
             minterWallet,
-            1_000_000_000_000,
+            1_000_000_000_000_000,
         )
 
         // Transfer tokens to liqudity provider ATA from Minter
@@ -92,6 +101,15 @@ describe("Initialize Sure Pool",() => {
             minterWallet,
             minterWalletATA,
             liquidityProviderWalletATAPubKey,
+            minterWallet,
+            1_000_000,
+        )
+
+        await transfer(
+            connection,
+            minterWallet,
+            minterWalletATA,
+            liquidityProviderWalletATAPubKey2,
             minterWallet,
             1_000_000,
         )
@@ -274,6 +292,8 @@ describe("Initialize Sure Pool",() => {
         } catch(e){
             console.log("res: ",e)
         } 
+
+    // TODO: Deposit some more liquidity from other LPs
     
 
     let nftAccount = await getAccount(
@@ -283,7 +303,9 @@ describe("Initialize Sure Pool",() => {
     assert.equal(nftAccount.amount,1);
     /// Get liquidity position
     let liquidityPosition = await program.account.liquidityPosition.fetch(liquidityPositionPDA)
-    console.log("")
     assert.equal(liquidityPosition.nftAccount.toBase58(),nftAccountPDA.toBase58(),"nft account not equal to expected address")
+    }),
+    it("redeem liquidity based on NFT",async () => {
+
     })
 })
