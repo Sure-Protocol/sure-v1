@@ -29,34 +29,43 @@ export const getPoolPDA = async (smartContractToInsure: PublicKey,token_mint:Pub
     return poolPDA
 }
 
-export const getBitmapPDA = async (poolPDA: PublicKey,token_mint: PublicKey,program: anchor.Program<SurePool>): Promise<[pda: anchor.web3.PublicKey,bump:number]> => {
-    return await PublicKey.findProgramAddress(
+export const getBitmapPDA = async (poolPDA: PublicKey,tokenMint: PublicKey,program: anchor.Program<SurePool>): Promise<anchor.web3.PublicKey> => {
+    const [bitmapPDA,bitmapBump] =  await PublicKey.findProgramAddress(
         [
             SURE_BITMAP,
             poolPDA.toBytes(),
-            token_mint.toBytes(),
+            tokenMint.toBytes(),
         ],
         program.programId,
     )
+    return bitmapPDA
     
 }
 
-export const getTickPDA = async (poolPDA: PublicKey,tokenMint: PublicKey,tick:number): Promise<PublicKey> =>{
+export const getTickAccountPDA = async (poolPDA: PublicKey,tokenMint: PublicKey,tick:number): Promise<PublicKey> =>{
     let tickBN = new anchor.BN(tick)
     const [tickAccountPDA,tickAccountBump] = await PublicKey.findProgramAddress(
         [
             SURE_TICK_SEED,
             poolPDA.toBytes(),
             tokenMint.toBytes(),
-            tickBN.toArrayLike(Buffer,"le",8)
+            tickBN.toArrayLike(Buffer,"le",2)
         ],
         program.programId,
     )
     return tickAccountPDA
 }
 
-export const getTickPosition = async (poolPDA: PublicKey,tokenMint: PublicKey,tick:number): Promise<number> => {
-    const tickPDA = await getTickPDA(poolPDA,tokenMint,tick);
+/**
+     * Current tick position in tick pool
+     *
+     * @param poolPDA PDA for pool 
+     * @param tick Tick in basis points to supply liquidity to
+     * @param tokenMint The mint of the token to be supplied to the pool. This could be USDC
+     * @return Nothing
+     */
+export const getCurrentTickPosition = async (poolPDA: PublicKey,tokenMint: PublicKey,tick:number): Promise<number> => {
+    const tickPDA = await getTickAccountPDA(poolPDA,tokenMint,tick);
     try {
         const tickAccount = await program.account.tick.fetch(tickPDA);
         return tickAccount.lastLiquidityPositionIdx
@@ -65,11 +74,32 @@ export const getTickPosition = async (poolPDA: PublicKey,tokenMint: PublicKey,ti
     }
 }
 
+/**
+     * Current tick position in tick pool
+     * get the lowest tick pool with available liquidity
+     *
+     * @param poolPDA PDA for pool 
+     * @param tokenMint The mint of the token to be supplied to the pool. This could be USDC
+     * @return Nothing
+     */
+export const getLowestBit = async (poolPDA:PublicKey,tokenMint: PublicKey): Promise<number> => {
+    const bitmapPDA = await getBitmapPDA(poolPDA,tokenMint,program)
+    const bitmap =await program.account.bitMap.fetch(bitmapPDA)
+
+    const u256 = bitmap.word.flatMap((word) => {
+        return word.toString(2,64).split("").reverse().join("")
+    })[0]
+    const firstBit = u256.indexOf("1")
+   
+    return firstBit
+}
+
+
 /// Check if tick account exists for the pool, 
 /// if not, create the account. 
 export const createTickAccount = async (poolPDA: PublicKey,tokenMint: PublicKey,tick: number,creator: PublicKey): Promise<PublicKey> => {
     
-    const tickAccountPDA = await getTickPDA(poolPDA,tokenMint,tick);
+    const tickAccountPDA = await getTickAccountPDA(poolPDA,tokenMint,tick);
 
     try{
         let tickBN = new anchor.BN(tick)
@@ -88,9 +118,11 @@ export const createTickAccount = async (poolPDA: PublicKey,tokenMint: PublicKey,
    return tickAccountPDA
 }
 
+
+
 export const getOrCreateTickAccount = async (poolPDA: PublicKey,tokenMint: PublicKey,tick: number,owner: PublicKey): Promise<anchor.web3.PublicKey> => {
 
-    const tickAccountPDA = await getTickPDA(poolPDA,tokenMint,tick);
+    const tickAccountPDA = await getTickAccountPDA(poolPDA,tokenMint,tick);
     
     try {
         await program.account.tick.fetch(tickAccountPDA)
@@ -133,7 +165,7 @@ export const getLPMintPDA = async (poolPDA:PublicKey,vaultPDA: PublicKey,tickBN:
             SURE_NFT_MINT_SEED,
             poolPDA.toBytes(),
             vaultPDA.toBytes(),
-            tickBN.toArrayLike(Buffer,"le",8),
+            tickBN.toArrayLike(Buffer,"le",2),
             nextTickPositionBN.toArrayLike(Buffer,"le",8)
         ],
         program.programId
@@ -148,7 +180,7 @@ export const getLPTokenAccountPDA = async (poolPDA:PublicKey,vaultPDA: PublicKey
             SURE_TOKEN_ACCOUNT_SEED,
             poolPDA.toBytes(),
             vaultPDA.toBytes(),
-            tickBN.toArrayLike(Buffer,"le",8),
+            tickBN.toArrayLike(Buffer,"le",2),
             nextTickPositionBN.toArrayLike(Buffer,"le",8)
         ],
         program.programId
@@ -166,6 +198,7 @@ export const getLiquidityPositionPDA = async (nftAccountPDA: PublicKey): Promise
     )
     return liquidityPositionPDA
 }
+
 /**
      * Deposit liquidity into a Sure pool
      *
@@ -194,13 +227,12 @@ export const depositLiquidity = async (
     const vaultPDA = await getVaultPDA(poolPDA,tokenMint);
 
     // Get tick account
-    //const tickAccount = await getOrCreateTickAccount(poolPDA,tokenMint,tick,liquidityProvider)
     
-    const tickAccount = await  createTickAccount(poolPDA,tokenMint,tick,liquidityProvider);
+    const tickAccount = await createTickAccount(poolPDA,tokenMint,tick,liquidityProvider);
     //  Generate tick
 
     const tickBN = new anchor.BN(tick)
-    const tickPosition = await getTickPosition(poolPDA,tokenMint,tick);
+    const tickPosition = await getCurrentTickPosition(poolPDA,tokenMint,tick);
     const nextTickPositionBN = new anchor.BN(tickPosition+1)
 
     // Generate nft accounts
@@ -210,31 +242,33 @@ export const depositLiquidity = async (
     let liquidityPositionPDA = await getLiquidityPositionPDA(nftAccount);
 
     // Get bitmap 
-    const [bitmapPDA,bitmapBum] = await getBitmapPDA(poolPDA,tokenMint,program)
+    const bitmapPDA = await getBitmapPDA(poolPDA,tokenMint,program)
 
    
 
     /// Deposit liquidity Instruction 
     try {
-        await program.rpc.depositLiquidity(tickBN,nextTickPositionBN,(new anchor.BN(liquidityAmount)),{
-            accounts:{
-                liquidityProvider: liquidityProvider,
-                protocolOwner: protocolOwnerPDA,
-                liquidityProviderAccount: liquidityProviderATA,
-                pool: poolPDA,
-                tokenVault: vaultPDA,
-                nftMint: nftMint,
-                liquidityPosition: liquidityPositionPDA,
-                nftAccount: nftAccount,
-                bitmap: bitmapPDA,
-                tickAccount: tickAccount,
-                rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                systemProgram: SystemProgram.programId,
-                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-            }
-        })
+        const amountBN = new anchor.BN(liquidityAmount)
+        const res = await program.methods.depositLiquidity(tick,nextTickPositionBN,amountBN).accounts({
+            liquidityProvider: liquidityProvider,
+            protocolOwner: protocolOwnerPDA,
+            liquidityProviderAccount: liquidityProviderATA,
+            pool: poolPDA,
+            tokenVault: vaultPDA,
+            nftMint: nftMint,
+            liquidityPosition: liquidityPositionPDA,
+            nftAccount: nftAccount,
+            bitmap: bitmapPDA,
+            tickAccount: tickAccount,
+            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        }).rpc()
+
+        console.log("deposit liquidity res: ",res)
     } catch(e){
+        console.log(e)
         throw new Error("sure.error! Could not deposit liqudity. Cause: "+e)
     }
 }

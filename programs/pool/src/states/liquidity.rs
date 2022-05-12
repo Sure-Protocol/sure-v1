@@ -35,7 +35,7 @@ pub struct LiquidityPosition {
     pub tick_id: u8,
 
     /// The tick that the liquidity is at
-    pub tick: u64, // 8 bytes
+    pub tick: u16, // 8 bytes
 
     /// Outstanding Rewards
     pub outstanding_rewards: u32, // 4 bytes
@@ -47,6 +47,6 @@ impl LiquidityPosition {
 
 #[event]
 pub struct NewLiquidityPosition {
-    pub tick: u64,
+    pub tick: u16,
     pub liquidity: u64,
 }

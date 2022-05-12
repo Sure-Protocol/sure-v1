@@ -105,6 +105,7 @@ pub mod sure_pool {
         // Bitmap
         let bitmap = &mut ctx.accounts.bitmap;
         bitmap.bump = *ctx.bumps.get("bitmap").unwrap();
+        bitmap.spacing = 10;
 
         // Get pool account
         let pool_account = &mut ctx.accounts.pool;
@@ -127,6 +128,7 @@ pub mod sure_pool {
             name: "".to_string(),
             smart_contract: ctx.accounts.insured_token_account.key()
         });
+
         Ok(())
     }
 
@@ -141,13 +143,12 @@ pub mod sure_pool {
     /// * liquidity_position_id: should be an id that is currently not in the tick pool
     pub fn deposit_liquidity(
         ctx: Context<DepositLiquidity>,
-        tick: u64,
+        tick: u16,
         tick_pos: u64,
         amount: u64,
     ) -> Result<()> {
         // ___________________ Validation ____________________________
         // #### Check input arguments
-
         // tick must be greater than 0 and less than 1,000 bp .
         require!(
             tick > 0 && tick < 1_000,
@@ -156,6 +157,7 @@ pub mod sure_pool {
         require!(amount > 0, utils::errors::SureError::InvalidAmount);
 
         // Check that the correct vault is provided
+        let bitmap = &mut ctx.accounts.bitmap;
         let pool_vault_pb = &ctx.accounts.pool.vault;
         let token_vault = &ctx.accounts.token_vault.to_account_info();
         require!(
@@ -204,6 +206,7 @@ pub mod sure_pool {
         let tick_account_state =
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let mut tick_account = tick_account_state.load_mut()?;
+
         let new_id = tick_account.get_new_id();
 
         // # 3.  Save liqudity position
@@ -218,17 +221,23 @@ pub mod sure_pool {
         liquidity_position.created_at = Clock::get()?.unix_timestamp;
         liquidity_position.tick_id = new_id;
 
+        // Update bitmap
+        bitmap.flip_bit(tick);
+
         // # 4. Update tick with new liquidity position
         tick_account
             .add_liquidity(new_id, amount)
             .map_err(|e| e.to_anchor_error())?;
         tick_account.update_callback()?;
 
+        msg!(&format!("liq: {}", (*tick_account).liquidity));
+
         emit!(liquidity::NewLiquidityPosition {
             tick: tick,
             liquidity: amount
         });
-
+        msg!("hello I guess");
+        //require!(true == false, SureError::InvalidAmount);
         Ok(())
     }
 
@@ -285,7 +294,7 @@ pub mod sure_pool {
         Ok(())
     }
 
-    /// Buy insurance
+    /// Buy insurance for tick
     /// A buyer should select an amount to insure and the smart contract should
     /// premium
     ///
@@ -293,7 +302,11 @@ pub mod sure_pool {
     /// # Arguments
     /// * ctx
     ///
-    pub fn buy_insurance(ctx: Context<BuyInsurance>, amount: u64) -> Result<()> {
+    pub fn buy_insurance_for_tick(
+        ctx: Context<BuyInsurance>,
+        amount: u64,
+        tick: u16,
+    ) -> Result<()> {
         // _______________ Validation __________________
         // * Check that the
 

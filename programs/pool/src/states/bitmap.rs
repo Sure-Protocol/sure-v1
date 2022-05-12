@@ -14,6 +14,8 @@ pub struct BitMap {
 
     pub word_pos: i16, // 2 bytes
 
+    pub spacing: u16, // 2 byts
+
     /// Map
     pub word: [u64; 4], // 8*4 = 32 bytes
 }
@@ -55,10 +57,10 @@ pub fn most_significant_bit(x: U256) -> u8 {
 }
 
 impl BitMap {
-    pub const SPACE: usize = 1 + 2 + 32;
+    pub const SPACE: usize = 1 + 2 + 2 + 32;
 
-    pub fn flip_bit(&mut self, tick: u16, tick_spacing: u16) {
-        let tick_ratio = tick / tick_spacing;
+    pub fn flip_bit(&mut self, tick: u16) {
+        let tick_ratio = tick / self.spacing;
         let current_position = position(tick_ratio);
         let mask = U256::from(1 as i16) << current_position.bit_pos;
         let word = U256(self.word);
@@ -69,12 +71,12 @@ impl BitMap {
         let tick_ratio = tick / tick_spacing;
         let Position { word_pos, bit_pos } = position(tick_ratio);
 
-        let next_bit = self.next_initialized_tick(tick, tick_spacing, true);
+        let next_bit = self.next_initialized_tick(tick, true);
         next_bit.next == bit_pos && next_bit.initialized
     }
 
-    pub fn next_initialized_tick(&self, tick: u16, tick_spacing: u16, lte: bool) -> NextBit {
-        let tick_ratio = tick / tick_spacing;
+    pub fn next_initialized_tick(&self, tick: u16, lte: bool) -> NextBit {
+        let tick_ratio = tick / self.spacing;
 
         if lte {
             let Position { word_pos, bit_pos } = position(tick_ratio);

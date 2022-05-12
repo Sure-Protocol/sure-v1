@@ -172,7 +172,7 @@ impl<'info> Validate<'info> for CreatePool<'info> {
 
 /// Deposit Liquidity into an exisitng pool
 #[derive(Accounts)]
-#[instruction(tick: u64,tick_pos: u64)]
+#[instruction(tick: u16,tick_pos: u64)]
 pub struct DepositLiquidity<'info> {
     /// Liquidity provider
     #[account(mut)]
@@ -344,7 +344,7 @@ impl<'info> Validate<'info> for RedeemLiquidity<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(pool: Pubkey,token: Pubkey,tick: u64)]
+#[instruction(pool: Pubkey,token: Pubkey,tick: u16)]
 pub struct InitializeTick<'info> {
     /// Signer of the transaction
     #[account(mut)]
@@ -390,20 +390,21 @@ pub struct BuyInsurance<'info> {
     pub buyer: Signer<'info>,
 
     /// Pool to buy from
+    #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
 
     /// Insurance Position
-    #[account(
-        init,
-        space = 8 + InsuranceContract::SPACE,
-        payer = buyer,
-        seeds = [
-            SURE_INSURANCE_CONTRACT.as_bytes(),
-            pool.key().as_ref(),
-        ],
-        bump,
-    )]
-    pub insurance_contract: Box<Account<'info, InsuranceContract>>,
+    // #[account(
+    //     init,
+    //     space = 8 + InsuranceContract::SPACE,
+    //     payer = buyer,
+    //     seeds = [
+    //         SURE_INSURANCE_CONTRACT.as_bytes(),
+    //         pool.key().as_ref(),
+    //     ],
+    //     bump,
+    // )]
+    // pub insurance_contract: Box<Account<'info, InsuranceContract>>,
 
     /// System Contract used to create accounts
     pub system_program: Program<'info, System>,
