@@ -4,9 +4,14 @@ import * as anchor from "@project-serum/anchor"
 import { Program } from "@project-serum/anchor";
 import { token } from "@project-serum/anchor/dist/cjs/utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-const {SystemProgram} =anchor.web3;
+import {TokenAccount} from "./types"
+import { metadata, metaplex } from "@metaplex/js/lib/programs";
+import { TokenMetadataProgram, TokenProgram } from "@metaplex-foundation/js-next";
+import { metadata } from "@metaplex/js/lib/programs";
 
+const {SystemProgram} =anchor.web3;
 const program = anchor.workspace.SurePool as Program<SurePool>
+
 export const POOL_SEED =anchor.utils.bytes.utf8.encode("sure-insurance-pool")
 export const TOKEN_VAULT_SEED = anchor.utils.bytes.utf8.encode("sure-ata")
 export const SURE_BITMAP = anchor.utils.bytes.utf8.encode("sure-bitmap")
@@ -14,6 +19,10 @@ export const SURE_LIQUIDITY_POSITION = anchor.utils.bytes.utf8.encode("sure-lp")
 export const SURE_TICK_SEED = anchor.utils.bytes.utf8.encode("sure-tick")
 export const SURE_NFT_MINT_SEED = anchor.utils.bytes.utf8.encode("sure-nft");
 export const SURE_TOKEN_ACCOUNT_SEED = anchor.utils.bytes.utf8.encode("sure-token-account");
+export const SURE_MP_METADATA_SEED = anchor.utils.bytes.utf8.encode("metadata")
+
+// Export sub libs
+export * from "./nft"
 
 
 export const getPoolPDA = async (smartContractToInsure: PublicKey,token_mint:PublicKey,program: anchor.Program<SurePool>): Promise<anchor.web3.PublicKey> => {
@@ -158,19 +167,28 @@ export const getVaultPDA = async (poolPDA: PublicKey,tokenMint:PublicKey):Promis
 }
 
 
-export const getLPMintPDA = async (poolPDA:PublicKey,vaultPDA: PublicKey,tickBN: anchor.BN,nextTickPositionBN: anchor.BN): Promise<PublicKey> => {
+export const getLPMintPDA = async (nftAccountPDA: PublicKey): Promise<PublicKey> => {
 
-    const [nftAccountPDA,nftAccountBump] = await PublicKey.findProgramAddress(
+    const [nftMintPDA,nftMintBump] = await PublicKey.findProgramAddress(
         [
             SURE_NFT_MINT_SEED,
-            poolPDA.toBytes(),
-            vaultPDA.toBytes(),
-            tickBN.toArrayLike(Buffer,"le",2),
-            nextTickPositionBN.toArrayLike(Buffer,"le",8)
+            nftAccountPDA.toBytes(),
         ],
         program.programId
     )
-    return nftAccountPDA
+    return nftMintPDA
+}
+
+export const getMpMetadataPDA = async (nftMintPDA: PublicKey): Promise<PublicKey> => {
+    const [mpMetadataPDA, mpMetadataBump] = await PublicKey.findProgramAddress(
+        [
+            SURE_MP_METADATA_SEED,
+            TokenMetadataProgram.publicKey.toBuffer(),
+            nftMintPDA.toBytes()
+        ],
+        TokenMetadataProgram.publicKey
+    )
+    return mpMetadataPDA
 }
 
 export const getLPTokenAccountPDA = async (poolPDA:PublicKey,vaultPDA: PublicKey,tickBN: anchor.BN,nextTickPositionBN: anchor.BN): Promise<PublicKey> => {
@@ -236,15 +254,16 @@ export const depositLiquidity = async (
     const nextTickPositionBN = new anchor.BN(tickPosition+1)
 
     // Generate nft accounts
-    const nftMint = await getLPMintPDA(poolPDA,vaultPDA,tickBN,nextTickPositionBN);
     const nftAccount = await getLPTokenAccountPDA(poolPDA,vaultPDA,tickBN,nextTickPositionBN)
+    const nftMint = await getLPMintPDA(nftAccount);
+  
 
     let liquidityPositionPDA = await getLiquidityPositionPDA(nftAccount);
 
     // Get bitmap 
     const bitmapPDA = await getBitmapPDA(poolPDA,tokenMint,program)
 
-   
+    const mpMetadataAccountPDA = await getMpMetadataPDA(nftMint)
 
     /// Deposit liquidity Instruction 
     try {
@@ -256,6 +275,8 @@ export const depositLiquidity = async (
             pool: poolPDA,
             tokenVault: vaultPDA,
             nftMint: nftMint,
+            metadataAccount:mpMetadataAccountPDA,
+            metadataProgram:TokenMetadataProgram.publicKey,
             liquidityPosition: liquidityPositionPDA,
             nftAccount: nftAccount,
             bitmap: bitmapPDA,
@@ -271,4 +292,60 @@ export const depositLiquidity = async (
         console.log(e)
         throw new Error("sure.error! Could not deposit liqudity. Cause: "+e)
     }
+}
+
+/**
+ * Redeem liquidity based on ownership of NFT
+ * 
+ * @param Wallet: the publickey of the signer and payer
+ * @param walletATA: Associated token account for the token to be redeemed
+ * @param nftAccount: The NFT (account) that should be used to redeem 
+ * 
+ */
+export const redeemLiquidity = async (wallet: PublicKey,walletATA: PublicKey,nftAccount:PublicKey) => {
+
+    const liquidityPositionPDA = await getLiquidityPositionPDA(nftAccount);
+    console.log("liquidityPositionPDA:",liquidityPositionPDA)
+    let liquidityPosition;
+    try{
+        liquidityPosition = await program.account.liquidityPosition.fetch(liquidityPositionPDA);
+    }catch(e){
+        throw new Error("could not get liquidity position: "+e)
+    }
+  
+    const poolPDA = liquidityPosition.pool;
+    const tokenMint = liquidityPosition.tokenMint
+    const tick = liquidityPosition.tick
+    const nftMint = liquidityPosition.nftMint
+
+    // Protocol Owner 
+    let [protocolOwnerPDA,_] = await getProtocolOwner();
+
+    let vaultAccountPDA = await getVaultPDA(poolPDA,tokenMint);
+    console.log("tick: ",tick)
+    let tickAccount = await getTickAccountPDA(poolPDA,tokenMint,tick)
+    console.log("tickAccount: ",tickAccount.toBase58())
+    let metadataAccountPDA = await getMpMetadataPDA(nftMint)
+
+    try {
+        await program.rpc.redeemLiquidity({
+            accounts:{
+                nftHolder: wallet,
+                nft: nftAccount,
+                protocolOwner: protocolOwnerPDA,
+                liquidityPosition: liquidityPositionPDA,
+                tokenAccount: walletATA,
+                vaultAccount: vaultAccountPDA,
+                tickAccount: tickAccount,
+                metadataAccount: metadataAccountPDA,
+                metadataProgram: TokenMetadataProgram.publicKey,
+                pool: poolPDA,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+            }
+        })
+    }catch(err){
+        throw new Error("sure.reedemLiquidity.error. cause: "+err)
+    }
+   
 }

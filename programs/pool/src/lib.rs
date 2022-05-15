@@ -13,6 +13,8 @@ use anchor_lang::solana_program;
 use anchor_spl::*;
 use context::*;
 use vipers::prelude::*;
+use mpl_token_metadata::instruction::{create_metadata_accounts_v2,update_metadata_accounts_v2};
+use mpl_token_metadata::state::Creator;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -159,6 +161,7 @@ pub mod sure_pool {
         // Check that the correct vault is provided
         let bitmap = &mut ctx.accounts.bitmap;
         let pool_vault_pb = &ctx.accounts.pool.vault;
+        let protocol_owner = &ctx.accounts.protocol_owner.load()?;
         let token_vault = &ctx.accounts.token_vault.to_account_info();
         require!(
             pool_vault_pb.key() == token_vault.key(),
@@ -183,6 +186,47 @@ pub mod sure_pool {
             1,
         )?;
 
+        // Add metadata to nft in order to represent position
+        let create_metadata_accounts_ix = create_metadata_accounts_v2(
+            /// TODO: Find correct metadata id
+            ctx.accounts.metadata_program.key(),
+            ctx.accounts.metadata_account.key(),
+            ctx.accounts.nft_mint.key(),
+            ctx.accounts.protocol_owner.key(),
+            ctx.accounts.liquidity_provider.key(),
+            ctx.accounts.protocol_owner.key(),
+            String::from("Sure LP NFT V1"),
+            String::from("SURE-LP"),
+            format!("https://sure.claims"),
+            Some(vec![
+                Creator{
+                    address: ctx.accounts.protocol_owner.key(),
+                    verified: true,
+                    share: 100,
+                }
+            ]),
+            0,
+            true,
+            true,
+            None,
+            None
+        );
+
+        // Protocol owner signs the transaction with seeds 
+        // and bump
+        solana_program::program::invoke_signed(
+            &create_metadata_accounts_ix, 
+            &[
+                ctx.accounts.metadata_account.to_account_info().clone(),
+                ctx.accounts.nft_mint.to_account_info().clone(),
+                ctx.accounts.protocol_owner.to_account_info().clone(),
+                ctx.accounts.liquidity_provider.to_account_info().clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
+                ctx.accounts.rent.to_account_info().clone(),
+
+            ], &[&[&[protocol_owner.bump]]])?;
+
+
         // # 2. Transfer tokens from liquidity provider account into vault
         token::transfer(
             CpiContext::new(
@@ -199,8 +243,6 @@ pub mod sure_pool {
             ),
             amount,
         )?;
-
-        // TODO Add metaplex data to the NFT mint.
 
         // Load tick account state
         let tick_account_state =
@@ -220,6 +262,7 @@ pub mod sure_pool {
         liquidity_position.tick = tick;
         liquidity_position.created_at = Clock::get()?.unix_timestamp;
         liquidity_position.tick_id = new_id;
+        liquidity_position.token_mint = ctx.accounts.pool.token;
 
         // Update bitmap
         bitmap.flip_bit(tick);
@@ -230,13 +273,11 @@ pub mod sure_pool {
             .map_err(|e| e.to_anchor_error())?;
         tick_account.update_callback()?;
 
-        msg!(&format!("liq: {}", (*tick_account).liquidity));
 
         emit!(liquidity::NewLiquidityPosition {
             tick: tick,
             liquidity: amount
         });
-        msg!("hello I guess");
         //require!(true == false, SureError::InvalidAmount);
         Ok(())
     }
@@ -262,20 +303,25 @@ pub mod sure_pool {
     /// * ctx
     ///
     pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>) -> Result<()> {
-        // _______________ Validation __________________
+        // _______________ LOAD accounts __________________
+    
+
         let liquidity_position = &ctx.accounts.liquidity_position;
 
         let tick_account_state =
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let mut tick_account = tick_account_state.load_mut()?;
 
+
+        let protocol_owner = &ctx.accounts.protocol_owner.load()?;
+        /// Available liquidity
         let free_liquidity = tick_account.available_liquidity(liquidity_position.tick_id);
         require!(free_liquidity > 0, SureError::LiquidityFilled);
 
         // _______________ Functionality _______________
-        // # 1. Find the available liquidity
+      
 
-        // # 2 Transfer excess liquidity back to nft holder
+        // # 1 Transfer excess liquidity back to nft holder
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_account.to_account_info().clone(),
@@ -289,8 +335,43 @@ pub mod sure_pool {
             free_liquidity,
         )?;
 
+        // # 2. Update nft metadata to reflect token
+        let updated_metaplex = mpl_token_metadata::state::DataV2 {
+            name: String::from("Sure LP NFT V1"),
+            symbol: String::from("SURE-LP"),
+            uri:format!("https://sure.claims"),
+            seller_fee_basis_points: 0,
+            creators: Some(vec![
+                Creator{
+                    address: ctx.accounts.protocol_owner.key(),
+                    verified: true,
+                    share: 100,
+                }
+            ]),
+            collection: None,
+            uses: None,    
+        };
+        let update_metaplex_metadata_ix = update_metadata_accounts_v2(
+            ctx.accounts.metadata_program.key(),
+            ctx.accounts.metadata_account.key(),
+            ctx.accounts.protocol_owner.key(),
+            None,
+            Some(updated_metaplex),
+            None,
+            None,
+        );
+
+        solana_program::program::invoke_signed(
+            &update_metaplex_metadata_ix, 
+            &[
+                ctx.accounts.metadata_account.to_account_info().clone(),
+                ctx.accounts.protocol_owner.to_account_info().clone(),
+                ctx.accounts.system_program.to_account_info().clone(),
+
+            ], &[&[&[protocol_owner.bump]]])?;
+
         // # 3 Update tick poo
-        tick_account.remove_liquidity(liquidity_position.tick_id);
+        tick_account.remove_liquidity(liquidity_position.tick_id).map_err(|e| e.to_anchor_error())?;
         Ok(())
     }
 

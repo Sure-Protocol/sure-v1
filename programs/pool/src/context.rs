@@ -12,6 +12,7 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
+
 use std::mem::size_of;
 use vipers::{assert_is_ata, prelude::*};
 
@@ -24,7 +25,7 @@ pub const SURE_BITMAP: &str = "sure-bitmap";
 pub const SURE_TICK_SEED: &str = "sure-tick";
 pub const SURE_NFT_MINT_SEED: &str = "sure-nft";
 pub const SURE_TOKEN_ACCOUNT_SEED: &str = "sure-token-account";
-
+pub const SURE_MP_METADATA_SEED: &str = "metadata";
 /// Initialize Sure Protocol
 /// by setting the owner of the protocol
 #[derive(Accounts)]
@@ -198,10 +199,7 @@ pub struct DepositLiquidity<'info> {
         init,
         seeds = [
             SURE_NFT_MINT_SEED.as_ref(),
-            pool.key().as_ref(),
-            token_vault.key().as_ref(),
-            tick.to_le_bytes().as_ref(),
-            tick_pos.to_le_bytes().as_ref(),
+            nft_account.key().as_ref()
             ],
         bump,
         mint::decimals = 0,
@@ -209,6 +207,15 @@ pub struct DepositLiquidity<'info> {
         payer = liquidity_provider,
     )]
     pub nft_mint: Box<Account<'info, Mint>>,
+
+    /// CHECK: done in method
+    #[account(mut)]
+    pub metadata_account: UncheckedAccount<'info>,
+
+    /// Program id for metadata program
+    /// CHECK: checks that the address matches the mpl token metadata id
+    #[account(address =mpl_token_metadata::ID )]
+    pub metadata_program: UncheckedAccount<'info>,
 
     /// Create Liquidity position
     /// HASH: [sure-lp,liquidity-provider,pool,token,tick]
@@ -237,7 +244,7 @@ pub struct DepositLiquidity<'info> {
         ],
         bump,
         token::mint = nft_mint,
-        token::authority = liquidity_provider_account,
+        token::authority = liquidity_provider,
         payer = liquidity_provider,
     )]
     pub nft_account: Box<Account<'info, TokenAccount>>,
@@ -305,15 +312,14 @@ pub struct RedeemLiquidity<'info> {
     )]
     pub nft: Box<Account<'info, TokenAccount>>,
 
-    /// Mint of the NFT
-    #[account(mut)]
-    pub nft_mint: Account<'info, Mint>,
+    /// Protocol owner as the authority of mints
+    pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
 
     /// Liquidity position
     #[account(mut)]
     pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
 
-    /// Token account to recieve the tokens at
+    /// Token account to recieve the tokens
     pub token_account: Box<Account<'info, TokenAccount>>,
 
     /// Pool Vault to transfer tokens from
@@ -322,12 +328,23 @@ pub struct RedeemLiquidity<'info> {
     #[account(mut)]
     pub tick_account: AccountLoader<'info, Tick>,
 
+    /// CHECK: Account used to hold metadata on the LP NFT 
+    #[account(mut)]
+    pub metadata_account: AccountInfo<'info>,
+
+    /// CHECK: Checks that the address is the metadata metaplex program
+    #[account(address = mpl_token_metadata::ID)]
+    pub metadata_program: AccountInfo<'info>,
+
     /// Sure Protocol Pool Account
     #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
 
-    /// Sure owner
-    pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
+    // Token program that executes the transfer
+    pub token_program: Program<'info, Token>,
+
+    /// Provide the system program
+    pub system_program: Program<'info, System>,
 }
 
 impl<'info> Validate<'info> for RedeemLiquidity<'info> {

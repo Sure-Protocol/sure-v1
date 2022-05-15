@@ -21,6 +21,9 @@ pub struct LiquidityPosition {
     /// Liquidity Pool
     pub pool: Pubkey, // 32 bytes
 
+    // TokenMint representing the position
+    pub token_mint: Pubkey,
+
     /// Mint of token provided
     pub nft_account: Pubkey, // 32 bytes
 
@@ -42,7 +45,7 @@ pub struct LiquidityPosition {
 }
 
 impl LiquidityPosition {
-    pub const SPACE: usize = 1 + 8 + 8 + 32 + 32 + 32 + 8 + 1 + 8 + 4;
+    pub const SPACE: usize = 1 + 8 + 8 + 32 + 32 + 32 + 32 + 8 + 1 + 8 + 4;
 }
 
 #[event]

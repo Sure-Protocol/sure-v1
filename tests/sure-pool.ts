@@ -1,7 +1,7 @@
 import {assert} from "chai"
 import * as chai from 'chai'
 import * as anchor from "@project-serum/anchor";
-import { createMint,AccountLayout,TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount, ASSOCIATED_TOKEN_PROGRAM_ID, transfer, mintTo, getAccount, createAssociatedTokenAccount, Account} from "@solana/spl-token"
+import { createMint,AccountLayout,TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount, ASSOCIATED_TOKEN_PROGRAM_ID, transfer, mintTo, getAccount, createAssociatedTokenAccount, Account, getMint} from "@solana/spl-token"
 
 import { Program } from "@project-serum/anchor";
 import { SurePool } from "../target/types/sure_pool";
@@ -14,8 +14,10 @@ import JSBI from 'jsbi';
 
 
 import {Metaplex} from "@metaplex-foundation/js-next"
+import { metadata } from "@metaplex/js/lib/programs";
 
 import * as sureUtils from "./utils"
+
 /// =============== Variables ==================
 
 // PDA seeds 
@@ -244,12 +246,9 @@ describe("Initialize Sure Pool",() => {
     const tickPosition = await sureUtils.getCurrentTickPosition(poolPDA,token0,tick);
     const tickAccountPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,tick);
     const tickAccount = await program.account.tick.fetch(tickAccountPDA)
-    ///! here 
-    console.log(tickAccount)
-    console.log(new anchor.BN(tickAccount.liquidity))
-    console.log(tickAccount.liquidity.toArrayLike(Buffer,"le",8).toString())
-    console.log(tickAccount.liquidity.toString())
-    console.log((new anchor.BN(13)).toArrayLike(Buffer,"le",8).toString())
+    ///! here   
+    metaplex
+   
 
     const nftAccountPDA = await sureUtils.getLPTokenAccountPDA(
         poolPDA,
@@ -269,106 +268,67 @@ describe("Initialize Sure Pool",() => {
     
     }),
     it("redeem liquidity based on NFT",async () => {
-        /// Allow user to provide only the NFT to get the 
-        /// liquidity position and redeem it.
-        const tick = 220;
+        //  Allow user to provide only the NFT to get the 
+        // liquidity position and redeem it.
+        // const sureNfts = await sureUtils.getSureNfts(connection,wallet.publicKey)
         
+        // /// Select one NFT to redeem 
+        // const reedemableNFT = sureNfts[0];
         
-        const poolPDA = await sureUtils.getPoolPDA(
-            protcolToInsure0.publicKey,
-            token0,
-            program
-        );
-        const vaultPDA = await sureUtils.getVaultPDA(
-            poolPDA,
-            token0
-        );
-        const tickPosition =await sureUtils.getCurrentTickPosition(
-            poolPDA,  
-            token0,
-            tick,
-        );
-
-        const nftAccount = await sureUtils.getLPTokenAccountPDA(
-            poolPDA,
-            vaultPDA,
-            new anchor.BN(tick),
-            new anchor.BN(tickPosition)
-        )
-
-        // Get the number of Sure tokens in wallet 
-        const tokens = await connection.getTokenAccountsByOwner(
-            walletATAPubkey,
-            {programId:TOKEN_PROGRAM_ID},
-        )
-        //console.log(await connection.getAccountInfo(walletATAPubkey))
-        // try{
-        //     console.log(wallet.publicKey instanceof PublicKey)
-        //     const userTokens = await metaplex.nfts().findAllByOwner(
-        //         metaplex.identity().publicKey
-        //     )
-        //     console.log("userTokens: ",userTokens)
-
-        // } catch(e){
-        //     console.log("error: ",e)
-        // }
-      
-        // Choose the first 
-
-        // await program.rpc.redeemLiquidity({
-        //     accounts:{
-        //         nftHolder: wallet.publicKey,
-        //         nft: 
-        //     }
-        // })
+        // // Redeem liquidity
+        // await sureUtils.redeemLiquidity(
+        //     wallet.publicKey,
+        //     walletATAPubkey,
+        //     reedemableNFT.pubkey
+        // )
     })
     it("buy insurance from smart contract pool",async () => {
 
-        /// Variables
-        const amount = 3000
+        // /// Variables
+        // const amount = 3000
 
-        // Find pool to target
-        const poolPDA = await sureUtils.getPoolPDA(
-            protcolToInsure0.publicKey,
-            token0,
-            program
-        )
+        // // Find pool to target
+        // const poolPDA = await sureUtils.getPoolPDA(
+        //     protcolToInsure0.publicKey,
+        //     token0,
+        //     program
+        // )
         
-        let poolAccount
-        try {
-            poolAccount = await program.account.poolAccount.fetch(poolPDA);
-        }catch(e){
-            console.log("could not get pool account: cause: ",e )
-            throw new Error("pool account not found. cause: " + e)
-        }
+        // let poolAccount
+        // try {
+        //     poolAccount = await program.account.poolAccount.fetch(poolPDA);
+        // }catch(e){
+        //     console.log("could not get pool account: cause: ",e )
+        //     throw new Error("pool account not found. cause: " + e)
+        // }
        
-        const tickSpacing = poolAccount.tickSpacing
+        // const tickSpacing = poolAccount.tickSpacing
 
-        // 
-        const firstBit = await sureUtils.getLowestBit(poolPDA,token0);
-        const firstTick = 0 + tickSpacing*firstBit;
-        console.log("first tick to buy from: ",firstTick);
+        // // 
+        // const firstBit = await sureUtils.getLowestBit(poolPDA,token0);
+        // const firstTick = 0 + tickSpacing*firstBit;
+        // console.log("first tick to buy from: ",firstTick);
 
-        // get tick account
+        // // get tick account
     
-        const tickAccountPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,firstTick);
-        let tickAccount;
-        try {
-            tickAccount = await program.account.tick.fetch(tickAccountPDA) 
-        }catch(e){
-            console.log("could not get tick account: cause: ",e )
-            throw new Error("Tick account not found. cause: " + e)
-        }
+        // const tickAccountPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,firstTick);
+        // let tickAccount;
+        // try {
+        //     tickAccount = await program.account.tick.fetch(tickAccountPDA) 
+        // }catch(e){
+        //     console.log("could not get tick account: cause: ",e )
+        //     throw new Error("Tick account not found. cause: " + e)
+        // }
 
 
-        console.log("tickAccount.liquidity: ",tickAccount.liquidity.toString())
-        const availableLiquidity = JSBI.BigInt(tickAccount.liquidity)
-        console.log("available liq: ",String(availableLiquidity))
-        console.log("bn to string",)
-        console.log("tick: ",String(JSBI.BigInt(tickAccount.usedLiquidity)))
-        const ten8 = JSBI.BigInt(Math.pow(10,8));
-        const liquidityDecimals = JSBI.divide(availableLiquidity,ten8);
-        console.log("available liquidity: ",JSBI.toNumber(liquidityDecimals))
+        // console.log("tickAccount.liquidity: ",tickAccount.liquidity.toString())
+        // const availableLiquidity = JSBI.BigInt(tickAccount.liquidity)
+        // console.log("available liq: ",String(availableLiquidity))
+        // console.log("bn to string",)
+        // console.log("tick: ",String(JSBI.BigInt(tickAccount.usedLiquidity)))
+        // const ten8 = JSBI.BigInt(Math.pow(10,8));
+        // const liquidityDecimals = JSBI.divide(availableLiquidity,ten8);
+        // console.log("available liquidity: ",JSBI.toNumber(liquidityDecimals))
 
     })
 })

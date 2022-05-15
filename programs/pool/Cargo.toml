@@ -22,5 +22,6 @@ anchor-lang = "^0.24.2"
 anchor-spl = "^0.24.2"
 uint = "=0.9.1"
 vipers = "2.0.4"
+mpl-token-metadata = {version ="1.2.7", features = ["no-entrypoint"] }
 
 [dev-dependencies]
