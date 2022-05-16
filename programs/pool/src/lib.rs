@@ -162,9 +162,9 @@ pub mod sure_pool {
         let bitmap = &mut ctx.accounts.bitmap;
         let pool_vault_pb = &ctx.accounts.pool.vault;
         let protocol_owner = &ctx.accounts.protocol_owner.load()?;
-        let token_vault = &ctx.accounts.token_vault.to_account_info();
+        let vault = &ctx.accounts.vault.to_account_info();
         require!(
-            pool_vault_pb.key() == token_vault.key(),
+            pool_vault_pb.key() == vault.key(),
             utils::errors::SureError::InvalidMint
         );
 
@@ -237,7 +237,7 @@ pub mod sure_pool {
                         .liquidity_provider_account
                         .to_account_info()
                         .clone(),
-                    to: ctx.accounts.token_vault.to_account_info().clone(),
+                    to: ctx.accounts.vault.to_account_info().clone(),
                     authority: ctx.accounts.liquidity_provider.to_account_info(),
                 },
             ),
@@ -302,7 +302,7 @@ pub mod sure_pool {
     /// # Arguments
     /// * ctx
     ///
-    pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>) -> Result<()> {
+    pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>,token_mint:Pubkey,insured_token_account: Pubkey) -> Result<()> {
         // _______________ LOAD accounts __________________
     
 
@@ -314,23 +314,30 @@ pub mod sure_pool {
 
 
         let protocol_owner = &ctx.accounts.protocol_owner.load()?;
+        let pool = &ctx.accounts.pool;
         /// Available liquidity
         let free_liquidity = tick_account.available_liquidity(liquidity_position.tick_id);
         require!(free_liquidity > 0, SureError::LiquidityFilled);
 
         // _______________ Functionality _______________
       
-
+        let pool_seeds = [
+            &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
+            &token_mint.to_bytes() as &[u8],
+            &insured_token_account.to_bytes() as &[u8],
+            &[pool.bump]
+        ];
+        
         // # 1 Transfer excess liquidity back to nft holder
         token::transfer(
             CpiContext::new_with_signer(
-                ctx.accounts.token_account.to_account_info().clone(),
+                ctx.accounts.token_program.to_account_info().clone(),
                 token::Transfer {
-                    from: ctx.accounts.vault_account.to_account_info().clone(),
-                    to: ctx.accounts.nft_holder.to_account_info().clone(),
-                    authority: ctx.accounts.vault_account.to_account_info().clone(),
+                    from: ctx.accounts.vault.to_account_info().clone(),
+                    to: ctx.accounts.token_account.to_account_info().clone(),
+                    authority: ctx.accounts.pool.to_account_info().clone(),
                 },
-                &[&[&[ctx.accounts.protocol_owner.load()?.bump] as &[u8]]],
+                &[&pool_seeds[..]],
             ),
             free_liquidity,
         )?;

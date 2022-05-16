@@ -2037,6 +2037,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/chai@npm:^4.3.1":
+  version: 4.3.1
+  resolution: "@types/chai@npm:4.3.1"
+  checksum: 2ee246b76c469cd620a7a1876a73bc597074361b67d547b4bd96a0c1adb43597ede2d8589ab626192e14349d83cbb646cc11e2c179eeeb43ff11596de94d82c4
+  languageName: node
+  linkType: hard
+
 "@types/connect@npm:^3.4.33":
   version: 3.4.35
   resolution: "@types/connect@npm:3.4.35"
@@ -5297,6 +5304,7 @@ __metadata:
     "@project-serum/anchor": ^0.22.0
     "@solana/buffer-layout-utils": ^0.2.0
     "@solana/spl-token": ^0.2.0
+    "@types/chai": ^4.3.1
     "@types/mocha": ^9.0.0
     chai: ^4.3.4
     jsbi: ^4.3.0

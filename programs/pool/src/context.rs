@@ -123,7 +123,7 @@ pub struct CreatePool<'info> {
         ],
         bump,
         token::mint = token,
-        token::authority = vault
+        token::authority = pool
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
 
@@ -192,7 +192,7 @@ pub struct DepositLiquidity<'info> {
 
     /// Pool Vault account to deposit liquidity to
     #[account(mut)]
-    pub token_vault: Box<Account<'info, TokenAccount>>,
+    pub vault: Box<Account<'info, TokenAccount>>,
 
     // NFT minting
     #[account(
@@ -238,7 +238,7 @@ pub struct DepositLiquidity<'info> {
         [
             SURE_TOKEN_ACCOUNT_SEED.as_bytes().as_ref(),
             pool.key().as_ref(),
-            token_vault.key().as_ref(),
+            vault.key().as_ref(),
             tick.to_le_bytes().as_ref(),
             tick_pos.to_le_bytes().as_ref(),
         ],
@@ -277,7 +277,7 @@ impl<'info> Validate<'info> for DepositLiquidity<'info> {
         assert_is_zero_token_account!(self.nft_account);
 
         // Check correct vault
-        assert_keys_eq!(self.pool.vault, self.token_vault);
+        assert_keys_eq!(self.pool.vault, self.vault);
 
         // check the same bitmap
         assert_keys_eq!(self.pool.bitmap, self.bitmap);
@@ -308,9 +308,9 @@ pub struct RedeemLiquidity<'info> {
 
     /// NFT that proves ownership of position
     #[account(
-        constraint = nft.mint ==liquidity_position.nft_mint
+        constraint = nft_account.mint ==liquidity_position.nft_mint
     )]
-    pub nft: Box<Account<'info, TokenAccount>>,
+    pub nft_account: Box<Account<'info, TokenAccount>>,
 
     /// Protocol owner as the authority of mints
     pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
@@ -320,10 +320,12 @@ pub struct RedeemLiquidity<'info> {
     pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
 
     /// Token account to recieve the tokens
+    #[account(mut)]
     pub token_account: Box<Account<'info, TokenAccount>>,
 
     /// Pool Vault to transfer tokens from
-    pub vault_account: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
+    pub vault: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
     pub tick_account: AccountLoader<'info, Tick>,
@@ -349,10 +351,10 @@ pub struct RedeemLiquidity<'info> {
 
 impl<'info> Validate<'info> for RedeemLiquidity<'info> {
     fn validate(&self) -> Result<()> {
-        assert_is_zero_token_account!(self.nft);
+        //assert_is_zero_token_account!(self.nft);
 
         // Check correct vault
-        assert_keys_eq!(self.pool.vault, self.vault_account);
+        assert_keys_eq!(self.pool.vault, self.vault);
 
         // check the same bitmap
         //assert_keys_eq!(self.pool.bitmap, self.bitmap);

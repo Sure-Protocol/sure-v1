@@ -1,5 +1,5 @@
 import {assert} from "chai"
-import * as chai from 'chai'
+import {assert} from 'chai'
 import * as anchor from "@project-serum/anchor";
 import { createMint,AccountLayout,TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount, ASSOCIATED_TOKEN_PROGRAM_ID, transfer, mintTo, getAccount, createAssociatedTokenAccount, Account, getMint} from "@solana/spl-token"
 
@@ -179,6 +179,7 @@ describe("Initialize Sure Pool",() => {
         // Generate PDA for token vault
         vault0 = await sureUtils.getVaultPDA(poolPDA,token0)
 
+
         const bitmapPDA = await sureUtils.getBitmapPDA(poolPDA,token0,program)
         let [protocolOwnerPDA,_] = await sureUtils.getProtocolOwner();
        
@@ -201,6 +202,9 @@ describe("Initialize Sure Pool",() => {
 
         const newPool = await program.account.poolAccount.fetch(poolPDA)
         assert.equal(newPool.tickSpacing,tick_spacing)
+        assert.equal(newPool.vault.toBase58(),vault0.toBase58())
+        assert.equal(newPool.token.toBase58(),token0.toBase58())
+        assert.isAbove(newPool.bump,0)
     }),
     it("create tick account for pool",async () => {
         const tick = 340;
@@ -241,14 +245,13 @@ describe("Initialize Sure Pool",() => {
         console.log("deposit liquidity error. Cause: ",err)
     }
 
+    
+
     const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,token0,program);
     const vaultPDA = await sureUtils.getVaultPDA(poolPDA,token0);
     const tickPosition = await sureUtils.getCurrentTickPosition(poolPDA,token0,tick);
     const tickAccountPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,tick);
-    const tickAccount = await program.account.tick.fetch(tickAccountPDA)
-    ///! here   
-    metaplex
-   
+    const tickAccount = await program.account.tick.fetch(tickAccountPDA)   
 
     const nftAccountPDA = await sureUtils.getLPTokenAccountPDA(
         poolPDA,
@@ -270,17 +273,22 @@ describe("Initialize Sure Pool",() => {
     it("redeem liquidity based on NFT",async () => {
         //  Allow user to provide only the NFT to get the 
         // liquidity position and redeem it.
-        // const sureNfts = await sureUtils.getSureNfts(connection,wallet.publicKey)
+        const sureNfts = await sureUtils.getSureNfts(connection,wallet.publicKey)
+        /// Select one NFT to redeem 
+        const reedemableNFT = sureNfts[0];
         
-        // /// Select one NFT to redeem 
-        // const reedemableNFT = sureNfts[0];
-        
-        // // Redeem liquidity
-        // await sureUtils.redeemLiquidity(
-        //     wallet.publicKey,
-        //     walletATAPubkey,
-        //     reedemableNFT.pubkey
-        // )
+        // Redeem liquidity
+        try {
+            await sureUtils.redeemLiquidity(
+                wallet.publicKey,
+                walletATAPubkey,
+                reedemableNFT.pubkey,
+                protcolToInsure0.publicKey,
+            )
+        }catch(err){
+            throw new Error(err)
+        }
+       
     })
     it("buy insurance from smart contract pool",async () => {
 

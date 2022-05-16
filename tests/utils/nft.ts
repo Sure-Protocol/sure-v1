@@ -12,16 +12,16 @@ export const getSureNfts = async (connection:anchor.web3.Connection, wallet: Pub
         wallet, { programId: TOKEN_PROGRAM_ID }
     )
     
-    const [sureMintAuthority,_] =await  sureSdk.getProtocolOwner()
-    const sureNfts = tokensOwnedByWallet.value.filter(async token => {
-        if(token.account.data.parsed?.info?.mint){
-            const tokenMint = new PublicKey(token.account.data.parsed.info.mint)
-            const tokenMintAccount = await getMint(connection,tokenMint)
-            return tokenMintAccount.mintAuthority.toBase58() == sureMintAuthority.toBase58()
+    const [sureMintAuthority,_] =await sureSdk.getProtocolOwner()
+    const sureNfts: Array<TokenAccount> = []
+    for (let t = 0; t < tokensOwnedByWallet.value.length; t++) {
+        
+        const tokenMint = new PublicKey(tokensOwnedByWallet.value[t].account.data.parsed.info.mint)
+        const tokenMintAccount = await getMint(connection,tokenMint)
+        if (tokenMintAccount.mintAuthority.toBase58() === sureMintAuthority.toBase58()){
+            sureNfts.push(tokensOwnedByWallet.value[t])
         }
-        return false
-    })
+    }
 
     return sureNfts
-
 }

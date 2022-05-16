@@ -5,7 +5,7 @@ import { Program } from "@project-serum/anchor";
 import { token } from "@project-serum/anchor/dist/cjs/utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {TokenAccount} from "./types"
-import { metadata, metaplex } from "@metaplex/js/lib/programs";
+import {  metaplex } from "@metaplex/js/lib/programs";
 import { TokenMetadataProgram, TokenProgram } from "@metaplex-foundation/js-next";
 import { metadata } from "@metaplex/js/lib/programs";
 
@@ -257,7 +257,6 @@ export const depositLiquidity = async (
     const nftAccount = await getLPTokenAccountPDA(poolPDA,vaultPDA,tickBN,nextTickPositionBN)
     const nftMint = await getLPMintPDA(nftAccount);
   
-
     let liquidityPositionPDA = await getLiquidityPositionPDA(nftAccount);
 
     // Get bitmap 
@@ -273,7 +272,7 @@ export const depositLiquidity = async (
             protocolOwner: protocolOwnerPDA,
             liquidityProviderAccount: liquidityProviderATA,
             pool: poolPDA,
-            tokenVault: vaultPDA,
+            vault: vaultPDA,
             nftMint: nftMint,
             metadataAccount:mpMetadataAccountPDA,
             metadataProgram:TokenMetadataProgram.publicKey,
@@ -287,7 +286,6 @@ export const depositLiquidity = async (
             associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
         }).rpc()
 
-        console.log("deposit liquidity res: ",res)
     } catch(e){
         console.log(e)
         throw new Error("sure.error! Could not deposit liqudity. Cause: "+e)
@@ -302,10 +300,9 @@ export const depositLiquidity = async (
  * @param nftAccount: The NFT (account) that should be used to redeem 
  * 
  */
-export const redeemLiquidity = async (wallet: PublicKey,walletATA: PublicKey,nftAccount:PublicKey) => {
+export const redeemLiquidity = async (wallet: PublicKey,walletATA: PublicKey,nftAccount:PublicKey,insuredTokenAccount:PublicKey) => {
 
     const liquidityPositionPDA = await getLiquidityPositionPDA(nftAccount);
-    console.log("liquidityPositionPDA:",liquidityPositionPDA)
     let liquidityPosition;
     try{
         liquidityPosition = await program.account.liquidityPosition.fetch(liquidityPositionPDA);
@@ -314,28 +311,27 @@ export const redeemLiquidity = async (wallet: PublicKey,walletATA: PublicKey,nft
     }
   
     const poolPDA = liquidityPosition.pool;
+    const pool = await program.account.poolAccount.fetch(poolPDA)
     const tokenMint = liquidityPosition.tokenMint
     const tick = liquidityPosition.tick
     const nftMint = liquidityPosition.nftMint
+    
 
     // Protocol Owner 
     let [protocolOwnerPDA,_] = await getProtocolOwner();
 
     let vaultAccountPDA = await getVaultPDA(poolPDA,tokenMint);
-    console.log("tick: ",tick)
     let tickAccount = await getTickAccountPDA(poolPDA,tokenMint,tick)
-    console.log("tickAccount: ",tickAccount.toBase58())
     let metadataAccountPDA = await getMpMetadataPDA(nftMint)
-
     try {
-        await program.rpc.redeemLiquidity({
+        await program.rpc.redeemLiquidity(tokenMint,insuredTokenAccount,{
             accounts:{
                 nftHolder: wallet,
-                nft: nftAccount,
+                nftAccount: nftAccount,
                 protocolOwner: protocolOwnerPDA,
                 liquidityPosition: liquidityPositionPDA,
                 tokenAccount: walletATA,
-                vaultAccount: vaultAccountPDA,
+                vault: pool.vault,
                 tickAccount: tickAccount,
                 metadataAccount: metadataAccountPDA,
                 metadataProgram: TokenMetadataProgram.publicKey,

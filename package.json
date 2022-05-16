@@ -6,6 +6,7 @@
     "@project-serum/anchor": "^0.22.0",
     "@solana/buffer-layout-utils": "^0.2.0",
     "@solana/spl-token": "^0.2.0",
+    "@types/chai": "^4.3.1",
     "jsbi": "^4.3.0"
   },
   "devDependencies": {
