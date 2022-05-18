@@ -267,10 +267,13 @@ pub mod sure_pool {
         liquidity_position.tick = tick;
         liquidity_position.created_at = Clock::get()?.unix_timestamp;
         liquidity_position.tick_id = new_id;
-        liquidity_position.token_mint = ctx.accounts.pool.token;
+        liquidity_position.token_mint = pool.token;
 
         // Update bitmap
-        bitmap.flip_bit(tick);
+        if !bitmap.is_initialized(tick, pool.tick_spacing.clone()){
+            bitmap.flip_bit(tick);
+        }
+       
 
         // # 4. Update tick with new liquidity position
         tick_account
@@ -396,6 +399,8 @@ pub mod sure_pool {
     pub fn initialize_insurance_contract(
         ctx: Context<InitializeInsuranceContract>,
     ) -> Result<()> {
+        // TODO: Add period as a seed and variable
+
         // Load insurance_contract
         let insurance_contract = &mut ctx.accounts.insurance_contract;
 
@@ -420,15 +425,28 @@ pub mod sure_pool {
     pub fn buy_insurance_for_tick(
         ctx: Context<BuyInsurance>,
         amount: u64,
-        tick: u16,
     ) -> Result<()> {
         // _______________ Validation __________________
         // * Check that the
 
         // _______________ Functionality _______________
-        
 
-        // # 1. Find
+        // Load accounts
+        let tick_account_state =
+        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+        let mut tick_account = tick_account_state.load_mut()?;
+
+        let pool_account = &mut ctx.accounts.pool;
+
+        // #1 credit tick account
+        tick_account.buy_insurance(amount).map_err(|e| e.to_anchor_error())?;
+
+        // #2 Update pool account
+        pool_account.active_liquidity -= amount;
+
+        // #3 transfer premium to premium vault 
+
+
         Ok(())
     }
 

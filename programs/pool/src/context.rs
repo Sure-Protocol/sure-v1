@@ -448,6 +448,10 @@ pub struct BuyInsurance<'info> {
     #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
 
+    /// Tick account to buy from 
+    #[account(mut)]
+    pub tick_account: AccountLoader<'info, Tick>,
+
     /// Insurance Position
     #[account(mut,
     constraint = insurance_contract.pool == pool.key(),
