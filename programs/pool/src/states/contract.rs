@@ -4,10 +4,9 @@ use anchor_lang::prelude::*;
 
 /// Contract
 /// Seed: [
-/// sure-insurance-contract,
-/// pool,
-/// token,
-/// liquidity_position
+/// "sure-insurance-contract"
+/// signer
+/// pool
 /// ]
 #[account]
 pub struct InsuranceContract {
@@ -17,11 +16,16 @@ pub struct InsuranceContract {
     /// Amount insured
     pub amount: u64, // 8 bytes
 
-    /// Liquidity position
-    /// The liquidity position insuring the user
-    pub liquidity_position: Pubkey,
+    /// Insured pool
+    pub pool: Pubkey, // 32 bytes
+
+    /// Owner of insurance contract 
+    pub owner: Pubkey, // 32 bytes
+
+    /// Is the insurance contract active
+    pub active: bool, // 1 byte
 }
 
 impl InsuranceContract {
-    pub const SPACE: usize = 0;
+    pub const SPACE: usize = 1 + 8 + 32 + 32 + 1;
 }

@@ -26,6 +26,7 @@ pub const SURE_TICK_SEED: &str = "sure-tick";
 pub const SURE_NFT_MINT_SEED: &str = "sure-nft";
 pub const SURE_TOKEN_ACCOUNT_SEED: &str = "sure-token-account";
 pub const SURE_MP_METADATA_SEED: &str = "metadata";
+
 /// Initialize Sure Protocol
 /// by setting the owner of the protocol
 #[derive(Accounts)]
@@ -400,6 +401,41 @@ pub struct CloseTick<'info> {
     pub tick_account: AccountLoader<'info, Tick>,
 }
 
+
+/// Initialize a new insurance contract with pool
+#[derive(Accounts)]
+pub struct InitializeInsuranceContract<'info> {
+    /// Signer of contract
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    /// Pool to buy insurance from
+    pub pool: Box<Account<'info,PoolAccount>>,
+
+    /// Insurance Position
+    #[account(
+        init,
+        space = 8 + InsuranceContract::SPACE,
+        payer = owner,
+        seeds = [
+            SURE_INSURANCE_CONTRACT.as_bytes(),
+            owner.key().as_ref(),
+            pool.key().as_ref(),
+        ],
+        bump,
+    )]
+    pub insurance_contract: Box<Account<'info, InsuranceContract>>,
+
+    /// System Contract used to create accounts
+    pub system_program: Program<'info, System>,
+}
+
+
+impl<'info> Validate<'info> for InitializeInsuranceContract<'info> {
+    fn validate(&self) -> Result<()> {
+        Ok(())
+    }
+}
 /// Buy Insurance Request
 ///
 #[derive(Accounts)]
@@ -413,17 +449,12 @@ pub struct BuyInsurance<'info> {
     pub pool: Box<Account<'info, PoolAccount>>,
 
     /// Insurance Position
-    // #[account(
-    //     init,
-    //     space = 8 + InsuranceContract::SPACE,
-    //     payer = buyer,
-    //     seeds = [
-    //         SURE_INSURANCE_CONTRACT.as_bytes(),
-    //         pool.key().as_ref(),
-    //     ],
-    //     bump,
-    // )]
-    // pub insurance_contract: Box<Account<'info, InsuranceContract>>,
+    #[account(mut,
+    constraint = insurance_contract.pool == pool.key(),
+    constraint = insurance_contract.active == true,
+    constraint = insurance_contract.owner == buyer.key(),
+    )]
+    pub insurance_contract: Box<Account<'info, InsuranceContract>>,
 
     /// System Contract used to create accounts
     pub system_program: Program<'info, System>,

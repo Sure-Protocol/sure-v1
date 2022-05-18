@@ -207,7 +207,7 @@ describe("Initialize Sure Pool",() => {
         assert.isAbove(newPool.bump,0)
     }),
     it("create tick account for pool",async () => {
-        const tick = 340;
+        const tick = 440;
         const tickBN = new anchor.BN(tick)
         const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,token0,program);
         const tickPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,tick);
@@ -221,13 +221,14 @@ describe("Initialize Sure Pool",() => {
 
         const createdTickAccount = await program.account.tick.fetch(tickPDA);
         assert.equal(createdTickAccount.active,true);
-        assert.equal(createdTickAccount.liquidity,0)
+        assert.equal(createdTickAccount.liquidity.toString(),"0");
+        assert.equal(createdTickAccount.usedLiquidity.toString(),"0");
+        assert.equal(createdTickAccount.tick.toString(),tick.toString())
         assert.equal(createdTickAccount.lastLiquidityPositionIdx,0);
     }),
     it("deposit liquidity into pool at a given tick",async () => {
-        let premium_rate = 300; // basis points
-        let amount = 1; // amount to draw from account
-        let tick = 220; // 300bp tick
+        let amount = 15; // amount to draw from account
+        let tick = 210; // 300bp tick
 
 
     // TODO: Deposit some more liquidity from other LPs
@@ -242,7 +243,7 @@ describe("Initialize Sure Pool",() => {
         token0
         )
     } catch(err) {
-        console.log("deposit liquidity error. Cause: ",err)
+        throw new Error("deposit liquidity error. Cause:" + err)
     }
 
     
@@ -257,7 +258,7 @@ describe("Initialize Sure Pool",() => {
         poolPDA,
         vaultPDA,
         new anchor.BN(tick),
-        new anchor.BN(tickPosition+1)
+        new anchor.BN(tickPosition)
     )
     let nftAccount = await getAccount(
         connection,
@@ -292,51 +293,53 @@ describe("Initialize Sure Pool",() => {
     })
     it("buy insurance from smart contract pool",async () => {
 
-        // /// Variables
-        // const amount = 3000
+        /// Variables
+        const amountToBuy = 15000
+        const newLiquidity = 14000
+        const tick = 120
 
-        // // Find pool to target
-        // const poolPDA = await sureUtils.getPoolPDA(
-        //     protcolToInsure0.publicKey,
-        //     token0,
-        //     program
-        // )
-        
-        // let poolAccount
-        // try {
-        //     poolAccount = await program.account.poolAccount.fetch(poolPDA);
-        // }catch(e){
-        //     console.log("could not get pool account: cause: ",e )
-        //     throw new Error("pool account not found. cause: " + e)
-        // }
        
-        // const tickSpacing = poolAccount.tickSpacing
 
-        // // 
-        // const firstBit = await sureUtils.getLowestBit(poolPDA,token0);
-        // const firstTick = 0 + tickSpacing*firstBit;
-        // console.log("first tick to buy from: ",firstTick);
+        // deposit liquidity 
+        try{
+            await sureUtils.depositLiquidity(
+            newLiquidity,
+            tick,
+            wallet.publicKey,
+            walletATAPubkey,
+            protcolToInsure0.publicKey,
+            token0
+            )
+        } catch(err) {
+            throw new Error("deposit liquidity error. Cause:" + err)
+        }
 
-        // // get tick account
-    
-        // const tickAccountPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,firstTick);
-        // let tickAccount;
-        // try {
-        //     tickAccount = await program.account.tick.fetch(tickAccountPDA) 
-        // }catch(e){
-        //     console.log("could not get tick account: cause: ",e )
-        //     throw new Error("Tick account not found. cause: " + e)
-        // }
+        try{
+            await sureUtils.depositLiquidity(
+            10000,
+            150,
+            wallet.publicKey,
+            walletATAPubkey,
+            protcolToInsure0.publicKey,
+            token0
+            )
+        } catch(err) {
+            throw new Error("deposit liquidity error. Cause:" + err)
+        }
 
+       
 
-        // console.log("tickAccount.liquidity: ",tickAccount.liquidity.toString())
-        // const availableLiquidity = JSBI.BigInt(tickAccount.liquidity)
-        // console.log("available liq: ",String(availableLiquidity))
-        // console.log("bn to string",)
-        // console.log("tick: ",String(JSBI.BigInt(tickAccount.usedLiquidity)))
-        // const ten8 = JSBI.BigInt(Math.pow(10,8));
-        // const liquidityDecimals = JSBI.divide(availableLiquidity,ten8);
-        // console.log("available liquidity: ",JSBI.toNumber(liquidityDecimals))
+        // Find pool to target
+        const poolPDA = await sureUtils.getPoolPDA(
+            protcolToInsure0.publicKey,
+            token0,
+            program
+        )
 
+        // Calculate cost of insurance 
+        const [potentialAmountCovered,price] = await sureUtils.estimateYearlyPremium(amountToBuy,poolPDA,wallet.publicKey)
+        console.log("potentialAmountCovered: ",potentialAmountCovered.toString(), " , price: ",price.toString())
+
+        await sureUtils.buyInsurance(connection,amountToBuy,poolPDA,wallet.publicKey);
     })
 })

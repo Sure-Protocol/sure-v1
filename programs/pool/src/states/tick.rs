@@ -14,6 +14,7 @@ pub const SECONDS_IN_A_YEAR: usize = 31556926;
 /// the liquidity at a current tick
 
 #[account(zero_copy)]
+#[repr(packed)]
 pub struct Tick {
     /// The bump identity of the PDA
     pub bump: u8, // 1 byte

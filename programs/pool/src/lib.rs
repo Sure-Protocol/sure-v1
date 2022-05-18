@@ -160,7 +160,8 @@ pub mod sure_pool {
 
         // Check that the correct vault is provided
         let bitmap = &mut ctx.accounts.bitmap;
-        let pool_vault_pb = &ctx.accounts.pool.vault;
+        let pool = &mut ctx.accounts.pool;
+        let pool_vault_pb =pool.vault; 
         let protocol_owner = &ctx.accounts.protocol_owner.load()?;
         let vault = &ctx.accounts.vault.to_account_info();
         require!(
@@ -244,6 +245,10 @@ pub mod sure_pool {
             amount,
         )?;
 
+        // Update pool
+        pool.liquidity += amount;
+        
+
         // Load tick account state
         let tick_account_state =
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
@@ -257,7 +262,7 @@ pub mod sure_pool {
         liquidity_position.liquidity = amount;
         liquidity_position.nft_account = ctx.accounts.nft_account.key();
         liquidity_position.used_liquidity = 0;
-        liquidity_position.pool = ctx.accounts.pool.key();
+        liquidity_position.pool = pool.key();
         liquidity_position.nft_mint = ctx.accounts.nft_mint.key();
         liquidity_position.tick = tick;
         liquidity_position.created_at = Clock::get()?.unix_timestamp;
@@ -271,7 +276,7 @@ pub mod sure_pool {
         tick_account
             .add_liquidity(new_id, amount)
             .map_err(|e| e.to_anchor_error())?;
-        tick_account.update_callback()?;
+        //tick_account.update_callback()?;
 
 
         emit!(liquidity::NewLiquidityPosition {
@@ -382,6 +387,28 @@ pub mod sure_pool {
         Ok(())
     }
 
+    /// Initialize Insurance Contract
+    /// Let a user create an insurance contract with a Sure pool
+    /// 
+    /// # Arguments
+    /// * ctx: Contains the pool, insurance contract and signer
+    /// 
+    pub fn initialize_insurance_contract(
+        ctx: Context<InitializeInsuranceContract>,
+    ) -> Result<()> {
+        // Load insurance_contract
+        let insurance_contract = &mut ctx.accounts.insurance_contract;
+
+        // Initialize insurance_contract
+        insurance_contract.amount = 0;
+        insurance_contract.bump = *ctx.bumps.get("insurance_contract").unwrap();
+        insurance_contract.pool = ctx.accounts.pool.key();
+        insurance_contract.active = true;
+        insurance_contract.owner = ctx.accounts.owner.key();
+
+        Ok(())
+    }
+
     /// Buy insurance for tick
     /// A buyer should select an amount to insure and the smart contract should
     /// premium
@@ -399,6 +426,8 @@ pub mod sure_pool {
         // * Check that the
 
         // _______________ Functionality _______________
+        
+
         // # 1. Find
         Ok(())
     }
@@ -421,7 +450,6 @@ pub mod sure_pool {
 
         // Initialize account
         tick_account.initialize(*ctx.bumps.get("tick_account").unwrap(), tick_bp)?;
-
         Ok(())
     }
 
