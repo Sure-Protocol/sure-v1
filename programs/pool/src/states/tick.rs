@@ -12,7 +12,8 @@ pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: usize = 255;
 pub const SECONDS_IN_A_YEAR: usize = 31556926;
 /// Tick acount (PDA) is used to hold information about
 /// the liquidity at a current tick
-
+/// Token mint:
+/// It is possible to supply various tokens into different tick account
 #[account(zero_copy)]
 #[repr(packed)]
 pub struct Tick {
@@ -24,6 +25,9 @@ pub struct Tick {
 
     /// Amount of liquidity used from the pool
     pub used_liquidity: u64, // 8 bytes
+
+    /// token mint used as liqudiity
+    pub token_mint: Pubkey,
 
     /// last slot the tick was updated on
     pub last_updated: i64, // 8 bytes
@@ -79,7 +83,7 @@ pub trait TickTrait {
     fn is_pool_empty(&self) -> bool;
 
     // Liquidity Management
-    fn add_liquidity(&mut self, id: u8, size: u64) -> Result<(), TickError>;
+    fn add_liquidity(&mut self, id: u8, size: u64,token_mint: Pubkey) -> Result<(), TickError>;
     fn remove_liquidity(&mut self, id: u8) -> Result<(), TickError>;
     fn available_liquidity(&mut self, id: u8) -> u64;
     fn increase_rewards(&mut self) -> Result<(), TickError>;
@@ -176,7 +180,7 @@ impl TickTrait for Tick {
     /// # Arguments
     /// * id: The id in the liquidity position seed
     /// * size: the size of the liquidity added
-    fn add_liquidity(&mut self, new_id: u8, liquidity_size: u64) -> Result<(), TickError> {
+    fn add_liquidity(&mut self, new_id: u8, liquidity_size: u64,token_mint: Pubkey) -> Result<(), TickError> {
         if (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as u8) == (self.last_liquidity_position_idx + 1) {
             return Err(TickError::NoMoreLiquiditySpots);
         }
@@ -189,6 +193,7 @@ impl TickTrait for Tick {
         self.active = true;
         self.last_liquidity_position_idx += 1;
         self.liquidity_position_id[new_idx as usize] = new_id;
+        self.token_mint = token_mint;
 
         self.update_callback();
         Ok(())
@@ -491,7 +496,6 @@ impl Tick {
 mod tests {
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
-
     fn initialize_tick() -> Tick {
         let time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -505,6 +509,7 @@ mod tests {
             bump: 1,
             liquidity: 0,
             used_liquidity: 0,
+            token_mint: anchor_spl::mint::USDC,
             last_updated: time,
             tick: 300,
             active: false,
@@ -518,7 +523,8 @@ mod tests {
     #[test]
     fn shift_position() {
         let mut tick = initialize_tick();
-        tick.add_liquidity(0, 1000).unwrap();
+
+        tick.add_liquidity(0, 1000,anchor_spl::mint::USDC).unwrap();
         let idx = 0;
         assert_eq!(tick.liquidity_position_accumulated[idx], 1000);
         println!("accumulated: {:?}", tick.liquidity_position_accumulated);
@@ -536,7 +542,7 @@ mod tests {
         let mut tick = initialize_tick();
 
         // Add liquidity
-        tick.add_liquidity(244, 1_000).unwrap();
+        tick.add_liquidity(244, 1_000,anchor_spl::mint::USDC).unwrap();
         println!("liquidity pos: {:?}", tick.liquidity_position_accumulated);
         assert_eq!(tick.last_liquidity_position_idx, 1);
         assert_eq!(tick.liquidity, 1_000);
@@ -563,7 +569,7 @@ mod tests {
         let mut tick = initialize_tick();
 
         // Add liquidity
-        tick.add_liquidity(244, 1_000).unwrap();
+        tick.add_liquidity(244, 1_000,anchor_spl::mint::USDC).unwrap();
         println!("liquidity pos: {:?}", tick.liquidity_position_accumulated);
         assert_eq!(tick.last_liquidity_position_idx, 1);
         assert_eq!(tick.liquidity, 1_000);
@@ -608,7 +614,7 @@ mod tests {
 
         // Add liquidity
         let id = tick.get_new_id();
-        tick.add_liquidity(id, 1_000).unwrap();
+        tick.add_liquidity(id, 1_000,anchor_spl::mint::USDC).unwrap();
 
         // Someone buys insurance
         let new_insurance_amount = 900;

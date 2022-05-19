@@ -15,7 +15,7 @@ pub struct PoolManager {
 }
 
 impl PoolManager {
-    pub const POOL_MANAGER_SIZE: usize = 32 + 1;
+    pub const SIZE: usize = 32 + 1;
 }
 
 /// Pool Account (PDA) contains information describing the
@@ -26,9 +26,8 @@ pub struct PoolAccount {
     /// Bump to identify the PDA
     pub bump: u8, // 1 byte
 
-    /// Token held in the pool.
-    /// In the beginning this is just USDC
-    pub token: Pubkey, // 32 bytes
+    /// Name of pool visible to the user
+    pub name: String, // 4 + 200 bytes
 
     /// Fee paid when buying insurance.
     /// in 10^-6
@@ -50,20 +49,28 @@ pub struct PoolAccount {
     /// Current premium rate in basis points (0.01%).
     pub premium_rate: u64, // 8 bytes
 
-    /// Name of pool visible to the user
-    pub name: String, // 4 + 200 bytes
-
     /// The public key of the smart contract that is
     /// insured
     pub smart_contract: Pubkey, // 32 bytes
-
-    /// Vault that holds the liquidity (tokens)
-    pub vault: Pubkey, // 32 bytes
 
     /// Whether the insurance pool is locked
     pub locked: bool, // 1 byte
 }
 
 impl PoolAccount {
-    pub const SPACE: usize = 1 + 32 + 4 + 4 + 4 + 8 + 8 + 8 + 4 + 200 + 32 + 32 + 1;
+    pub const SPACE: usize = 1 + 4 + 200 + 4 + 2 + 8 + 8 + 32 + 8 + 32 + 1;
+}
+
+
+#[event]
+pub struct InitializedPool {
+    #[index]
+    pub name: String,
+    pub smart_contract: Pubkey,
+}
+
+
+#[event]
+pub struct CreatePoolVaults {
+
 }

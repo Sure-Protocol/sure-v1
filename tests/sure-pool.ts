@@ -1,4 +1,3 @@
-import {assert} from "chai"
 import {assert} from 'chai'
 import * as anchor from "@project-serum/anchor";
 import { createMint,AccountLayout,TOKEN_PROGRAM_ID, getOrCreateAssociatedTokenAccount, ASSOCIATED_TOKEN_PROGRAM_ID, transfer, mintTo, getAccount, createAssociatedTokenAccount, Account, getMint} from "@solana/spl-token"
@@ -133,13 +132,11 @@ describe("Initialize Sure Pool",() => {
     
     it("create protocol owner ", async () => {
         let [protocolOwnerPDA,_] = await sureUtils.getProtocolOwner();
-        await program.rpc.initializeProtocol({
-            accounts:{
+        await program.methods.initializeProtocol().accounts({
                 owner: provider.wallet.publicKey,
                 protocolOwner: protocolOwnerPDA,
                 systemProgram: SystemProgram.programId,
-            }
-        })
+        }).rpc()
     })
 
     it("create Sure pool manager",async () => {
@@ -168,56 +165,79 @@ describe("Initialize Sure Pool",() => {
          const name = "my awesome sure pool"
  
 
-        
-        // Smart contract that sure should insure. 
-        protcolToInsure0 = anchor.web3.Keypair.generate()
-
         // Generate PDA for Sure Pool
-        const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,token0,program);
+        const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,program);
 
 
         // Generate PDA for token vault
-        vault0 = await sureUtils.getVaultPDA(poolPDA,token0)
+        vault0 = await sureUtils.getLiquidityVaultPDA(poolPDA,token0)
 
-
-        const bitmapPDA = await sureUtils.getBitmapPDA(poolPDA,token0,program)
         let [protocolOwnerPDA,_] = await sureUtils.getProtocolOwner();
        
 
         // Create Poool
-        await program.rpc.createPool(insuranceFee,tick_spacing,name,{
-            accounts:{
-                poolCreator:provider.wallet.publicKey,
-                protocolOwner:protocolOwnerPDA,
-                pool:poolPDA,
-                insuredTokenAccount: protcolToInsure0.publicKey,
-                vault: vault0,
-                token: token0,
-                bitmap:bitmapPDA,
-                rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                systemProgram: SystemProgram.programId,
-            }
-        })
+        try{
+            await program.methods.createPool(insuranceFee,tick_spacing,name).accounts(
+                {
+                    poolCreator:wallet.publicKey,
+                    protocolOwner:protocolOwnerPDA,
+                    pool:poolPDA,
+                    insuredTokenAccount: protcolToInsure0.publicKey,
+                    rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+                    systemProgram: SystemProgram.programId,
+                }
+            ).rpc()
+        } catch (err) {
+            throw new Error("Could not create pool. Cause: "+err)
+        }
 
         const newPool = await program.account.poolAccount.fetch(poolPDA)
         assert.equal(newPool.tickSpacing,tick_spacing)
-        assert.equal(newPool.vault.toBase58(),vault0.toBase58())
-        assert.equal(newPool.token.toBase58(),token0.toBase58())
         assert.isAbove(newPool.bump,0)
+    }),
+    it("create pool vaults -> For a given mint the isolated ",async () => {
+        // Smart contract that sure should insure. 
+
+        // Generate PDA for Sure Pool
+        const pool= await sureUtils.getPoolPDA(protcolToInsure0.publicKey,program);
+        const bitmap = await sureUtils.getBitmapPDA(pool,token0,program)
+        const liquidityVault = await sureUtils.getLiquidityVaultPDA(pool,token0);
+        const premiumVault = await sureUtils.getPremiumVaultPDA(pool,token0)
+
+        try {
+            await program.methods.createPoolVaults().accounts({
+                creator: wallet.publicKey,
+                pool: pool,
+                tokenMint: token0,
+                liquidityVault: liquidityVault,
+                premiumVault: premiumVault,
+                bitmap: bitmap,
+                rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+            }).rpc()
+        }catch(err) {
+            throw new Error("could not create Pool vaults. cause: "+err)
+        }
+
+        const bitmapAccount = await program.account.bitMap.fetch(bitmap);
+        assert.equal(bitmapAccount.spacing,10)
     }),
     it("create tick account for pool",async () => {
         const tick = 440;
         const tickBN = new anchor.BN(tick)
-        const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,token0,program);
+        const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,program);
         const tickPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,tick);
-        await program.rpc.initializeTick(poolPDA,token0,tickBN,{
-            accounts: {
+        try{
+            await program.methods.initializeTick(poolPDA,token0,tickBN).accounts({
                 creator:wallet.publicKey,
                 tickAccount: tickPDA,
                 systemProgram: SystemProgram.programId,
-            }
-        })
+
+        }).rpc()
+        }catch (err) {
+            throw new Error("Could not initialize tick. Cause: " + err)
+        }
 
         const createdTickAccount = await program.account.tick.fetch(tickPDA);
         assert.equal(createdTickAccount.active,true);
@@ -231,45 +251,46 @@ describe("Initialize Sure Pool",() => {
         let tick = 210; // 300bp tick
 
 
-    // TODO: Deposit some more liquidity from other LPs
+        // TODO: Deposit some more liquidity from other LPs
     
-    try{
-        await sureUtils.depositLiquidity(
-        amount,
-        tick,
-        wallet.publicKey,
-        walletATAPubkey,
-        protcolToInsure0.publicKey,
-        token0
+        try{
+            await sureUtils.depositLiquidity(
+            connection,
+            amount,
+            tick,
+            wallet.publicKey,
+            walletATAPubkey,
+            protcolToInsure0.publicKey,
+            token0
+            )
+        } catch(err) {
+            throw new Error("Deposit liquidity error. Cause:" + err)
+        }
+
+    
+
+        const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,program);
+        const vaultPDA = await sureUtils.getLiquidityVaultPDA(poolPDA,token0);
+        const tickPosition = await sureUtils.getCurrentTickPosition(poolPDA,token0,tick);
+        const tickAccountPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,tick);
+        const tickAccount = await program.account.tick.fetch(tickAccountPDA)   
+
+        const nftAccountPDA = await sureUtils.getLPTokenAccountPDA(
+            poolPDA,
+            vaultPDA,
+            new anchor.BN(tick),
+            new anchor.BN(tickPosition)
         )
-    } catch(err) {
-        throw new Error("deposit liquidity error. Cause:" + err)
-    }
-
-    
-
-    const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,token0,program);
-    const vaultPDA = await sureUtils.getVaultPDA(poolPDA,token0);
-    const tickPosition = await sureUtils.getCurrentTickPosition(poolPDA,token0,tick);
-    const tickAccountPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,tick);
-    const tickAccount = await program.account.tick.fetch(tickAccountPDA)   
-
-    const nftAccountPDA = await sureUtils.getLPTokenAccountPDA(
-        poolPDA,
-        vaultPDA,
-        new anchor.BN(tick),
-        new anchor.BN(tickPosition)
-    )
-    let nftAccount = await getAccount(
-        connection,
-        nftAccountPDA,
-    )
-    assert.equal(nftAccount.amount,1);
-    /// Get liquidity position
-    const liquidityPositionPDA = await sureUtils.getLiquidityPositionPDA(nftAccountPDA);
-    let liquidityPosition = await program.account.liquidityPosition.fetch(liquidityPositionPDA)
-    assert.equal(liquidityPosition.nftAccount.toBase58(),nftAccountPDA.toBase58(),"nft account not equal to expected address")
-    
+        let nftAccount = await getAccount(
+            connection,
+            nftAccountPDA,
+        )
+        assert.equal(nftAccount.amount,1);
+        /// Get liquidity position
+        const liquidityPositionPDA = await sureUtils.getLiquidityPositionPDA(nftAccountPDA);
+        let liquidityPosition = await program.account.liquidityPosition.fetch(liquidityPositionPDA)
+        assert.equal(liquidityPosition.nftAccount.toBase58(),nftAccountPDA.toBase58(),"nft account not equal to expected address")
+        
     }),
     it("redeem liquidity based on NFT",async () => {
         //  Allow user to provide only the NFT to get the 
@@ -303,6 +324,7 @@ describe("Initialize Sure Pool",() => {
         // deposit liquidity 
         try{
             await sureUtils.depositLiquidity(
+                connection,
             newLiquidity,
             tick,
             wallet.publicKey,
@@ -316,6 +338,7 @@ describe("Initialize Sure Pool",() => {
 
         try{
             await sureUtils.depositLiquidity(
+                connection,
             10000,
             150,
             wallet.publicKey,
@@ -332,14 +355,13 @@ describe("Initialize Sure Pool",() => {
         // Find pool to target
         const poolPDA = await sureUtils.getPoolPDA(
             protcolToInsure0.publicKey,
-            token0,
             program
         )
 
         // Calculate cost of insurance 
-        const [potentialAmountCovered,price] = await sureUtils.estimateYearlyPremium(amountToBuy,poolPDA,wallet.publicKey)
+        const [potentialAmountCovered,price] = await sureUtils.estimateYearlyPremium(amountToBuy,token0,poolPDA,wallet.publicKey)
         console.log("potentialAmountCovered: ",potentialAmountCovered.toString(), " , price: ",price.toString())
 
-        await sureUtils.buyInsurance(connection,amountToBuy,poolPDA,wallet.publicKey);
+        await sureUtils.buyInsurance(connection,amountToBuy,token0,poolPDA,wallet.publicKey);
     })
 })

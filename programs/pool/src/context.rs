@@ -10,6 +10,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
+    mint,
 };
 
 
@@ -18,6 +19,8 @@ use vipers::{assert_is_ata, prelude::*};
 
 pub const SURE_PRIMARY_POOL_SEED: &str = "sure-insurance-pool";
 pub const SURE_ASSOCIATED_TOKEN_ACCOUNT_SEED: &str = "sure-ata";
+pub const SURE_PREMIUM_POOL_SEED: &str = "sure-premium-vault";
+pub const SURE_VAULT_POOL_SEED: &str = "sure-liquidity-vault";
 pub const SURE_LIQUIDITY_POSITION: &str = "sure-lp";
 pub const SURE_PROTOCOL_OWNER: &str = "sure-protocol-owner";
 pub const SURE_INSURANCE_CONTRACT: &str = "sure-insurance-contract";
@@ -30,7 +33,7 @@ pub const SURE_MP_METADATA_SEED: &str = "metadata";
 /// Initialize Sure Protocol
 /// by setting the owner of the protocol
 #[derive(Accounts)]
-pub struct Initialize<'info> {
+pub struct InitializeProtocol<'info> {
     /// Owner of the protocol
     #[account(mut)]
     pub owner: Signer<'info>,
@@ -49,7 +52,7 @@ pub struct Initialize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> Validate<'info> for Initialize<'info> {
+impl<'info> Validate<'info> for InitializeProtocol<'info> {
     fn validate(&self) -> Result<()> {
         Ok(())
     }
@@ -61,7 +64,7 @@ pub struct InitializePoolManager<'info> {
     #[account(
         init,
         payer= initial_manager,
-        space = 8 + PoolManager::POOL_MANAGER_SIZE,
+        space = 8 + PoolManager::SIZE,
         seeds = [b"sure-pool-manager"],
         bump
     )]
@@ -89,7 +92,6 @@ pub struct CreatePool<'info> {
     pub pool_creator: Signer<'info>,
 
     /// Protocol owner
-    /// !!!ISSUE
     pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
 
     #[account(
@@ -98,7 +100,6 @@ pub struct CreatePool<'info> {
         payer = pool_creator,
         seeds = [
             SURE_PRIMARY_POOL_SEED.as_bytes(),
-            token.key().as_ref(),
             insured_token_account.key().to_bytes().as_ref(),
         ],
         bump
@@ -113,34 +114,81 @@ pub struct CreatePool<'info> {
     )]
     pub insured_token_account: UncheckedAccount<'info>,
 
-    // Initialized Associated token accoun to hold vault tokens
+    /// Sysvar for Associated Token Account
+    pub rent: Sysvar<'info, Rent>,
+
+    /// Provide the system program
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> Validate<'info> for CreatePool<'info> {
+    fn validate(&self) -> Result<()> {
+        // To start, only the protocol owner can create a pool
+        //assert_keys_eq!(self.pool_creator, self.protocol_owner);
+        //
+        //
+        assert_keys_eq!(self.pool.smart_contract, self.insured_token_account);
+
+        Ok(())
+    }
+}
+
+/// Create Pool Vaults
+/// creates the associated pool vault 
+/// based on token mint 
+#[derive(Accounts)]
+pub struct CreatePoolVaults<'info> {
+    // Signer of the creation
+    #[account(mut)]
+    pub creator: Signer<'info>,
+
+    /// Pool account that the vaults are associated to
+    pub pool: Box<Account<'info,PoolAccount>>,
+
+    /// Token mint used for the Vaults
+    pub token_mint: Box<Account<'info, Mint>>,
+
+    // Pool Vault used to hold tokens from token_mint
     #[account(
         init,
-        payer = pool_creator,
+        payer = creator,
         seeds = [
-            SURE_ASSOCIATED_TOKEN_ACCOUNT_SEED.as_bytes(),
+            SURE_VAULT_POOL_SEED.as_bytes(),
             pool.key().as_ref(),
-            token.key().as_ref()
+            token_mint.key().as_ref(),
         ],
         bump,
-        token::mint = token,
+        token::mint = token_mint,
+        token::authority = pool,
+    )]
+    pub liquidity_vault: Box<Account<'info, TokenAccount>>,
+
+    // Premium Vault holding all future premiums
+    #[account(
+        init,
+        payer = creator,
+        seeds = [
+            SURE_PREMIUM_POOL_SEED.as_bytes(),
+            pool.key().as_ref(),
+            token_mint.key().as_ref()
+        ],
+        bump,
+        token::mint = token_mint,
         token::authority = pool
     )]
-    pub vault: Box<Account<'info, TokenAccount>>,
+    pub premium_vault: Box<Account<'info,TokenAccount>>,
 
-    /// Token to be deposited into the pool
-    pub token: Box<Account<'info, Mint>>,
 
     /// Bitmap
     /// Keep track of ticks used to provide liquidity at
     #[account(
         init,
         space = 8 + BitMap::SPACE,
-        payer = pool_creator,
+        payer = creator,
         seeds = [
             SURE_BITMAP.as_bytes(),
             pool.key().as_ref(),
-            token.key().as_ref()
+            token_mint.key().as_ref()
         ],
         bump,
     )]
@@ -156,18 +204,11 @@ pub struct CreatePool<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> Validate<'info> for CreatePool<'info> {
+impl<'info> Validate<'info> for CreatePoolVaults<'info> {
     fn validate(&self) -> Result<()> {
-        // To start, only the protocol owner can create a pool
-        assert_keys_eq!(self.pool_creator, self.protocol_owner);
-        //
-        assert_keys_eq!(self.pool.token, self.token);
-        //
-        assert_keys_eq!(self.pool.bitmap, self.bitmap);
-        //
-        assert_keys_eq!(self.pool.smart_contract, self.insured_token_account);
-        assert_keys_eq!(self.pool.vault, self.vault);
-
+        // Make sure that token is USDC
+        assert_eq!(self.token_mint.key(), mint::USDC,"Vaults can only have mint USDC");
+        
         Ok(())
     }
 }
@@ -193,7 +234,7 @@ pub struct DepositLiquidity<'info> {
 
     /// Pool Vault account to deposit liquidity to
     #[account(mut)]
-    pub vault: Box<Account<'info, TokenAccount>>,
+    pub vault: Account<'info, TokenAccount>,
 
     // NFT minting
     #[account(
@@ -277,28 +318,13 @@ impl<'info> Validate<'info> for DepositLiquidity<'info> {
     fn validate(&self) -> Result<()> {
         assert_is_zero_token_account!(self.nft_account);
 
-        // Check correct vault
-        assert_keys_eq!(self.pool.vault, self.vault);
-
         // check the same bitmap
         assert_keys_eq!(self.pool.bitmap, self.bitmap);
         Ok(())
     }
 }
 
-#[derive(Accounts)]
-pub struct UpdateTickPosition<'info> {
-    /// Pays for the update
-    pub signer: Signer<'info>,
 
-    /// Tick account
-    #[account(mut)]
-    pub tick: AccountLoader<'info, Tick>,
-
-    /// Liquidity Position
-    #[account(mut)]
-    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
-}
 
 /// Redeem liquidity
 /// Allow holder of NFT to redeem liquidity from pool
@@ -355,12 +381,25 @@ impl<'info> Validate<'info> for RedeemLiquidity<'info> {
         //assert_is_zero_token_account!(self.nft);
 
         // Check correct vault
-        assert_keys_eq!(self.pool.vault, self.vault);
 
         // check the same bitmap
         //assert_keys_eq!(self.pool.bitmap, self.bitmap);
         Ok(())
     }
+}
+
+#[derive(Accounts)]
+pub struct UpdateTickPosition<'info> {
+    /// Pays for the update
+    pub signer: Signer<'info>,
+
+    /// Tick account
+    #[account(mut)]
+    pub tick: AccountLoader<'info, Tick>,
+
+    /// Liquidity Position
+    #[account(mut)]
+    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
 }
 
 #[derive(Accounts)]
@@ -448,7 +487,7 @@ pub struct BuyInsurance<'info> {
     #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
 
-    /// Tick account to buy from 
+    /// Tick account to buy 
     #[account(mut)]
     pub tick_account: AccountLoader<'info, Tick>,
 
@@ -457,6 +496,34 @@ pub struct BuyInsurance<'info> {
     constraint = insurance_contract.pool == pool.key(),
     constraint = insurance_contract.active == true,
     constraint = insurance_contract.owner == buyer.key(),
+    )]
+    pub insurance_contract: Box<Account<'info, InsuranceContract>>,
+
+    /// System Contract used to create accounts
+    pub system_program: Program<'info, System>,
+}
+
+/// Cancel insurance contract
+/// 
+#[derive(Accounts)]
+pub struct CancelInsurance<'info>{
+    /// Holder of insurance
+    #[account(mut)]
+    pub holder: Signer<'info>,
+
+    /// Pool to exit
+    #[account(mut)]
+    pub pool: Box<Account<'info, PoolAccount>>,
+
+    /// Tick account to exit from 
+    #[account(mut)]
+    pub tick_account: AccountLoader<'info, Tick>,
+
+    /// Insurance Contract
+    #[account(mut,
+    constraint = insurance_contract.pool == pool.key(),
+    constraint = insurance_contract.active == true,
+    constraint = insurance_contract.owner == holder.key(),
     )]
     pub insurance_contract: Box<Account<'info, InsuranceContract>>,
 

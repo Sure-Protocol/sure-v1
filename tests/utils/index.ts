@@ -3,7 +3,7 @@ import {PublicKey} from "@solana/web3.js"
 import * as anchor from "@project-serum/anchor"
 import { Program } from "@project-serum/anchor";
 import { token } from "@project-serum/anchor/dist/cjs/utils";
-import { ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { ASSOCIATED_TOKEN_PROGRAM_ID, getAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {TokenAccount} from "./types"
 import {  metaplex } from "@metaplex/js/lib/programs";
 import { TokenMetadataProgram, TokenProgram } from "@metaplex-foundation/js-next";
@@ -19,6 +19,8 @@ export const TOKEN_VAULT_SEED = anchor.utils.bytes.utf8.encode("sure-ata")
 export const SURE_BITMAP = anchor.utils.bytes.utf8.encode("sure-bitmap")
 export const SURE_LIQUIDITY_POSITION = anchor.utils.bytes.utf8.encode("sure-lp");
 export const SURE_TICK_SEED = anchor.utils.bytes.utf8.encode("sure-tick")
+export const SURE_VAULT_POOL_SEED = anchor.utils.bytes.utf8.encode("sure-liquidity-vault");
+export const SURE_PREMIUM_POOL_SEED = anchor.utils.bytes.utf8.encode("sure-premium-vault");
 export const SURE_NFT_MINT_SEED = anchor.utils.bytes.utf8.encode("sure-nft");
 export const SURE_TOKEN_ACCOUNT_SEED = anchor.utils.bytes.utf8.encode("sure-token-account");
 export const SURE_MP_METADATA_SEED = anchor.utils.bytes.utf8.encode("metadata")
@@ -27,12 +29,35 @@ export const SURE_INSURANCE_CONTRACT = anchor.utils.bytes.utf8.encode("sure-insu
 export * from "./nft"
 
 
-export const getPoolPDA = async (smartContractToInsure: PublicKey,token_mint:PublicKey,program: anchor.Program<SurePool>): Promise<anchor.web3.PublicKey> => {
-    const POOL_SEED =anchor.utils.bytes.utf8.encode("sure-insurance-pool")
+export const getLiquidityVaultPDA = async (pool: PublicKey,tokenMint: PublicKey): Promise<PublicKey> => {
+    const [liquidityVaultPDA,liquidityVaultBump] = await PublicKey.findProgramAddress(
+        [
+            SURE_VAULT_POOL_SEED,
+            pool.toBytes(),
+            tokenMint.toBytes()
+        ],
+        program.programId
+    )
+    return liquidityVaultPDA
+}
+
+export const getPremiumVaultPDA = async (pool: PublicKey,tokenMint: PublicKey): Promise<PublicKey> => {
+    const [premiumVaultPDA,premiumVaultBump] = await PublicKey.findProgramAddress(
+        [
+            SURE_PREMIUM_POOL_SEED,
+            pool.toBytes(),
+            tokenMint.toBytes()
+        ],
+        program.programId
+    )
+    return premiumVaultPDA
+}
+
+export const getPoolPDA = async (smartContractToInsure: PublicKey,program: anchor.Program<SurePool>): Promise<anchor.web3.PublicKey> => {
+   
     const [poolPDA,poolBump] = await PublicKey.findProgramAddress(
         [
             POOL_SEED,
-            token_mint.toBytes(),
             smartContractToInsure.toBytes()
         ],
         program.programId
@@ -40,12 +65,12 @@ export const getPoolPDA = async (smartContractToInsure: PublicKey,token_mint:Pub
     return poolPDA
 }
 
-export const getBitmapPDA = async (poolPDA: PublicKey,tokenMint: PublicKey,program: anchor.Program<SurePool>): Promise<anchor.web3.PublicKey> => {
+export const getBitmapPDA = async (pool: PublicKey,tokenMint: PublicKey,program: anchor.Program<SurePool>): Promise<anchor.web3.PublicKey> => {
     const [bitmapPDA,bitmapBump] =  await PublicKey.findProgramAddress(
         [
             SURE_BITMAP,
-            poolPDA.toBytes(),
-            tokenMint.toBytes(),
+            pool.toBytes(),
+            tokenMint.toBytes()
         ],
         program.programId,
     )
@@ -206,18 +231,6 @@ export const getProtocolOwner = async (): Promise<[PublicKey,number]> => {
     )
 }
 
-export const getVaultPDA = async (poolPDA: PublicKey,tokenMint:PublicKey):Promise<PublicKey> => {
-    const [vaultPDA,vaultBump] = await PublicKey.findProgramAddress(
-        [
-            TOKEN_VAULT_SEED,
-            poolPDA.toBytes(),
-            tokenMint.toBytes(),
-        ],
-        program.programId
-    )
-    return vaultPDA
-}
-
 
 export const getLPMintPDA = async (nftAccountPDA: PublicKey): Promise<PublicKey> => {
 
@@ -295,6 +308,7 @@ export const getLiquidityPositionPDA = async (nftAccountPDA: PublicKey): Promise
      * @return Nothing
      */
 export const depositLiquidity = async (
+    connection: anchor.web3.Connection, 
     liquidityAmount: number,
     tick:number,
     liquidityProvider: PublicKey,
@@ -303,17 +317,39 @@ export const depositLiquidity = async (
     tokenMint:PublicKey
     ) => {
     // Liquidity Pool PDA
-    const poolPDA = await getPoolPDA(protocolToInsure,tokenMint,program);
+    const poolPDA = await getPoolPDA(protocolToInsure,program);
+    try{
+        await program.account.poolAccount.fetch(poolPDA)
+    }catch(err){
+        throw new Error("Pool does not exist. Cause: "+err)
+    }
 
     // Protocol Owner 
     let [protocolOwnerPDA,_] = await getProtocolOwner();
+    try{
+        await program.account.protocolOwner.fetch(protocolOwnerPDA)
+    }catch(err){
+        throw new Error("Protocol owner does not exist. Cause: "+err)
+    }
     // Liquidity Pool Vault
-    const vaultPDA = await getVaultPDA(poolPDA,tokenMint);
+    const vaultPDA = await getLiquidityVaultPDA(poolPDA,tokenMint);
+    try {
+        await getAccount(
+            connection,
+            vaultPDA,
+        )
+    }catch(err){
+        throw new Error("Vault does not exist. Cause: "+err)
+    }
+
 
     // Get tick account
-  
     const tickAccountPDA = await createTickAccount(poolPDA,tokenMint,tick,liquidityProvider);
-   
+    try{
+        await program.account.tick.fetch(tickAccountPDA)
+    }catch(err){
+        throw new Error("Tick account does not exist. Cause: "+err)
+    }
     //  Generate tick
 
     const tickBN = new anchor.BN(tick)
@@ -328,13 +364,18 @@ export const depositLiquidity = async (
 
     // Get bitmap 
     const bitmapPDA = await getBitmapPDA(poolPDA,tokenMint,program)
+    try{
+        await program.account.bitMap.fetch(bitmapPDA)
+    }catch(err){
+        throw new Error("Bitmap does not exist. Cause: "+err)
+    }
 
     const mpMetadataAccountPDA = await getMpMetadataPDA(nftMint)
 
     /// Deposit liquidity Instruction 
     try {
         const amountBN = new anchor.BN(liquidityAmount)
-        const res = await program.methods.depositLiquidity(tick,nextTickPositionBN,amountBN).accounts({
+        await program.methods.depositLiquidity(tick,nextTickPositionBN,amountBN).accounts({
             liquidityProvider: liquidityProvider,
             protocolOwner: protocolOwnerPDA,
             liquidityProviderAccount: liquidityProviderATA,
@@ -387,18 +428,18 @@ export const redeemLiquidity = async (wallet: PublicKey,walletATA: PublicKey,nft
     // Protocol Owner 
     let [protocolOwnerPDA,_] = await getProtocolOwner();
 
-    let vaultAccountPDA = await getVaultPDA(poolPDA,tokenMint);
+    let vaultAccountPDA = await getLiquidityVaultPDA(poolPDA,tokenMint);
     let tickAccount = await getTickAccountPDA(poolPDA,tokenMint,tick)
     let metadataAccountPDA = await getMpMetadataPDA(nftMint)
     try {
-        await program.rpc.redeemLiquidity(tokenMint,insuredTokenAccount,{
+        await program.rpc.redeemLiquidity({
             accounts:{
                 nftHolder: wallet,
                 nftAccount: nftAccount,
                 protocolOwner: protocolOwnerPDA,
                 liquidityPosition: liquidityPositionPDA,
                 tokenAccount: walletATA,
-                vault: pool.vault,
+                vault: vaultAccountPDA,
                 tickAccount: tickAccount,
                 metadataAccount: metadataAccountPDA,
                 metadataProgram: TokenMetadataProgram.publicKey,
@@ -415,13 +456,13 @@ export const redeemLiquidity = async (wallet: PublicKey,walletATA: PublicKey,nft
 
 
 
-export const estimateYearlyPremium = async (amount: number,pool: PublicKey,owner:PublicKey): Promise<[amountCovered:anchor.BN,insurancePrice:anchor.BN]> => {
+export const estimateYearlyPremium = async (amount: number,tokenMint:PublicKey,pool: PublicKey,owner:PublicKey): Promise<[amountCovered:anchor.BN,insurancePrice:anchor.BN]> => {
     const poolAccount = await program.account.poolAccount.fetch(pool);
     const insuranceFee = poolAccount.insuranceFee;
 
     /// Estimate premium 
     const tickSpacing = poolAccount.tickSpacing
-    const firstBit = await getLowestBit(pool,poolAccount.token);
+    const firstBit = await getLowestBit(pool,tokenMint);
     const firstTick = getTickBasisPoint(firstBit,tickSpacing)
 
   
@@ -436,7 +477,7 @@ export const estimateYearlyPremium = async (amount: number,pool: PublicKey,owner
     let tick = firstTick;
 
     // Get tick account
-    let tickAccountPDA = await getTickAccountPDA(pool,poolAccount.token,firstTick)
+    let tickAccountPDA = await getTickAccountPDA(pool,tokenMint,firstTick)
     let tickAccount = await program.account.tick.fetch(tickAccountPDA)
     let availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
 
@@ -456,8 +497,8 @@ export const estimateYearlyPremium = async (amount: number,pool: PublicKey,owner
         amountToCover = amountToCover.sub(amountToPay)
 
         // find next liquidity
-        tick = await getNextTick(tick,pool,poolAccount.token,10)
-        tickAccountPDA = await getTickAccountPDA(pool,poolAccount.token,tick)
+        tick = await getNextTick(tick,pool,tokenMint,10)
+        tickAccountPDA = await getTickAccountPDA(pool,tokenMint,tick)
         tickAccount = await program.account.tick.fetch(tickAccountPDA)
         availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
 
@@ -484,7 +525,7 @@ export const estimateYearlyPremium = async (amount: number,pool: PublicKey,owner
  * 
  */
 
-export const buyInsurance = async (connection: anchor.web3.Connection,amount: number,pool: PublicKey,owner: PublicKey) => {
+export const buyInsurance = async (connection: anchor.web3.Connection,amount: number,tokenMint: PublicKey,pool: PublicKey,owner: PublicKey) => {
     
     const poolAccount = await program.account.poolAccount.fetch(pool);
     
@@ -511,7 +552,7 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
 
     // ================= buy insurance by traversing ticks ==============
     const tickSpacing = poolAccount.tickSpacing
-    const firstBit = await getLowestBit(pool,poolAccount.token);
+    const firstBit = await getLowestBit(pool,tokenMint);
     const firstTick = getTickBasisPoint(firstBit,tickSpacing)
 
    
@@ -526,7 +567,7 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
     let txs = new anchor.web3.Transaction()
 
     // Get tick account
-    let tickAccountPDA = await getTickAccountPDA(pool,poolAccount.token,firstTick)
+    let tickAccountPDA = await getTickAccountPDA(pool,tokenMint,firstTick)
     let tickAccount = await program.account.tick.fetch(tickAccountPDA)
     let availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
 
@@ -540,10 +581,11 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
         }
 
         // Buy insurance for tick
-        txs.add(program.instruction.buyInsuranceForTick(amountToPay,tick,{
+        txs.add(program.instruction.buyInsuranceForTick(amountToPay,{
             accounts:{
                 buyer: owner,
                 pool: pool,
+                tickAccount:tickAccountPDA,
                 insuranceContract: insuranceContractPDA,
                 systemProgram: SystemProgram.programId,
             },
@@ -553,8 +595,8 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
         amountToCover = amountToCover.sub(amountToPay)
 
         // find next liquidity
-        tick = await getNextTick(tick,pool,poolAccount.token,10)
-        tickAccountPDA = await getTickAccountPDA(pool,poolAccount.token,tick)
+        tick = await getNextTick(tick,pool,tokenMint,10)
+        tickAccountPDA = await getTickAccountPDA(pool,tokenMint,tick)
         tickAccount = await program.account.tick.fetch(tickAccountPDA)
         availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
         amountCovered = amountCovered.add(amountToPay)

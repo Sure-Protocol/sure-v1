@@ -34,7 +34,7 @@ pub mod sure_pool {
     ///
     /// * ctx:
     ///
-    pub fn initialize_protocol(ctx: Context<Initialize>) -> Result<()> {
+    pub fn initialize_protocol(ctx: Context<InitializeProtocol>) -> Result<()> {
         let protocol_owner = &mut ctx.accounts.protocol_owner.load_init()?;
         protocol_owner.bump = unwrap_bump!(ctx, "protocol_owner");
         protocol_owner.owner = ctx.accounts.owner.key();
@@ -84,19 +84,13 @@ pub mod sure_pool {
         tick_spacing: u16,
         name: String,
     ) -> Result<()> {
-        let liquidity_token = &mut ctx.accounts.token;
-
         // ________________ Validation ________________
         // Only allow the owner of the protocol to create pools
-        let protocol_owner = &ctx.accounts.protocol_owner.load()?;
-        require!(
-            ctx.accounts.pool_creator.key() == protocol_owner.owner,
-            SureError::InvalidPoolCreator
-        );
-
-        // Only allow for USDC
-        // Must be mocked in tests.
-        //require!(liquidity_token.key() == USDC.key(),utils::errors::SureError::InvalidMint);
+        // let protocol_owner = &ctx.accounts.protocol_owner.load()?;
+        // require!(
+        //     ctx.accounts.pool_creator.key() == protocol_owner.owner,
+        //     SureError::InvalidPoolCreator
+        // );
 
         // Range size should be less than 100. Meaning that the premium should be less than 100%
         require!(
@@ -104,17 +98,11 @@ pub mod sure_pool {
             utils::errors::SureError::InvalidRangeSize
         );
 
-        // Bitmap
-        let bitmap = &mut ctx.accounts.bitmap;
-        bitmap.bump = *ctx.bumps.get("bitmap").unwrap();
-        bitmap.spacing = 10;
-
         // Get pool account
         let pool_account = &mut ctx.accounts.pool;
 
         // Set up pool account
         pool_account.bump = *ctx.bumps.get("pool").unwrap();
-        pool_account.token = liquidity_token.key();
         pool_account.insurance_fee = insurance_fee;
         pool_account.tick_spacing = tick_spacing;
         pool_account.liquidity = 0;
@@ -123,14 +111,36 @@ pub mod sure_pool {
         pool_account.premium_rate = 0;
         pool_account.smart_contract = ctx.accounts.insured_token_account.key();
         pool_account.locked = false;
-        pool_account.vault = ctx.accounts.vault.key();
-        pool_account.bitmap = bitmap.key();
 
-        emit!(utils::events::InitializedPool {
+        emit!(pool::InitializedPool {
             name: "".to_string(),
             smart_contract: ctx.accounts.insured_token_account.key()
         });
 
+        Ok(())
+    }
+
+    /// Create Token Pool Vaults
+    /// Create and initialize 
+    /// - Liquidity Vault 
+    /// - Premium Vault
+    /// for the provided Pool.
+    /// 
+    /// # Arguments
+    /// * ctx: 
+    /// 
+    pub fn create_pool_vaults(ctx: Context<CreatePoolVaults>) -> Result<()>{
+
+        // Load accounts
+        let bitmap = &mut ctx.accounts.bitmap;
+        
+        // Initialize Bitmap
+        bitmap.bump = *ctx.bumps.get("bitmap").unwrap();
+        bitmap.spacing = 10;
+        bitmap.word= [0;4];
+        
+        emit!(pool::CreatePoolVaults{
+        });
         Ok(())
     }
 
@@ -158,17 +168,13 @@ pub mod sure_pool {
         );
         require!(amount > 0, utils::errors::SureError::InvalidAmount);
 
-        // Check that the correct vault is provided
+        // Load Accounts
         let bitmap = &mut ctx.accounts.bitmap;
         let pool = &mut ctx.accounts.pool;
-        let pool_vault_pb =pool.vault; 
         let protocol_owner = &ctx.accounts.protocol_owner.load()?;
-        let vault = &ctx.accounts.vault.to_account_info();
-        require!(
-            pool_vault_pb.key() == vault.key(),
-            utils::errors::SureError::InvalidMint
-        );
+        let vault = &ctx.accounts.vault;
 
+        
         // The existence of a liquidity position should be checked by anchor.
 
         // _________________ Functionality _________________________
@@ -238,7 +244,7 @@ pub mod sure_pool {
                         .liquidity_provider_account
                         .to_account_info()
                         .clone(),
-                    to: ctx.accounts.vault.to_account_info().clone(),
+                    to: vault.to_account_info().clone(),
                     authority: ctx.accounts.liquidity_provider.to_account_info(),
                 },
             ),
@@ -267,7 +273,7 @@ pub mod sure_pool {
         liquidity_position.tick = tick;
         liquidity_position.created_at = Clock::get()?.unix_timestamp;
         liquidity_position.tick_id = new_id;
-        liquidity_position.token_mint = pool.token;
+        liquidity_position.token_mint = vault.mint;
 
         // Update bitmap
         if !bitmap.is_initialized(tick, pool.tick_spacing.clone()){
@@ -277,7 +283,7 @@ pub mod sure_pool {
 
         // # 4. Update tick with new liquidity position
         tick_account
-            .add_liquidity(new_id, amount)
+            .add_liquidity(new_id, amount,vault.mint)
             .map_err(|e| e.to_anchor_error())?;
         //tick_account.update_callback()?;
 
@@ -310,9 +316,10 @@ pub mod sure_pool {
     /// # Arguments
     /// * ctx
     ///
-    pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>,token_mint:Pubkey,insured_token_account: Pubkey) -> Result<()> {
+    pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>) -> Result<()> {
         // _______________ LOAD accounts __________________
-    
+        
+        let vault = &ctx.accounts.vault;
 
         let liquidity_position = &ctx.accounts.liquidity_position;
 
@@ -323,6 +330,8 @@ pub mod sure_pool {
 
         let protocol_owner = &ctx.accounts.protocol_owner.load()?;
         let pool = &ctx.accounts.pool;
+        
+
         /// Available liquidity
         let free_liquidity = tick_account.available_liquidity(liquidity_position.tick_id);
         require!(free_liquidity > 0, SureError::LiquidityFilled);
@@ -331,8 +340,7 @@ pub mod sure_pool {
       
         let pool_seeds = [
             &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
-            &token_mint.to_bytes() as &[u8],
-            &insured_token_account.to_bytes() as &[u8],
+            &pool.smart_contract.to_bytes() as &[u8],
             &[pool.bump]
         ];
         
@@ -438,14 +446,40 @@ pub mod sure_pool {
 
         let pool_account = &mut ctx.accounts.pool;
 
+        let insurance_contract = &mut ctx.accounts.insurance_contract;
         // #1 credit tick account
         tick_account.buy_insurance(amount).map_err(|e| e.to_anchor_error())?;
 
         // #2 Update pool account
         pool_account.active_liquidity -= amount;
 
-        // #3 transfer premium to premium vault 
+        // # 3 transfer premium to premium vault 
 
+        // # 4 Update insurance contract
+        insurance_contract.amount += amount;
+        Ok(())
+    }
+
+    /// Cancel insurance contract 
+    /// Allows user to exit insurance contract for a 
+    /// given tick
+    /// 
+    /// # Arguments
+    /// * ctx
+    ///
+    pub fn cancel_insurance_for_tick(
+        ctx: Context<CancelInsurance>,
+        amount: u64,
+    ) -> Result<()> {
+        // Load accounts 
+
+        // # 1 Exit tick position
+
+        // # 2 Reduce amount in pool
+
+        // # 3 Transfer money from premium vault to user - premium vault held by pool
+
+        // # 4 update insurance contract
 
         Ok(())
     }
