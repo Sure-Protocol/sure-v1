@@ -40,9 +40,16 @@ export class Bitmap {
         const u256 = this.word.flatMap((word) => {
             return word.toString(2,64).split("").reverse().join("")
         })[0]
-        const firstBit = u256.indexOf("1")
        
-        return firstBit
+        return u256.indexOf("1")
+    }
+
+    getHighestBit(): number {
+        const u256 = this.word.flatMap((word) => {
+            return word.toString(2,64).split("").reverse().join("")
+        })[0]
+
+        return u256.lastIndexOf("1")
     }
 
     getTickFromBit(bit: number): number {
@@ -53,24 +60,39 @@ export class Bitmap {
         return tick/this.spacing
     }
 
-    getNextTick(previousTick: number): number {
-        const prevBit = this.getBitFromTick(previousTick);
+    getNextTick(tick: number): number {
+        const bit = this.getBitFromTick(tick);
     
         const u256 = this.word.flatMap((word) => {
             return word.toString(2,64).split("").reverse().join("")
         })[0]
     
-        //console.log("u256: ",u256)
-        const remainingBitmap = u256.slice(prevBit+1)
+        const remainingBitmap = u256.slice(bit+1)
         const subBit = remainingBitmap.indexOf("1")
         if (subBit === -1){
             return -1
         }
-        const nextBit = subBit + prevBit+1
+        const nextBit = subBit + bit+1
     
         return this.getTickFromBit(nextBit)
     }
 
+    getPreviousTick(tick:number):number {
+        const bit = this.getBitFromTick(tick);
+    
+        const u256 = this.word.flatMap((word) => {
+            return word.toString(2,64).split("").reverse().join("")
+        })[0]
+
+        const priorBitmap = u256.slice(0,tick-1)
+        const lastBit = priorBitmap.lastIndexOf("1")
+        if (lastBit === -1){
+            return lastBit
+        }
+
+        return this.getTickFromBit(lastBit)
+
+    }
 }
 
 

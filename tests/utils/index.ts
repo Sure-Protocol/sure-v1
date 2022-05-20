@@ -590,6 +590,7 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
     // Get the premium vault for the given pool
     const premiumVaultPDA = await getPremiumVaultPDA(pool,tokenMint);
 
+    // Get correct associated token account 
     const tokenAccount = await getOrCreateAssociatedTokenAccount(
         connection,
         (owner as NodeWallet).payer,
@@ -678,7 +679,12 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
  * @param pool<publickey>: the pool to buy from 
  * 
  */
-export const reduceInsuranceAmount = async (newInsuranceAmount: number,pool) => {
+export const reduceInsuranceAmount = async (newInsuranceAmount: number,pool:PublicKey,owner: PublicKey) => {
+
+    // Load accounts
+    const userInsuranceContractsPDA = await getInsuranceContractsBitmapPDA(owner, pool);
+    const userInsuranceContracts = await program.account.bitMap.fetch(userInsuranceContractsPDA)
+    const insuranceContractBitmap = bitmap.Bitmap.new(userInsuranceContracts)
 
 
 }
