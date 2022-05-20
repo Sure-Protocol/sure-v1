@@ -295,7 +295,7 @@ pub mod sure_pool {
         liquidity_position.token_mint = vault.mint;
 
         // Update bitmap
-        if !bitmap.is_initialized(tick, pool.tick_spacing.clone()) {
+        if !bitmap.is_initialized(tick) {
             bitmap.flip_bit(tick);
         }
 
@@ -424,6 +424,11 @@ pub mod sure_pool {
 
         // Load insurance_contract
         let insurance_contract = &mut ctx.accounts.insurance_contract;
+        let insurance_contracts = &mut ctx.accounts.insurance_contracts;
+        let tick_account_state =
+        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+        let tick_account = tick_account_state.load()?;
+
 
         // Initialize insurance_contract
         insurance_contract.amount = 0;
@@ -434,6 +439,25 @@ pub mod sure_pool {
         insurance_contract.token_mint = ctx.accounts.token_mint.key();
         insurance_contract.active = true;
         insurance_contract.owner = ctx.accounts.owner.key();
+
+        // Update insurance contract
+        // Mark the position as filled
+        if !insurance_contracts.is_initialized(tick_account.tick) {
+            insurance_contracts.flip_bit(tick_account.tick);
+        }
+
+        Ok(())
+    }
+
+    pub fn initialize_user_insurance_contracts(ctx: Context<InitializeUserInsuranceContracts>) -> Result<()> {
+        
+        // Load accounts
+        let insurance_contracts = &mut ctx.accounts.insurance_contracts;
+
+        // Initialize the insurance contract overview 
+        insurance_contracts.bump = unwrap_bump!(ctx,"insurance_contracts");
+        insurance_contracts.spacing = 10;
+        insurance_contracts.word = [0; 4];
 
         Ok(())
     }
@@ -471,7 +495,7 @@ pub mod sure_pool {
         let amount_to_cover = cmp::min(available_liquidity_in_tick, amount);
 
         // Calculate cost of coverage
-        let tick_in_decimals: u64 = (tick_account.tick) / (10000);
+        let tick_in_decimals = (tick_account.tick as u64) / (10000);
 
         let current_time = Clock::get()?.unix_timestamp;
         let time_diff = end_ts - current_time;
@@ -606,7 +630,7 @@ pub mod sure_pool {
         ctx: Context<InitializeTick>,
         _pool: Pubkey,
         _token: Pubkey,
-        tick_bp: u64,
+        tick_bp: u16,
     ) -> Result<()> {
         let mut tick_account = ctx.accounts.tick_account.load_init()?;
 

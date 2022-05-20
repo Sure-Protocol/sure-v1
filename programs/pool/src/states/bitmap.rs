@@ -66,8 +66,8 @@ impl BitMap {
         self.word = word.bitxor(mask).0;
     }
 
-    pub fn is_initialized(&self, tick: u16, tick_spacing: u16) -> bool {
-        let tick_ratio = tick / tick_spacing;
+    pub fn is_initialized(&self, tick: u16) -> bool {
+        let tick_ratio = tick / self.spacing;
         let Position { word_pos, bit_pos } = position(tick_ratio);
 
         let next_bit = self.next_initialized_tick(tick, true);

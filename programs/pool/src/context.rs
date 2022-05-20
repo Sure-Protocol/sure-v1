@@ -1,6 +1,6 @@
 use crate::states::{
     bitmap::BitMap,
-    contract::InsuranceContract,
+    contract::{InsuranceContract},
     liquidity::{self, LiquidityPosition},
     owner::ProtocolOwner,
     pool::{PoolAccount, PoolManager, SurePools},
@@ -23,6 +23,7 @@ pub const SURE_VAULT_POOL_SEED: &str = "sure-liquidity-vault";
 pub const SURE_LIQUIDITY_POSITION: &str = "sure-lp";
 pub const SURE_PROTOCOL_OWNER: &str = "sure-protocol-owner";
 pub const SURE_INSURANCE_CONTRACT: &str = "sure-insurance-contract";
+pub const SURE_INSURANCE_CONTRACTS: &str = "sure-insurance-contracts";
 pub const SURE_BITMAP: &str = "sure-bitmap";
 pub const SURE_TICK_SEED: &str = "sure-tick";
 pub const SURE_NFT_MINT_SEED: &str = "sure-nft";
@@ -473,7 +474,7 @@ pub struct InitializeInsuranceContract<'info> {
     /// Tick account to insure against
     pub tick_account: AccountLoader<'info, Tick>,
 
-    /// Insurance Position
+    /// Insurance Contract
     #[account(
         init,
         space = 8 + InsuranceContract::SPACE,
@@ -487,6 +488,10 @@ pub struct InitializeInsuranceContract<'info> {
     )]
     pub insurance_contract: Box<Account<'info, InsuranceContract>>,
 
+    /// Insurance positions
+    #[account(mut)]
+    pub insurance_contracts: Box<Account<'info, BitMap>>,
+
     /// System Contract used to create accounts
     pub system_program: Program<'info, System>,
 }
@@ -496,6 +501,37 @@ impl<'info> Validate<'info> for InitializeInsuranceContract<'info> {
         Ok(())
     }
 }
+
+/// Initialize user insurance contract
+/// The account is used to have an overview over the 
+/// positions hebild by the user 
+#[derive(Accounts)]
+pub struct InitializeUserInsuranceContracts<'info> {
+    /// Signer
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Pool associated with the insurance contracts
+    pub pool: Box<Account<'info,PoolAccount>>,
+
+    /// 
+    #[account(
+        init,
+        space = 8 + BitMap::SPACE,
+        payer = signer,
+        seeds = [
+            SURE_INSURANCE_CONTRACTS.as_bytes(),
+            signer.key().as_ref(),
+            pool.key().as_ref(),
+        ],
+        bump,
+    )]
+    pub insurance_contracts: Box<Account<'info, BitMap>>,
+
+    /// System program
+    pub system_program: Program<'info,System>
+}
+
 /// Buy Insurance Request
 ///
 #[derive(Accounts)]
@@ -524,7 +560,7 @@ pub struct BuyInsurance<'info> {
     )]
     pub premium_vault: Box<Account<'info, TokenAccount>>,
 
-    /// Insurance Position
+    /// Insurance Contract
     #[account(mut,
     constraint = insurance_contract.pool == pool.key(),
     constraint = insurance_contract.active == true,

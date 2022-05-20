@@ -204,7 +204,7 @@ describe("Initialize Sure Pool",() => {
 
         // Generate PDA for Sure Pool
         const pool= await sureUtils.getPoolPDA(protcolToInsure0.publicKey,program);
-        const bitmap = await sureUtils.getBitmapPDA(pool,token0,program)
+        const liqudityPositionBitmap = await sureUtils.getLiquidityPositionBitmapPDA(pool,token0,program)
         const liquidityVault = await sureUtils.getLiquidityVaultPDA(pool,token0);
         const premiumVault = await sureUtils.getPremiumVaultPDA(pool,token0)
 
@@ -215,7 +215,7 @@ describe("Initialize Sure Pool",() => {
                 tokenMint: token0,
                 liquidityVault: liquidityVault,
                 premiumVault: premiumVault,
-                bitmap: bitmap,
+                bitmap: liqudityPositionBitmap,
                 rent: anchor.web3.SYSVAR_RENT_PUBKEY,
                 tokenProgram: TOKEN_PROGRAM_ID,
                 systemProgram: SystemProgram.programId,
@@ -224,7 +224,7 @@ describe("Initialize Sure Pool",() => {
             throw new Error("could not create Pool vaults. cause: "+err)
         }
 
-        const bitmapAccount = await program.account.bitMap.fetch(bitmap);
+        const bitmapAccount = await program.account.bitMap.fetch(liqudityPositionBitmap);
         assert.equal(bitmapAccount.spacing,10)
     }),
     it("get list of existing pools", async () => {
@@ -253,11 +253,10 @@ describe("Initialize Sure Pool",() => {
     }),
     it("create tick account for pool",async () => {
         const tick = 440;
-        const tickBN = new anchor.BN(tick)
         const poolPDA = await sureUtils.getPoolPDA(protcolToInsure0.publicKey,program);
         const tickPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,tick);
         try{
-            await program.methods.initializeTick(poolPDA,token0,tickBN).accounts({
+            await program.methods.initializeTick(poolPDA,token0,tick).accounts({
                 creator:wallet.publicKey,
                 tickAccount: tickPDA,
                 systemProgram: SystemProgram.programId,
@@ -394,5 +393,25 @@ describe("Initialize Sure Pool",() => {
         console.log("potentialAmountCovered: ",potentialAmountCovered.toString(), " , price: ",price.toString())
 
         await sureUtils.buyInsurance(connection,amountToBuy,endTimestamp,token0,poolPDA,wallet);
+
+        // Check the user positions
+        const insuranceContractsPDA = await sureUtils.getInsuranceContractsBitmapPDA(wallet.publicKey,poolPDA)
+        const userInsuranceContractPositions = await program.account.bitMap.fetch(insuranceContractsPDA)
+        console.log(userInsuranceContractPositions)
+        const lowestBit = await sureUtils.getLowestBit(insuranceContractsPDA)
+        const lowestTick = await sureUtils.getTickBasisPoint(lowestBit,10)
+        console.log("lowest bit: ",lowestBit)
+        console.log("lowest tick: ",lowestTick)
+        const tickAccount = await sureUtils.getTickAccountPDA(poolPDA,token0,lowestTick);
+        const insuranceContractPDA = await sureUtils.getInsuranceContractPDA(tickAccount,wallet.publicKey)
+        const insuranceContract = await program.account.insuranceContract.fetch(insuranceContractPDA)
+
+        console.log("insurance contract: ",insuranceContract)
+
+
+    }),
+    it("reduce insured amount for contract",async ()=> {
+
+
     })
 })

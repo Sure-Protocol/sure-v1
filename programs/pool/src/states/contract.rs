@@ -1,34 +1,9 @@
-use crate::bitmap::BitMap;
 ///! Insurance contract representing the proof
 ///! that a user has insurance
 use anchor_lang::prelude::*;
 
-/// Account to keep an overview over a users
-/// insurance contract within a pool
-#[account]
-pub struct UserInsuranceContracts {
-    /// Bump
-    pub bump: u8, // 1 byte
-
-    /// Amount insured in pool
-    pub amount_insured: u64, // 8 bytes
-
-    /// Pool
-    pub pool: Pubkey, // 8 bytes
-
-    // Insurance Positions
-    //pub insurance_positions: BitMap, // 4 + 32*256
-}
-
-impl UserInsuranceContracts {
-    const SIZE: usize = 1 + 8 + 8 + 4 + 32 * 256;
-}
-/// Contract
-/// Seed: [
-/// "sure-insurance-contract"
-/// signer
-/// pool
-/// ]
+/// Insurance Contract for each tick 
+/// The account should be able to be reduced within a tick
 #[account]
 #[derive(Default)]
 pub struct InsuranceContract {
