@@ -397,9 +397,10 @@ describe("Initialize Sure Pool",() => {
         // Check the user positions
         const insuranceContractsPDA = await sureUtils.getInsuranceContractsBitmapPDA(wallet.publicKey,poolPDA)
         const userInsuranceContractPositions = await program.account.bitMap.fetch(insuranceContractsPDA)
+        const bitmap = sureUtils.Bitmap.new(userInsuranceContractPositions);
         console.log(userInsuranceContractPositions)
-        const lowestBit = await sureUtils.getLowestBit(insuranceContractsPDA)
-        const lowestTick = await sureUtils.getTickBasisPoint(lowestBit,10)
+        const lowestBit = bitmap.getLowestBit()
+        const lowestTick = bitmap.getTickFromBit(lowestBit)
         console.log("lowest bit: ",lowestBit)
         console.log("lowest tick: ",lowestTick)
         const tickAccount = await sureUtils.getTickAccountPDA(poolPDA,token0,lowestTick);

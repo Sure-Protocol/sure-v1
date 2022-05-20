@@ -34,6 +34,9 @@ export const SURE_INSURANCE_CONTRACTS = anchor.utils.bytes.utf8.encode("sure-ins
 export const SURE_POOLS_SEED = anchor.utils.bytes.utf8.encode("sure-pools")
 // Export sub libs
 export * from "./nft"
+export * from "./bitmap"
+
+import * as bitmap from "./bitmap"
 
 
 export const getLiquidityVaultPDA = async (pool: PublicKey,tokenMint: PublicKey): Promise<PublicKey> => {
@@ -117,70 +120,7 @@ export const getCurrentTickPosition = async (poolPDA: PublicKey,tokenMint: Publi
     }
 }
 
-/**
-     * Current tick position in tick pool
-     * get the lowest tick pool with available liquidity
-     *
-     * @param poolPDA PDA for pool 
-     * @param tokenMint The mint of the token to be supplied to the pool. This could be USDC
-     * @return lowest bit
-     */
-export const getLowestBit = async (bitmapPDA: PublicKey): Promise<number> => {
-    const bitmap =await program.account.bitMap.fetch(bitmapPDA)
 
-    const u256 = bitmap.word.flatMap((word) => {
-        return word.toString(2,64).split("").reverse().join("")
-    })[0]
-    const firstBit = u256.indexOf("1")
-   
-    return firstBit
-}
-
-export const getTickBasisPoint = (bitPosition: number, tickSpacing: number): number => {
-    return 0 + tickSpacing*bitPosition
-}
-
-export const getBitFromTick = (tick: number, tickSpacing: number): number => {
-    return tick/tickSpacing
-}
-
-/**
-     * Get the next tick position in tick pool
-     * NOT USED!!!!
-     * 
-     * @param poolPDA PDA for pool 
-     * @param tokenMint The mint of the token to be supplied to the pool. This could be USDC
-     * @return Next tick position
-     */
-export const getNextBit = async (bitmapPDA: PublicKey,prevBit:number): Promise<number> => {
-    const bitmap =await program.account.bitMap.fetch(bitmapPDA)
-
-    const u256 = bitmap.word.flatMap((word) => {
-        return word.toString(2,64).split("").reverse().join("")
-    })[0]
-
-    return 0
-}
-
-export const getNextTick = async (prevTick: number,bitmapPDA: PublicKey,tickSpacing: number ): Promise<number> => {
-    const prevBit = getBitFromTick(prevTick,tickSpacing);
-    const bitmap =await program.account.bitMap.fetch(bitmapPDA)
-
-    const u256 = bitmap.word.flatMap((word) => {
-        return word.toString(2,64).split("").reverse().join("")
-    })[0]
-
-    //console.log("u256: ",u256)
-    const remainingBitmap = u256.slice(prevBit+1)
-    const subBit = remainingBitmap.indexOf("1")
-    if (subBit === -1){
-        return -1
-    }
-    const nextBit = subBit + prevBit+1
-
-    return getTickBasisPoint(nextBit,tickSpacing)
-
-}
 
 /// Check if tick account exists for the pool, 
 /// if not, create the account. 
@@ -474,8 +414,8 @@ export const estimateYearlyPremium = async (amount: number,tokenMint:PublicKey,p
     /// Estimate premium 
     const tickSpacing = poolAccount.tickSpacing
     let bitmapPDA = await getLiquidityPositionBitmapPDA(pool,tokenMint,program);
-    const firstBit = await getLowestBit(bitmapPDA);
-    const firstTick = getTickBasisPoint(firstBit,tickSpacing)
+    const firstBit = await bitmap.getLowestBit(bitmapPDA);
+    const firstTick = bitmap.getTickBasisPoint(firstBit,tickSpacing)
 
   
     console.log("available liquidity in pool: ",poolAccount.liquidity)
@@ -511,7 +451,7 @@ export const estimateYearlyPremium = async (amount: number,tokenMint:PublicKey,p
         // find next liquidity
         
         bitmapPDA = await getLiquidityPositionBitmapPDA(pool,tokenMint,program)
-        tick = await getNextTick(tick,bitmapPDA,10)
+        tick = await bitmap.getNextTick(tick,bitmapPDA,10)
         tickAccountPDA = await getTickAccountPDA(pool,tokenMint,tick)
         tickAccount = await program.account.tick.fetch(tickAccountPDA)
         availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
@@ -660,8 +600,8 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
     // ================= buy insurance by traversing ticks ==============
     const tickSpacing = poolAccount.tickSpacing
     let insurancePositionBitmapPDA = await getLiquidityPositionBitmapPDA(pool,tokenMint,program)
-    const firstBit = await getLowestBit(insurancePositionBitmapPDA);
-    const firstTick = getTickBasisPoint(firstBit,tickSpacing)
+    const firstBit = await bitmap.getLowestBit(insurancePositionBitmapPDA);
+    const firstTick = bitmap.getTickBasisPoint(firstBit,tickSpacing)
 
     // Create insurance overview 
     const userInsuranceContractsPDA = await getOrCreateUserInsuranceContracts(owner.publicKey,pool)
@@ -711,7 +651,7 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
 
         // find next liquidity
         insurancePositionBitmapPDA = await getLiquidityPositionBitmapPDA(pool,tokenMint,program)
-        tick = await getNextTick(tick,insurancePositionBitmapPDA,10)
+        tick = await bitmap.getNextTick(tick,insurancePositionBitmapPDA,10)
         tickAccountPDA = await getTickAccountPDA(pool,tokenMint,tick)
         tickAccount = await program.account.tick.fetch(tickAccountPDA)
         availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
@@ -730,7 +670,9 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
 }
 
 /**
- * Reduce Insurance amount 
+ * Reduce Insurance Amount 
+ * Move from largest tick insurance position and move downwards until 
+ * the position is reduced 
  * 
  * @param amount<number>: the amount of insurance to buy
  * @param pool<publickey>: the pool to buy from 
