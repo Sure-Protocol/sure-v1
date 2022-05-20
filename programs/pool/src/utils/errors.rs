@@ -26,4 +26,14 @@ pub enum SureError {
 
     #[msg("Not empty Tick account")]
     TickAccountNotEmpty,
+
+    #[msg("Invalid timestamp")]
+    InvalidTimestamp,
+
+    // ======= Insurance contract ======
+    #[msg("Insurance Contract has expired")]
+    InsuranceContractExpired,
+
+    #[msg("Insurance Contract is not active")]
+    InsuranceContractIsNotActive,
 }

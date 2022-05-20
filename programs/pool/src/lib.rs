@@ -12,14 +12,17 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_spl::*;
 use context::*;
-use vipers::prelude::*;
-use mpl_token_metadata::instruction::{create_metadata_accounts_v2,update_metadata_accounts_v2};
+use mpl_token_metadata::instruction::{create_metadata_accounts_v2, update_metadata_accounts_v2};
 use mpl_token_metadata::state::Creator;
+use std::cmp;
+use vipers::prelude::*;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
 #[program]
 pub mod sure_pool {
+
+    use anchor_lang::solana_program::system_instruction::transfer;
 
     use super::*;
 
@@ -35,9 +38,16 @@ pub mod sure_pool {
     /// * ctx:
     ///
     pub fn initialize_protocol(ctx: Context<InitializeProtocol>) -> Result<()> {
+        // load accounts
         let protocol_owner = &mut ctx.accounts.protocol_owner.load_init()?;
+        let pools = &mut ctx.accounts.pools;
+
         protocol_owner.bump = unwrap_bump!(ctx, "protocol_owner");
         protocol_owner.owner = ctx.accounts.owner.key();
+
+        // Initialize pools overview
+        pools.bump = unwrap_bump!(ctx, "pools");
+        pools.pools = Vec::new();
 
         emit!(owner::ChangeProtocolOwner {
             owner: ctx.accounts.owner.key(),
@@ -92,25 +102,30 @@ pub mod sure_pool {
         //     SureError::InvalidPoolCreator
         // );
 
+        // Load Accounts
+        let pool_account = &mut ctx.accounts.pool;
+        let sure_pools = &mut ctx.accounts.sure_pools;
+
+        let insured_token_account = ctx.accounts.insured_token_account.key();
         // Range size should be less than 100. Meaning that the premium should be less than 100%
         require!(
             tick_spacing < 100 * 100 && tick_spacing > 0,
             utils::errors::SureError::InvalidRangeSize
         );
 
-        // Get pool account
-        let pool_account = &mut ctx.accounts.pool;
-
         // Set up pool account
         pool_account.bump = *ctx.bumps.get("pool").unwrap();
         pool_account.insurance_fee = insurance_fee;
         pool_account.tick_spacing = tick_spacing;
         pool_account.liquidity = 0;
-        pool_account.active_liquidity = 0;
+        pool_account.used_liquidity = 0;
         pool_account.name = name;
         pool_account.premium_rate = 0;
-        pool_account.smart_contract = ctx.accounts.insured_token_account.key();
+        pool_account.smart_contract = insured_token_account.clone();
         pool_account.locked = false;
+
+        // Update the pools
+        sure_pools.pools.push(insured_token_account.clone());
 
         emit!(pool::InitializedPool {
             name: "".to_string(),
@@ -120,27 +135,35 @@ pub mod sure_pool {
         Ok(())
     }
 
+    /// Remove pool
+    /// The pool owner can remove the pool
+    /// This results in
+    /// - All insurance contracts being voided
+    /// - All liquidity sent to the holder of the NFT
+    ///
+    // pub fn remove_pool() -> Result<()> {
+    //     Ok(())
+    // }
+
     /// Create Token Pool Vaults
-    /// Create and initialize 
-    /// - Liquidity Vault 
+    /// Create and initialize
+    /// - Liquidity Vault
     /// - Premium Vault
     /// for the provided Pool.
-    /// 
+    ///
     /// # Arguments
-    /// * ctx: 
-    /// 
-    pub fn create_pool_vaults(ctx: Context<CreatePoolVaults>) -> Result<()>{
-
+    /// * ctx:
+    ///
+    pub fn create_pool_vaults(ctx: Context<CreatePoolVaults>) -> Result<()> {
         // Load accounts
         let bitmap = &mut ctx.accounts.bitmap;
-        
+
         // Initialize Bitmap
         bitmap.bump = *ctx.bumps.get("bitmap").unwrap();
         bitmap.spacing = 10;
-        bitmap.word= [0;4];
-        
-        emit!(pool::CreatePoolVaults{
-        });
+        bitmap.word = [0; 4];
+
+        emit!(pool::CreatePoolVaults {});
         Ok(())
     }
 
@@ -174,7 +197,6 @@ pub mod sure_pool {
         let protocol_owner = &ctx.accounts.protocol_owner.load()?;
         let vault = &ctx.accounts.vault;
 
-        
         // The existence of a liquidity position should be checked by anchor.
 
         // _________________ Functionality _________________________
@@ -205,24 +227,22 @@ pub mod sure_pool {
             String::from("Sure LP NFT V1"),
             String::from("SURE-LP"),
             format!("https://sure.claims"),
-            Some(vec![
-                Creator{
-                    address: ctx.accounts.protocol_owner.key(),
-                    verified: true,
-                    share: 100,
-                }
-            ]),
+            Some(vec![Creator {
+                address: ctx.accounts.protocol_owner.key(),
+                verified: true,
+                share: 100,
+            }]),
             0,
             true,
             true,
             None,
-            None
+            None,
         );
 
-        // Protocol owner signs the transaction with seeds 
+        // Protocol owner signs the transaction with seeds
         // and bump
         solana_program::program::invoke_signed(
-            &create_metadata_accounts_ix, 
+            &create_metadata_accounts_ix,
             &[
                 ctx.accounts.metadata_account.to_account_info().clone(),
                 ctx.accounts.nft_mint.to_account_info().clone(),
@@ -230,9 +250,9 @@ pub mod sure_pool {
                 ctx.accounts.liquidity_provider.to_account_info().clone(),
                 ctx.accounts.system_program.to_account_info().clone(),
                 ctx.accounts.rent.to_account_info().clone(),
-
-            ], &[&[&[protocol_owner.bump]]])?;
-
+            ],
+            &[&[&[protocol_owner.bump]]],
+        )?;
 
         // # 2. Transfer tokens from liquidity provider account into vault
         token::transfer(
@@ -253,7 +273,6 @@ pub mod sure_pool {
 
         // Update pool
         pool.liquidity += amount;
-        
 
         // Load tick account state
         let tick_account_state =
@@ -276,17 +295,15 @@ pub mod sure_pool {
         liquidity_position.token_mint = vault.mint;
 
         // Update bitmap
-        if !bitmap.is_initialized(tick, pool.tick_spacing.clone()){
+        if !bitmap.is_initialized(tick, pool.tick_spacing.clone()) {
             bitmap.flip_bit(tick);
         }
-       
 
         // # 4. Update tick with new liquidity position
         tick_account
-            .add_liquidity(new_id, amount,vault.mint)
+            .add_liquidity(new_id, amount, vault.mint)
             .map_err(|e| e.to_anchor_error())?;
         //tick_account.update_callback()?;
-
 
         emit!(liquidity::NewLiquidityPosition {
             tick: tick,
@@ -318,7 +335,7 @@ pub mod sure_pool {
     ///
     pub fn redeem_liquidity(ctx: Context<RedeemLiquidity>) -> Result<()> {
         // _______________ LOAD accounts __________________
-        
+
         let vault = &ctx.accounts.vault;
 
         let liquidity_position = &ctx.accounts.liquidity_position;
@@ -327,23 +344,21 @@ pub mod sure_pool {
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let mut tick_account = tick_account_state.load_mut()?;
 
-
         let protocol_owner = &ctx.accounts.protocol_owner.load()?;
         let pool = &ctx.accounts.pool;
-        
 
         /// Available liquidity
         let free_liquidity = tick_account.available_liquidity(liquidity_position.tick_id);
         require!(free_liquidity > 0, SureError::LiquidityFilled);
 
         // _______________ Functionality _______________
-      
+
         let pool_seeds = [
             &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
             &pool.smart_contract.to_bytes() as &[u8],
-            &[pool.bump]
+            &[pool.bump],
         ];
-        
+
         // # 1 Transfer excess liquidity back to nft holder
         token::transfer(
             CpiContext::new_with_signer(
@@ -362,17 +377,15 @@ pub mod sure_pool {
         let updated_metaplex = mpl_token_metadata::state::DataV2 {
             name: String::from("Sure LP NFT V1"),
             symbol: String::from("SURE-LP"),
-            uri:format!("https://sure.claims"),
+            uri: format!("https://sure.claims"),
             seller_fee_basis_points: 0,
-            creators: Some(vec![
-                Creator{
-                    address: ctx.accounts.protocol_owner.key(),
-                    verified: true,
-                    share: 100,
-                }
-            ]),
+            creators: Some(vec![Creator {
+                address: ctx.accounts.protocol_owner.key(),
+                verified: true,
+                share: 100,
+            }]),
             collection: None,
-            uses: None,    
+            uses: None,
         };
         let update_metaplex_metadata_ix = update_metadata_accounts_v2(
             ctx.accounts.metadata_program.key(),
@@ -385,37 +398,40 @@ pub mod sure_pool {
         );
 
         solana_program::program::invoke_signed(
-            &update_metaplex_metadata_ix, 
+            &update_metaplex_metadata_ix,
             &[
                 ctx.accounts.metadata_account.to_account_info().clone(),
                 ctx.accounts.protocol_owner.to_account_info().clone(),
                 ctx.accounts.system_program.to_account_info().clone(),
-
-            ], &[&[&[protocol_owner.bump]]])?;
+            ],
+            &[&[&[protocol_owner.bump]]],
+        )?;
 
         // # 3 Update tick poo
-        tick_account.remove_liquidity(liquidity_position.tick_id).map_err(|e| e.to_anchor_error())?;
+        tick_account
+            .remove_liquidity(liquidity_position.tick_id)
+            .map_err(|e| e.to_anchor_error())?;
         Ok(())
     }
 
     /// Initialize Insurance Contract
     /// Let a user create an insurance contract with a Sure pool
-    /// 
+    ///
     /// # Arguments
     /// * ctx: Contains the pool, insurance contract and signer
-    /// 
-    pub fn initialize_insurance_contract(
-        ctx: Context<InitializeInsuranceContract>,
-    ) -> Result<()> {
-        // TODO: Add period as a seed and variable
+    ///
+    pub fn initialize_insurance_contract(ctx: Context<InitializeInsuranceContract>) -> Result<()> {
 
         // Load insurance_contract
         let insurance_contract = &mut ctx.accounts.insurance_contract;
 
         // Initialize insurance_contract
         insurance_contract.amount = 0;
+        insurance_contract.premium = 0;
         insurance_contract.bump = *ctx.bumps.get("insurance_contract").unwrap();
         insurance_contract.pool = ctx.accounts.pool.key();
+        insurance_contract.tick_account = ctx.accounts.tick_account.key();
+        insurance_contract.token_mint = ctx.accounts.token_mint.key();
         insurance_contract.active = true;
         insurance_contract.owner = ctx.accounts.owner.key();
 
@@ -426,13 +442,17 @@ pub mod sure_pool {
     /// A buyer should select an amount to insure and the smart contract should
     /// premium
     ///
+    /// NOTE: Protocol fee will be subtracted continously from the premium vaults
     ///
     /// # Arguments
     /// * ctx
+    /// * Amount: the amount the user want to insure
+    /// * Until ts: The timestamp for the end of the contract
     ///
     pub fn buy_insurance_for_tick(
         ctx: Context<BuyInsurance>,
         amount: u64,
+        end_ts: i64,
     ) -> Result<()> {
         // _______________ Validation __________________
         // * Check that the
@@ -441,45 +461,135 @@ pub mod sure_pool {
 
         // Load accounts
         let tick_account_state =
-        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let mut tick_account = tick_account_state.load_mut()?;
-
         let pool_account = &mut ctx.accounts.pool;
-
         let insurance_contract = &mut ctx.accounts.insurance_contract;
+
+        // Calculate coverage amount
+        let available_liquidity_in_tick = tick_account.liquidity - tick_account.used_liquidity;
+        let amount_to_cover = cmp::min(available_liquidity_in_tick, amount);
+
+        // Calculate cost of coverage
+        let tick_in_decimals: u64 = (tick_account.tick) / (10000);
+
+        let current_time = Clock::get()?.unix_timestamp;
+        let time_diff = end_ts - current_time;
+
+        if time_diff <= 0 {
+            return Err(error!(SureError::InvalidTimestamp));
+        }
+
+        let year_fraction = (time_diff as u64) / (solana_program::clock::SECONDS_PER_DAY * 365);
+        let premium = amount_to_cover * tick_in_decimals * year_fraction;
+
         // #1 credit tick account
-        tick_account.buy_insurance(amount).map_err(|e| e.to_anchor_error())?;
+        tick_account
+            .buy_insurance(amount_to_cover)
+            .map_err(|e| e.to_anchor_error())?;
 
         // #2 Update pool account
-        pool_account.active_liquidity -= amount;
+        pool_account.used_liquidity += amount_to_cover;
 
-        // # 3 transfer premium to premium vault 
+        // # 3 transfer premium to premium vault
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info().clone(),
+                token::Transfer {
+                    from: ctx.accounts.token_account.to_account_info().clone(),
+                    to: ctx.accounts.premium_vault.to_account_info().clone(),
+                    authority: ctx.accounts.buyer.to_account_info().clone(),
+                },
+            ),
+            premium,
+        )?;
 
         // # 4 Update insurance contract
         insurance_contract.amount += amount;
+        insurance_contract.premium += premium;
+        insurance_contract.period_ts = time_diff;
+        insurance_contract.end_ts = end_ts;
         Ok(())
     }
 
-    /// Cancel insurance contract 
-    /// Allows user to exit insurance contract for a 
-    /// given tick
-    /// 
+    /// Reduce the insurance amount position
+    /// Allow a user to reduce the size of the insurance position
+    ///
+    /// If a user wants increase the position a new insurance contract will be
+    /// created
+    ///
     /// # Arguments
     /// * ctx
     ///
-    pub fn cancel_insurance_for_tick(
-        ctx: Context<CancelInsurance>,
-        amount: u64,
+    pub fn reduce_insurance_amount_for_tick(
+        ctx: Context<ReduceInsuranceAmount>,
+        new_insurance_amount: u64,
     ) -> Result<()> {
-        // Load accounts 
+        // ====== Validate =======
+        let insurance_contract = &mut ctx.accounts.insurance_contract;
+
+        // Check that the contract haven't expired
+        let current_time = Clock::get()?.unix_timestamp;
+        require!(
+            current_time < insurance_contract.end_ts,
+            SureError::InsuranceContractExpired
+        );
+
+        // Require that the contract is active
+        require!(
+            insurance_contract.active,
+            SureError::InsuranceContractIsNotActive
+        );
+
+        require!(
+            new_insurance_amount < insurance_contract.amount,
+            SureError::InvalidAmount
+        );
+
+        // Load accounts
+        let tick_account_state =
+            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+        let mut tick_account = tick_account_state.load_mut()?;
+        let pool_account = &mut ctx.accounts.pool;
+
+        // Get the remaining premium in the account
+        let current_insured_amount = insurance_contract.amount;
+        let remaining_premium = insurance_contract.remaining_premium;
+        let new_premium = remaining_premium * (new_insurance_amount / insurance_contract.amount);
+        let premium_change = remaining_premium - new_premium;
+        let amount_reduction = current_insured_amount - new_insurance_amount;
 
         // # 1 Exit tick position
+        tick_account
+            .exit_insurance(amount_reduction)
+            .map_err(|e| e.to_anchor_error())?;
 
         // # 2 Reduce amount in pool
+        pool_account.used_liquidity -= amount_reduction;
 
         // # 3 Transfer money from premium vault to user - premium vault held by pool
+        let pool_seed = [
+            &SURE_PREMIUM_POOL_SEED.as_bytes() as &[u8],
+            &pool_account.smart_contract.to_bytes() as &[u8],
+            &[pool_account.bump],
+        ];
+
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info().clone(),
+                token::Transfer {
+                    from: ctx.accounts.premium_vault.to_account_info().clone(),
+                    to: ctx.accounts.token_account.to_account_info().clone(),
+                    authority: ctx.accounts.pool.to_account_info().clone(),
+                },
+                &[&pool_seed[..]],
+            ),
+            premium_change,
+        )?;
 
         // # 4 update insurance contract
+        insurance_contract.amount -= new_insurance_amount;
+        insurance_contract.remaining_premium = new_premium;
 
         Ok(())
     }

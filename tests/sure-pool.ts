@@ -132,9 +132,11 @@ describe("Initialize Sure Pool",() => {
     
     it("create protocol owner ", async () => {
         let [protocolOwnerPDA,_] = await sureUtils.getProtocolOwner();
+        let surePools = await sureUtils.getSurePools()
         await program.methods.initializeProtocol().accounts({
                 owner: provider.wallet.publicKey,
                 protocolOwner: protocolOwnerPDA,
+                pools: surePools,
                 systemProgram: SystemProgram.programId,
         }).rpc()
     })
@@ -173,7 +175,8 @@ describe("Initialize Sure Pool",() => {
         vault0 = await sureUtils.getLiquidityVaultPDA(poolPDA,token0)
 
         let [protocolOwnerPDA,_] = await sureUtils.getProtocolOwner();
-       
+        
+        let surePoolsList = await sureUtils.getSurePools();
 
         // Create Poool
         try{
@@ -182,6 +185,7 @@ describe("Initialize Sure Pool",() => {
                     poolCreator:wallet.publicKey,
                     protocolOwner:protocolOwnerPDA,
                     pool:poolPDA,
+                    surePools: surePoolsList,
                     insuredTokenAccount: protcolToInsure0.publicKey,
                     rent: anchor.web3.SYSVAR_RENT_PUBKEY,
                     systemProgram: SystemProgram.programId,
@@ -222,6 +226,30 @@ describe("Initialize Sure Pool",() => {
 
         const bitmapAccount = await program.account.bitMap.fetch(bitmap);
         assert.equal(bitmapAccount.spacing,10)
+    }),
+    it("get list of existing pools", async () => {
+        /// the full list of pools should be returned
+        const surePoolsPDA =await sureUtils.getSurePools()
+
+        try{
+            const surePools = await program.account.surePools.fetch(surePoolsPDA)
+            console.log("surePools: ",surePools)
+           
+            assert.equal(surePools.pools.length,1)
+            const firstContractInsured = surePools.pools[0]
+            // get the first pool 
+            const poolPDA = await sureUtils.getPoolPDA(firstContractInsured,program)
+            
+            try{
+                const pool = await program.account.poolAccount.fetch(poolPDA)
+            }catch(err){
+                throw new Error("Pool does not exist. Cause: "+err)
+            }
+        }catch(err){
+            throw new Error("Could not get Sure Pools. Cause: "+err)
+        }
+
+       
     }),
     it("create tick account for pool",async () => {
         const tick = 440;
@@ -318,6 +346,9 @@ describe("Initialize Sure Pool",() => {
         const amountToBuy = 15000
         const newLiquidity = 14000
         const tick = 120
+        const dateNow = new Date()
+        const hours = 10
+        const endTimestamp = dateNow.setTime(dateNow.getTime() + 60*60*1000*hours)
 
        
 
@@ -362,6 +393,6 @@ describe("Initialize Sure Pool",() => {
         const [potentialAmountCovered,price] = await sureUtils.estimateYearlyPremium(amountToBuy,token0,poolPDA,wallet.publicKey)
         console.log("potentialAmountCovered: ",potentialAmountCovered.toString(), " , price: ",price.toString())
 
-        await sureUtils.buyInsurance(connection,amountToBuy,token0,poolPDA,wallet.publicKey);
+        await sureUtils.buyInsurance(connection,amountToBuy,endTimestamp,token0,poolPDA,wallet);
     })
 })

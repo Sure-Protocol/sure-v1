@@ -1,7 +1,8 @@
 import { SurePool } from "../../target/types/sure_pool";
 import {PublicKey} from "@solana/web3.js"
+import {getOrCreateAssociatedTokenAccount} from "@solana/spl-token"
 import * as anchor from "@project-serum/anchor"
-import { Program } from "@project-serum/anchor";
+import { Program, Spl } from "@project-serum/anchor";
 import { token } from "@project-serum/anchor/dist/cjs/utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import {TokenAccount} from "./types"
@@ -9,7 +10,11 @@ import {  metaplex } from "@metaplex/js/lib/programs";
 import { TokenMetadataProgram, TokenProgram } from "@metaplex-foundation/js-next";
 import { metadata } from "@metaplex/js/lib/programs";
 import { assert } from "chai";
+import NodeWallet from "@project-serum/anchor/dist/cjs/nodewallet";
+
 import { Connection } from "@metaplex/js";
+import { publicKey } from "@solana/buffer-layout-utils";
+import { Wallet } from "@project-serum/anchor/dist/cjs/provider";
 
 const {SystemProgram} =anchor.web3;
 const program = anchor.workspace.SurePool as Program<SurePool>
@@ -25,6 +30,7 @@ export const SURE_NFT_MINT_SEED = anchor.utils.bytes.utf8.encode("sure-nft");
 export const SURE_TOKEN_ACCOUNT_SEED = anchor.utils.bytes.utf8.encode("sure-token-account");
 export const SURE_MP_METADATA_SEED = anchor.utils.bytes.utf8.encode("metadata")
 export const SURE_INSURANCE_CONTRACT = anchor.utils.bytes.utf8.encode("sure-insurance-contract")
+export const SURE_POOLS_SEED = anchor.utils.bytes.utf8.encode("sure-pools")
 // Export sub libs
 export * from "./nft"
 
@@ -256,13 +262,13 @@ export const getMpMetadataPDA = async (nftMintPDA: PublicKey): Promise<PublicKey
     return mpMetadataPDA
 }
 
-export const getInsuranceContractPDA = async (pool: PublicKey,owner: PublicKey):Promise<PublicKey> => {
+export const getInsuranceContractPDA = async (tickAccount: PublicKey,owner: PublicKey):Promise<PublicKey> => {
 
     const [insuranceContractPDA,insuranceContractBump] = await PublicKey.findProgramAddress(
        [
         SURE_INSURANCE_CONTRACT,
-        owner.toBuffer(),
-        pool.toBuffer()
+        owner.toBytes(),
+        tickAccount.toBytes(),
        ],
        program.programId
     )
@@ -454,6 +460,17 @@ export const redeemLiquidity = async (wallet: PublicKey,walletATA: PublicKey,nft
    
 }
 
+export const getSurePools = async (): Promise<PublicKey> => {
+
+    const [surePoolsPDA,surePoolsBump] = await PublicKey.findProgramAddress(
+        [
+            SURE_POOLS_SEED,
+        ],
+        program.programId,
+    )
+
+    return surePoolsPDA
+}
 
 
 export const estimateYearlyPremium = async (amount: number,tokenMint:PublicKey,pool: PublicKey,owner:PublicKey): Promise<[amountCovered:anchor.BN,insurancePrice:anchor.BN]> => {
@@ -513,6 +530,66 @@ export const estimateYearlyPremium = async (amount: number,tokenMint:PublicKey,p
     return [amountCovered,insurancePrice];
 }
 
+
+/**
+ * Create insurance contract for given tick 
+ * The insurance contract holds information about 
+ * 
+ * @param owner<publickey>: Owner of insurance contract
+ * @param tickAccount<publickey>: The tick to buy insurance from
+ * 
+ */
+export const createInsuranceContractForTick = async (owner: PublicKey,tickAccount: PublicKey,pool: PublicKey,tokenMint: PublicKey): Promise<PublicKey> => {
+    // Get insurance contract with pool
+    const insuranceContractPDA = await getInsuranceContractPDA(tickAccount,owner);
+
+    try {
+        await program.methods.initializeInsuranceContract().accounts({
+            owner: owner,
+            pool: pool,
+            tokenMint: tokenMint,
+            tickAccount: tickAccount,
+            insuranceContract: insuranceContractPDA,
+            systemProgram: SystemProgram.programId,
+        }).rpc()
+        const insuranceContract = await program.account.insuranceContract.fetch(insuranceContractPDA);
+
+        assert.equal(insuranceContract.active,true);
+        assert.equal(insuranceContract.amount.toString(),"0");
+        assert.equal(insuranceContract.pool.toBase58(),pool.toBase58())
+
+    } catch(err) {
+        throw new Error("Could not initialize Insurance contract. Cause: " + err)
+    }
+
+    return insuranceContractPDA
+}
+
+/**
+ * Get or create insurance contract for given tick 
+ * The insurance contract holds information about 
+ * 
+ * @param owner<publickey>: Owner of insurance contract
+ * @param tickAccount<publickey>: The tick to buy insurance from
+ * 
+ */
+export const getOrCreateInsuranceContractForTick  = async (owner: PublicKey,tickAccount: PublicKey,pool: PublicKey,tokenMint: PublicKey): Promise<PublicKey> => {
+    const insuranceContractPDA = await getInsuranceContractPDA(tickAccount,owner);
+    
+    try{
+        const insuranceContract = await program.account.insuranceContract.getAccountInfo(insuranceContractPDA)
+        if (insuranceContract !== null){
+            return insuranceContractPDA
+        }
+        throw new Error()
+    }catch(_){
+        // Insurance contract does not exist. Create it
+        await createInsuranceContractForTick(owner,tickAccount,pool,tokenMint)
+    }
+
+    return insuranceContractPDA
+}
+
 /**
  * Buy Insurance from the Liquidity pool
  * It's important that we can buy in as few transactions 
@@ -524,31 +601,19 @@ export const estimateYearlyPremium = async (amount: number,tokenMint:PublicKey,p
  * @param pool<publickey>: the pool to buy from 
  * 
  */
-
-export const buyInsurance = async (connection: anchor.web3.Connection,amount: number,tokenMint: PublicKey,pool: PublicKey,owner: PublicKey) => {
+export const buyInsurance = async (connection: anchor.web3.Connection,amount: number,endTimestamp: number,tokenMint: PublicKey,pool: PublicKey,owner: Wallet) => {
     
     const poolAccount = await program.account.poolAccount.fetch(pool);
     
-    // Get insurance contract with pool
-    const insuranceContractPDA = await getInsuranceContractPDA(pool,owner);
+    // Get the premium vault for the given pool
+    const premiumVaultPDA = await getPremiumVaultPDA(pool,tokenMint);
 
-    try {
-        await program.methods.initializeInsuranceContract().accounts({
-            owner: owner,
-            pool: pool,
-            insuranceContract: insuranceContractPDA,
-            systemProgram: SystemProgram.programId,
-        }).rpc()
-        const insuranceContract = await program.account.insuranceContract.fetch(insuranceContractPDA);
-
-        assert.equal(insuranceContract.active,true);
-        assert.equal(insuranceContract.amount.toString(),"0");
-        assert.equal(insuranceContract.pool.toBase58(),pool.toBase58())
-    } catch(err) {
-        throw new Error("Could not initialize Insurance contract. Cause: " + err)
-    }
-
-   
+    const tokenAccount = await getOrCreateAssociatedTokenAccount(
+        connection,
+        (owner as NodeWallet).payer,
+        tokenMint,
+        owner.publicKey,    
+    )
 
     // ================= buy insurance by traversing ticks ==============
     const tickSpacing = poolAccount.tickSpacing
@@ -560,6 +625,7 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
 
 
     // Check if there is enough
+    let insuranceContractPDA;
     let amountToPay = new anchor.BN(0);
     let amountToCover = new anchor.BN(amount);
     let amountCovered = new anchor.BN(0)
@@ -580,13 +646,20 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
             amountToPay = availableLiquidity
         }
 
+
+        // Get or create insurance for tick
+        insuranceContractPDA = await getOrCreateInsuranceContractForTick(owner.publicKey,tickAccountPDA,pool,tokenMint);
+       
         // Buy insurance for tick
-        txs.add(program.instruction.buyInsuranceForTick(amountToPay,{
+        txs.add(program.instruction.buyInsuranceForTick(amountToPay,new anchor.BN(endTimestamp),{
             accounts:{
-                buyer: owner,
+                buyer: owner.publicKey,
+                tokenAccount: tokenAccount.address,
                 pool: pool,
                 tickAccount:tickAccountPDA,
+                premiumVault: premiumVaultPDA,
                 insuranceContract: insuranceContractPDA,
+                tokenProgram: TOKEN_PROGRAM_ID,
                 systemProgram: SystemProgram.programId,
             },
         }
@@ -604,14 +677,12 @@ export const buyInsurance = async (connection: anchor.web3.Connection,amount: nu
         console.log("amountToCover: ",amountToCover)
     }
     txs.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-    txs.feePayer = owner;
+    txs.feePayer = owner.publicKey;
     
     try{
         await anchor.getProvider().send(txs)
     }catch(err){
         throw new Error("Sure.buyInsurance. Could not buy insurance. Cause: "+err)
     }
-
-
-    console.log("Amount not covered: ",amountToCover)
 }
+

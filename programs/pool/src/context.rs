@@ -3,16 +3,15 @@ use crate::states::{
     contract::InsuranceContract,
     liquidity::{self, LiquidityPosition},
     owner::ProtocolOwner,
-    pool::{PoolAccount, PoolManager},
+    pool::{PoolAccount, PoolManager, SurePools},
     tick::{Tick, TickTrait},
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
     mint,
+    token::{Mint, Token, TokenAccount},
 };
-
 
 use std::mem::size_of;
 use vipers::{assert_is_ata, prelude::*};
@@ -29,6 +28,7 @@ pub const SURE_TICK_SEED: &str = "sure-tick";
 pub const SURE_NFT_MINT_SEED: &str = "sure-nft";
 pub const SURE_TOKEN_ACCOUNT_SEED: &str = "sure-token-account";
 pub const SURE_MP_METADATA_SEED: &str = "metadata";
+pub const SURE_POOLS_SEED: &str = "sure-pools";
 
 /// Initialize Sure Protocol
 /// by setting the owner of the protocol
@@ -47,6 +47,18 @@ pub struct InitializeProtocol<'info> {
         space = 8 + ProtocolOwner::SPACE,
     )]
     pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
+
+    /// Sure Pools holding information about which protocols are insured
+    #[account(
+        init,
+        payer = owner,
+        space = SurePools::SIZE,
+        seeds = [
+            SURE_POOLS_SEED.as_bytes(),
+        ],
+        bump
+    )]
+    pub pools: Box<Account<'info, SurePools>>,
 
     /// System Program to create a new account
     pub system_program: Program<'info, System>,
@@ -106,6 +118,11 @@ pub struct CreatePool<'info> {
     )]
     pub pool: Box<Account<'info, PoolAccount>>,
 
+    /// Sure Pools keeps an overview over
+    /// existing pools
+    #[account(mut)]
+    pub sure_pools: Box<Account<'info, SurePools>>,
+
     // Assume the contract being hacked is a token account
     /// CHECK: This accounts represents the executable contract
     /// that is to be insured.
@@ -134,8 +151,8 @@ impl<'info> Validate<'info> for CreatePool<'info> {
 }
 
 /// Create Pool Vaults
-/// creates the associated pool vault 
-/// based on token mint 
+/// creates the associated pool vault
+/// based on token mint
 #[derive(Accounts)]
 pub struct CreatePoolVaults<'info> {
     // Signer of the creation
@@ -143,7 +160,7 @@ pub struct CreatePoolVaults<'info> {
     pub creator: Signer<'info>,
 
     /// Pool account that the vaults are associated to
-    pub pool: Box<Account<'info,PoolAccount>>,
+    pub pool: Box<Account<'info, PoolAccount>>,
 
     /// Token mint used for the Vaults
     pub token_mint: Box<Account<'info, Mint>>,
@@ -176,8 +193,7 @@ pub struct CreatePoolVaults<'info> {
         token::mint = token_mint,
         token::authority = pool
     )]
-    pub premium_vault: Box<Account<'info,TokenAccount>>,
-
+    pub premium_vault: Box<Account<'info, TokenAccount>>,
 
     /// Bitmap
     /// Keep track of ticks used to provide liquidity at
@@ -207,8 +223,12 @@ pub struct CreatePoolVaults<'info> {
 impl<'info> Validate<'info> for CreatePoolVaults<'info> {
     fn validate(&self) -> Result<()> {
         // Make sure that token is USDC
-        assert_eq!(self.token_mint.key(), mint::USDC,"Vaults can only have mint USDC");
-        
+        assert_eq!(
+            self.token_mint.key(),
+            mint::USDC,
+            "Vaults can only have mint USDC"
+        );
+
         Ok(())
     }
 }
@@ -324,8 +344,6 @@ impl<'info> Validate<'info> for DepositLiquidity<'info> {
     }
 }
 
-
-
 /// Redeem liquidity
 /// Allow holder of NFT to redeem liquidity from pool
 #[derive(Accounts)]
@@ -357,7 +375,7 @@ pub struct RedeemLiquidity<'info> {
     #[account(mut)]
     pub tick_account: AccountLoader<'info, Tick>,
 
-    /// CHECK: Account used to hold metadata on the LP NFT 
+    /// CHECK: Account used to hold metadata on the LP NFT
     #[account(mut)]
     pub metadata_account: AccountInfo<'info>,
 
@@ -439,8 +457,6 @@ pub struct CloseTick<'info> {
     )]
     pub tick_account: AccountLoader<'info, Tick>,
 }
-
-
 /// Initialize a new insurance contract with pool
 #[derive(Accounts)]
 pub struct InitializeInsuranceContract<'info> {
@@ -449,7 +465,13 @@ pub struct InitializeInsuranceContract<'info> {
     pub owner: Signer<'info>,
 
     /// Pool to buy insurance from
-    pub pool: Box<Account<'info,PoolAccount>>,
+    pub pool: Box<Account<'info, PoolAccount>>,
+
+    /// Token mint used to insure with
+    pub token_mint: Box<Account<'info, Mint>>,
+
+    /// Tick account to insure against
+    pub tick_account: AccountLoader<'info, Tick>,
 
     /// Insurance Position
     #[account(
@@ -459,7 +481,7 @@ pub struct InitializeInsuranceContract<'info> {
         seeds = [
             SURE_INSURANCE_CONTRACT.as_bytes(),
             owner.key().as_ref(),
-            pool.key().as_ref(),
+            tick_account.key().as_ref(),
         ],
         bump,
     )]
@@ -468,7 +490,6 @@ pub struct InitializeInsuranceContract<'info> {
     /// System Contract used to create accounts
     pub system_program: Program<'info, System>,
 }
-
 
 impl<'info> Validate<'info> for InitializeInsuranceContract<'info> {
     fn validate(&self) -> Result<()> {
@@ -483,13 +504,25 @@ pub struct BuyInsurance<'info> {
     #[account(mut)]
     pub buyer: Signer<'info>,
 
+    /// Account to buy tokens with
+    #[account(mut)]
+    pub token_account: Box<Account<'info, TokenAccount>>,
+
     /// Pool to buy from
     #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
 
-    /// Tick account to buy 
+    /// Tick account to buy
     #[account(mut)]
     pub tick_account: AccountLoader<'info, Tick>,
+
+    /// Premium Vault
+    #[account(
+        mut,
+        constraint = premium_vault.owner ==  pool.key(),
+        constraint = premium_vault.mint == token_account.mint,
+    )]
+    pub premium_vault: Box<Account<'info, TokenAccount>>,
 
     /// Insurance Position
     #[account(mut,
@@ -499,14 +532,23 @@ pub struct BuyInsurance<'info> {
     )]
     pub insurance_contract: Box<Account<'info, InsuranceContract>>,
 
+    /// Token program, needed to transfer tokens
+    pub token_program: Program<'info, Token>,
+
     /// System Contract used to create accounts
     pub system_program: Program<'info, System>,
 }
 
+impl<'info> Validate<'info> for BuyInsurance<'info> {
+    fn validate(&self) -> Result<()> {
+        Ok(())
+    }
+}
+
 /// Cancel insurance contract
-/// 
+///
 #[derive(Accounts)]
-pub struct CancelInsurance<'info>{
+pub struct ReduceInsuranceAmount<'info> {
     /// Holder of insurance
     #[account(mut)]
     pub holder: Signer<'info>,
@@ -515,17 +557,35 @@ pub struct CancelInsurance<'info>{
     #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
 
-    /// Tick account to exit from 
+    /// Tick account to exit from
     #[account(mut)]
     pub tick_account: AccountLoader<'info, Tick>,
 
+    /// Account to deposit tokens into
+    #[account(mut)]
+    pub token_account: Box<Account<'info, TokenAccount>>,
+
+    /// Premium Vault
+    #[account(
+        mut,
+        constraint = premium_vault.owner ==  pool.key(),
+        constraint = premium_vault.mint == insurance_contract.token_mint,
+        constraint = premium_vault.mint == token_account.mint,
+    )]
+    pub premium_vault: Box<Account<'info, TokenAccount>>,
+
     /// Insurance Contract
     #[account(mut,
-    constraint = insurance_contract.pool == pool.key(),
-    constraint = insurance_contract.active == true,
-    constraint = insurance_contract.owner == holder.key(),
+        constraint = insurance_contract.pool == pool.key(),
+        constraint = insurance_contract.active == true,
+        constraint = insurance_contract.owner == holder.key(),
+        constraint = insurance_contract.tick_account == tick_account.key(),
+        constraint = insurance_contract.owner == holder.key(),
     )]
     pub insurance_contract: Box<Account<'info, InsuranceContract>>,
+
+    /// TOken program used to transfer tokens
+    pub token_program: Program<'info, Token>,
 
     /// System Contract used to create accounts
     pub system_program: Program<'info, System>,

@@ -83,7 +83,7 @@ pub trait TickTrait {
     fn is_pool_empty(&self) -> bool;
 
     // Liquidity Management
-    fn add_liquidity(&mut self, id: u8, size: u64,token_mint: Pubkey) -> Result<(), TickError>;
+    fn add_liquidity(&mut self, id: u8, size: u64, token_mint: Pubkey) -> Result<(), TickError>;
     fn remove_liquidity(&mut self, id: u8) -> Result<(), TickError>;
     fn available_liquidity(&mut self, id: u8) -> u64;
     fn increase_rewards(&mut self) -> Result<(), TickError>;
@@ -180,7 +180,12 @@ impl TickTrait for Tick {
     /// # Arguments
     /// * id: The id in the liquidity position seed
     /// * size: the size of the liquidity added
-    fn add_liquidity(&mut self, new_id: u8, liquidity_size: u64,token_mint: Pubkey) -> Result<(), TickError> {
+    fn add_liquidity(
+        &mut self,
+        new_id: u8,
+        liquidity_size: u64,
+        token_mint: Pubkey,
+    ) -> Result<(), TickError> {
         if (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as u8) == (self.last_liquidity_position_idx + 1) {
             return Err(TickError::NoMoreLiquiditySpots);
         }
@@ -524,7 +529,7 @@ mod tests {
     fn shift_position() {
         let mut tick = initialize_tick();
 
-        tick.add_liquidity(0, 1000,anchor_spl::mint::USDC).unwrap();
+        tick.add_liquidity(0, 1000, anchor_spl::mint::USDC).unwrap();
         let idx = 0;
         assert_eq!(tick.liquidity_position_accumulated[idx], 1000);
         println!("accumulated: {:?}", tick.liquidity_position_accumulated);
@@ -542,7 +547,8 @@ mod tests {
         let mut tick = initialize_tick();
 
         // Add liquidity
-        tick.add_liquidity(244, 1_000,anchor_spl::mint::USDC).unwrap();
+        tick.add_liquidity(244, 1_000, anchor_spl::mint::USDC)
+            .unwrap();
         println!("liquidity pos: {:?}", tick.liquidity_position_accumulated);
         assert_eq!(tick.last_liquidity_position_idx, 1);
         assert_eq!(tick.liquidity, 1_000);
@@ -569,7 +575,8 @@ mod tests {
         let mut tick = initialize_tick();
 
         // Add liquidity
-        tick.add_liquidity(244, 1_000,anchor_spl::mint::USDC).unwrap();
+        tick.add_liquidity(244, 1_000, anchor_spl::mint::USDC)
+            .unwrap();
         println!("liquidity pos: {:?}", tick.liquidity_position_accumulated);
         assert_eq!(tick.last_liquidity_position_idx, 1);
         assert_eq!(tick.liquidity, 1_000);
@@ -614,7 +621,8 @@ mod tests {
 
         // Add liquidity
         let id = tick.get_new_id();
-        tick.add_liquidity(id, 1_000,anchor_spl::mint::USDC).unwrap();
+        tick.add_liquidity(id, 1_000, anchor_spl::mint::USDC)
+            .unwrap();
 
         // Someone buys insurance
         let new_insurance_amount = 900;
