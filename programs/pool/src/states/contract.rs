@@ -1,7 +1,11 @@
 ///! Insurance contract representing the proof
 ///! that a user has insurance
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
+use crate::utils::errors::*;
 
+
+const SURE_TIME_LOCK_IN_SECONDS: u64 = solana_program::clock::SECONDS_PER_DAY;
 /// Insurance Contract for each tick
 /// The account should be able to be reduced within a tick
 #[account]
@@ -11,7 +15,11 @@ pub struct InsuranceContract {
     pub bump: u8, // 1 byte
 
     /// Amount insured
-    pub amount: u64, // 8 bytes
+    pub insured_amount: u64, // 8 bytes
+
+    /// Amount to be converted to insured amount
+    /// over time
+    pub time_locked_insured_amount: u64,
 
     /// Premium
     pub premium: u64, // 8 bytes
@@ -24,6 +32,12 @@ pub struct InsuranceContract {
 
     /// The end time of the contract
     pub end_ts: i64, // 8 bytes
+
+    /// Start time of contract
+    pub start_ts: i64, // 8 bytes
+
+    /// End of timelocked insured amount
+    pub time_lock_end: i64, // 8 bytes
 
     /// Insured pool
     pub pool: Pubkey, // 32 bytes
@@ -40,12 +54,110 @@ pub struct InsuranceContract {
     /// Is the insurance contract active
     pub active: bool, // 1 byte
 
+    /// Updated 
+    pub updated_ts: i64, // 8 bytes
     /// Created
     pub created_ts: i64, // 8 bytes
 }
 
 impl InsuranceContract {
-    pub const SPACE: usize = 1 + 8 + 8 + 8 + 8 + 8 + 32 + 32 + 32 + 32 + 1 + 8;
+    pub const SPACE: usize = 1 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 32 + 32 + 32 + 32 + 1 + 8+8;
+
+    /// Calculate premium required to cover the 
+    /// contract for the time period
+    fn calculate_premium(&self,tick: u16,amount: u64,start_ts: i64,end_ts: i64) -> Result<u64>{
+
+        // Get the premium rate in decimal
+        let premium_rate = (tick as u64) / 10000;
+
+        // Get contract length 
+        let contract_length = end_ts-start_ts;
+        if end_ts <= start_ts {
+            return Ok(0);
+        }
+
+        let year_fraction = (contract_length as u64) / (solana_program::clock::SECONDS_PER_DAY * 365);
+        let premium = amount * premium_rate * year_fraction;
+        Ok(premium)
+    }
+
+    /// Update premium
+    /// Calculate the premium the user have to pay or get 
+    /// refunded when they update their insurance position
+    /// 
+    /// The calculations assumes the remainder of the contract
+    /// is voided and extended with the new one.
+    /// 
+    /// # Arguments
+    /// * tick: the current tick used for the premium rate
+    /// * new_insured_amount: The new amount to be insured
+    /// * new_end_ts: the updated end time for the contract
+    /// 
+    /// # Returns Result<increasePremium,premiumIncrease>
+    /// * increasePremium<bool>: Should premium be increased?
+    /// * premiumDiff<u64>: the premium diff.
+    fn increase_premium(&self,tick: u16,new_insured_amount: u64,new_end_ts: i64) -> Result<(bool,u64)> {
+        let current_time = Clock::get()?.unix_timestamp;
+        let remaining_premium = self.calculate_premium(tick,self.insured_amount,current_time,self.end_ts)?;
+        let new_premium = self.calculate_premium(tick,new_insured_amount,current_time,new_end_ts)?;
+        if remaining_premium > new_premium {
+            return Ok((false,(remaining_premium - new_premium)))
+        }
+        Ok((true,(new_premium-remaining_premium)))
+    }
+
+
+    /// Update insured amount and return the premium
+    /// 
+    /// # Arguments
+    /// * tick: the current tick used for the premium rate
+    /// * new_insured_amount: The new amount to be insured
+    /// * new_end_ts: the updated end time for the contract
+    /// 
+    /// # Returns Result<increasePremium,premiumIncrease>
+    /// * increasePremium<bool>: Should premium be increased?
+    /// * premiumDiff<u64>: the premium diff.
+    pub fn update_position_and_get_premium(&mut self,tick: u16,new_insured_amount: u64,new_end_ts:i64) -> Result<(bool,u64)> {
+        let increase_premium_res = self.increase_premium(tick, new_insured_amount,new_end_ts);
+        let current_time = Clock::get()?.unix_timestamp;
+        // Update insurance position
+        let time_lock = false;
+        if new_insured_amount > self.insured_amount && time_lock {
+            // Time-locked insurance amount
+            let amount_change = new_insured_amount - self.insured_amount;
+            self.time_locked_insured_amount = amount_change;
+            self.time_lock_end = current_time + (SURE_TIME_LOCK_IN_SECONDS as i64);
+        }else {
+            // Reduction happens immidiately
+            self.insured_amount = new_insured_amount;
+        }
+       
+        self.end_ts = new_end_ts;
+        self.updated_ts =current_time;
+        self.period_ts = new_end_ts - current_time;
+        
+       
+        return increase_premium_res;
+    }
+
+    /// Crank to be used to update the 
+    /// insured amount
+    /// 
+    /// # Arguments
+    /// * tick: the current tick used for the premium rate
+    /// * new_insured_amount: The new amount to be insured
+    /// * new_end_ts: the updated end time for the contract
+    /// 
+    /// # Returns Result<increasePremium,premiumIncrease>
+    /// * increasePremium<bool>: Should premium be increased?
+    /// * premiumDiff<u64>: the premium diff.
+    pub fn crank(&mut self) -> Result<()>{
+        // let current_time = Clock::get()?.unix_timestamp;
+        // let time_diff = current_time-self.updated_ts;
+        // let elapsed_time 
+        // self.updated_ts = current_time;
+        Ok(())
+    }
 }
 
 #[event]

@@ -405,20 +405,5 @@ describe("Initialize Sure Pool",() => {
     }),
     it("reduce insured amount for contract",async ()=> {
         // Create eventlistener
-        const poolPDA = await sureUtils.getPoolPDA(
-            protcolToInsure0.publicKey,
-            program
-        )
-
-        const newInsuranceAmount = 5000;
-    
-        try{
-            await sureUtils.reduceInsuranceAmount(connection,newInsuranceAmount,poolPDA,token0,wallet)
-        }catch(err){
-            throw new Error(err)
-        }
-
-        const updatedInsuredAmount = await sureUtils.getInsuredAmount(wallet.publicKey,token0,poolPDA)
-        assert.isTrue(new anchor.BN(newInsuranceAmount).eq(updatedInsuredAmount))
     })
 })

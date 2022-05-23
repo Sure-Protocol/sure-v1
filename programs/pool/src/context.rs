@@ -563,7 +563,6 @@ pub struct BuyInsurance<'info> {
     /// Insurance Contract
     #[account(mut,
     constraint = insurance_contract.pool == pool.key(),
-    constraint = insurance_contract.active == true,
     constraint = insurance_contract.owner == buyer.key(),
     )]
     pub insurance_contract: Box<Account<'info, InsuranceContract>>,

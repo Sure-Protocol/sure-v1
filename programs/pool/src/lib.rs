@@ -22,7 +22,6 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 #[program]
 pub mod sure_pool {
 
-    use anchor_lang::solana_program::system_instruction::transfer;
 
     use super::*;
 
@@ -427,15 +426,18 @@ pub mod sure_pool {
         let tick_account_state =
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let tick_account = tick_account_state.load()?;
-
+        let current_time = Clock::get()?.unix_timestamp;
         // Initialize insurance_contract
-        insurance_contract.amount = 0;
+        insurance_contract.insured_amount = 0;
         insurance_contract.premium = 0;
         insurance_contract.bump = *ctx.bumps.get("insurance_contract").unwrap();
         insurance_contract.pool = ctx.accounts.pool.key();
         insurance_contract.tick_account = ctx.accounts.tick_account.key();
         insurance_contract.token_mint = ctx.accounts.token_mint.key();
-        insurance_contract.active = true;
+        insurance_contract.active = false;
+        insurance_contract.end_ts = current_time;
+        insurance_contract.created_ts =current_time;
+        insurance_contract.start_ts = current_time; 
         insurance_contract.owner = ctx.accounts.owner.key();
 
         // Update insurance contract
@@ -474,14 +476,11 @@ pub mod sure_pool {
     ///
     pub fn buy_insurance_for_tick(
         ctx: Context<BuyInsurance>,
-        amount: u64,
+        insured_amount: u64,
         end_ts: i64,
     ) -> Result<()> {
-        // _______________ Validation __________________
-        // * Check that the
 
-        // _______________ Functionality _______________
-
+  
         // Load accounts
         let tick_account_state =
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
@@ -491,134 +490,56 @@ pub mod sure_pool {
 
         // Calculate coverage amount
         let available_liquidity_in_tick = tick_account.liquidity - tick_account.used_liquidity;
-        let amount_to_cover = cmp::min(available_liquidity_in_tick, amount);
+        let current_insured_amount = insurance_contract.insured_amount;
+        let amount_diff = if insured_amount > current_insured_amount {insured_amount-current_insured_amount}else {current_insured_amount-insured_amount};
 
-        // Calculate cost of coverage
-        let tick_in_decimals = (tick_account.tick as u64) / (10000);
 
-        let current_time = Clock::get()?.unix_timestamp;
-        let time_diff = end_ts - current_time;
-
-        if time_diff <= 0 {
-            return Err(error!(SureError::InvalidTimestamp));
+        let (isIncreasePremium,premium) = insurance_contract.update_position_and_get_premium(tick_account.tick, insured_amount, end_ts)?;
+        
+        if insured_amount > current_insured_amount{
+            tick_account
+            .buy_insurance(amount_diff)
+            .map_err(|e| e.to_anchor_error())?;
+            pool_account.used_liquidity += amount_diff;
+        }else{
+            tick_account
+            .exit_insurance(amount_diff)
+            .map_err(|e| e.to_anchor_error())?;
+            pool_account.used_liquidity -= amount_diff;
         }
-
-        let year_fraction = (time_diff as u64) / (solana_program::clock::SECONDS_PER_DAY * 365);
-        let premium = amount_to_cover * tick_in_decimals * year_fraction;
-
-        // #1 credit tick account
-        tick_account
-            .buy_insurance(amount_to_cover)
-            .map_err(|e| e.to_anchor_error())?;
-
-        // #2 Update pool account
-        pool_account.used_liquidity += amount_to_cover;
-
-        // # 3 transfer premium to premium vault
-        token::transfer(
-            CpiContext::new(
-                ctx.accounts.token_program.to_account_info().clone(),
-                token::Transfer {
-                    from: ctx.accounts.token_account.to_account_info().clone(),
-                    to: ctx.accounts.premium_vault.to_account_info().clone(),
-                    authority: ctx.accounts.buyer.to_account_info().clone(),
-                },
-            ),
-            premium,
-        )?;
-
-        // # 4 Update insurance contract
-        insurance_contract.amount += amount;
-        insurance_contract.premium += premium;
-        insurance_contract.period_ts = time_diff;
-        insurance_contract.end_ts = end_ts;
-        Ok(())
-    }
-
-    /// Reduce the insurance amount position
-    /// Allow a user to reduce the size of the insurance position
-    ///
-    /// If a user wants increase the position a new insurance contract will be
-    /// created
-    ///
-    /// # Arguments
-    /// * ctx
-    ///
-    pub fn reduce_insurance_amount_for_tick(
-        ctx: Context<ReduceInsuranceAmount>,
-        amount_reduction: u64,
-    ) -> Result<()> {
-        // ====== Validate =======
-        let insurance_contract = &mut ctx.accounts.insurance_contract;
-
-        // Check that the contract haven't expired
-        let current_time = Clock::get()?.unix_timestamp;
-        require!(
-            current_time < insurance_contract.end_ts,
-            SureError::InsuranceContractExpired
-        );
-
-        // Require that the contract is active
-        require!(
-            insurance_contract.active,
-            SureError::InsuranceContractIsNotActive
-        );
-
-        require!(
-            amount_reduction <= insurance_contract.amount,
-            SureError::InvalidAmount
-        );
-
-        //Load accounts
-        let tick_account_state =
-            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
-        let mut tick_account = tick_account_state.load_mut()?;
-        let pool_account = &mut ctx.accounts.pool;
-
-        // Get the remaining premium in the account
-        let remaining_premium = insurance_contract.remaining_premium;
-        let new_insurance_amount = insurance_contract.amount - amount_reduction;
-        let new_premium = remaining_premium * (new_insurance_amount / insurance_contract.amount);
-        let premium_change = remaining_premium - new_premium;
-
-        // # 1 Exit tick position
-        tick_account
-            .exit_insurance(amount_reduction)
-            .map_err(|e| e.to_anchor_error())?;
-
-        // # 2 Reduce amount in pool
-        pool_account.used_liquidity -= amount_reduction;
-
-        // # 3 Transfer money from premium vault to user - premium vault held by pool
-        let pool_seed = [
-            &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
-            &pool_account.smart_contract.to_bytes() as &[u8],
-            &[pool_account.bump],
-        ];
-
-        token::transfer(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info().clone(),
-                token::Transfer {
-                    from: ctx.accounts.premium_vault.to_account_info().clone(),
-                    to: ctx.accounts.token_account.to_account_info().clone(),
-                    authority: ctx.accounts.pool.to_account_info().clone(),
-                },
-                &[&pool_seed[..]],
-            ),
-            premium_change,
-        )?;
-
-        // # 4 update insurance contract
-        insurance_contract.amount -= amount_reduction;
-        insurance_contract.remaining_premium = new_premium;
-
-        emit!(contract::ReduceInsuredAmountForTick {
-            owner: ctx.accounts.holder.key().clone(),
-            tick: tick_account.tick,
-            updated_insured_amount: new_insurance_amount.clone()
-        });
-
+        
+        if isIncreasePremium{
+            token::transfer(
+                CpiContext::new(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    token::Transfer {
+                        from: ctx.accounts.token_account.to_account_info().clone(),
+                        to: ctx.accounts.premium_vault.to_account_info().clone(),
+                        authority: ctx.accounts.buyer.to_account_info().clone(),
+                    },
+                ),
+                premium,
+            )?;
+        }else{
+            let pool_seed = [
+                &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
+                &pool_account.smart_contract.to_bytes() as &[u8],
+                &[pool_account.bump],
+            ];
+    
+            token::transfer(
+                CpiContext::new_with_signer(
+                    ctx.accounts.token_program.to_account_info().clone(),
+                    token::Transfer {
+                        from: ctx.accounts.premium_vault.to_account_info().clone(),
+                        to: ctx.accounts.token_account.to_account_info().clone(),
+                        authority: ctx.accounts.pool.to_account_info().clone(),
+                    },
+                    &[&pool_seed[..]],
+                ),
+                premium,
+            )?;
+        }
         Ok(())
     }
 

@@ -5,7 +5,7 @@ import * as anchor from "@project-serum/anchor"
 import { Program, Spl } from "@project-serum/anchor";
 import { token } from "@project-serum/anchor/dist/cjs/utils";
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAccount, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import {TokenAccount} from "./types"
+import {Bitmap, TokenAccount} from "./types"
 import {  metaplex } from "@metaplex/js/lib/programs";
 import { TokenMetadataProgram, TokenProgram } from "@metaplex-foundation/js-next";
 import { metadata } from "@metaplex/js/lib/programs";
@@ -491,12 +491,12 @@ export const createInsuranceContractForTick = async (owner: PublicKey,tickAccoun
         }).rpc()
         const insuranceContract = await program.account.insuranceContract.fetch(insuranceContractPDA);
 
-        assert.equal(insuranceContract.active,true);
-        assert.equal(insuranceContract.amount.toString(),"0");
+        assert.equal(insuranceContract.active,false);
+        assert.equal(insuranceContract.insuredAmount.toString(),"0");
         assert.equal(insuranceContract.pool.toBase58(),pool.toBase58())
 
     } catch(err) {
-        throw new Error("Could not initialize Insurance contract. Cause: " + err)
+       throw new Error("could not create insurance contract. Cause: "+err)
     }
 
     return insuranceContractPDA
@@ -551,23 +551,28 @@ export const getInsuranceContractsBitmapPDA = async (owner: PublicKey,pool: Publ
  */
 export const getInsuredAmount = async (owner: PublicKey,tokenMint: PublicKey,pool:PublicKey): Promise<anchor.BN> => {
     const userInsuranceContractsPDA = await getInsuranceContractsBitmapPDA(owner, pool);
-    const userInsuranceContracts = await program.account.bitMap.fetch(userInsuranceContractsPDA)
+    try{
+        const userInsuranceContracts = await program.account.bitMap.fetch(userInsuranceContractsPDA)
     
-    // Create insurance contract bitmap 
-    const insuranceContractBitmap = bitmap.Bitmap.new(userInsuranceContracts)
+        // Create insurance contract bitmap 
+        const insuranceContractBitmap = bitmap.Bitmap.new(userInsuranceContracts)
 
-    // Start from right and reduce position
-    let currentTick = insuranceContractBitmap.getHighestTick();
-    
-    let amount = new anchor.BN(0);
-    while (currentTick !== -1) {
-        const tickAccountPDA = await getTickAccountPDA(pool,tokenMint,currentTick);
-        const insuranceContractForTickPDA =await getInsuranceContractPDA(tickAccountPDA,owner);
-        const insuranceContractForTick = await program.account.insuranceContract.fetch(insuranceContractForTickPDA)
-        amount = amount.add(insuranceContractForTick.amount)
-        currentTick = insuranceContractBitmap.getPreviousTick(currentTick)
-    }  
-    return amount
+        // Start from right and reduce position
+        let currentTick = insuranceContractBitmap.getHighestTick();
+        
+        let amount = new anchor.BN(0);
+        while (currentTick !== -1) {
+            const tickAccountPDA = await getTickAccountPDA(pool,tokenMint,currentTick);
+            const insuranceContractForTickPDA =await getInsuranceContractPDA(tickAccountPDA,owner);
+            const insuranceContractForTick = await program.account.insuranceContract.fetch(insuranceContractForTickPDA)
+            amount = amount.add(insuranceContractForTick.insuredAmount)
+            currentTick = insuranceContractBitmap.getPreviousTick(currentTick)
+        }  
+        return amount
+
+    }catch(_){
+    return new anchor.BN(0)
+    }
 }
 
 
@@ -612,144 +617,64 @@ export const getOrCreateUserInsuranceContracts = async (owner: PublicKey,pool:Pu
  * @param pool<publickey>: the pool to buy from 
  * 
  */
-export const buyInsurance = async (connection: anchor.web3.Connection,amount: number,endTimestamp: number,tokenMint: PublicKey,pool: PublicKey,owner: Wallet) => {
+export const buyInsurance = async (connection: anchor.web3.Connection,newInsuredAmount: number,endTimestamp: number,tokenMint: PublicKey,pool: PublicKey,wallet: Wallet) => {
+    const newInsuredAmountBN = new anchor.BN(newInsuredAmount)
     
-    const poolAccount = await program.account.poolAccount.fetch(pool);
-    
-    // Get the premium vault for the given pool
-    const premiumVaultPDA = await getPremiumVaultPDA(pool,tokenMint);
-
-    // Get correct associated token account 
-    const tokenAccount = await getOrCreateAssociatedTokenAccount(
-        connection,
-        (owner as NodeWallet).payer,
-        tokenMint,
-        owner.publicKey,    
-    )
-
-    // ================= buy insurance by traversing ticks ==============
-    const tickSpacing = poolAccount.tickSpacing
-    let insurancePositionBitmapPDA = await getLiquidityPositionBitmapPDA(pool,tokenMint,program)
-    const firstBit = await bitmap.getLowestBit(insurancePositionBitmapPDA);
-    const firstTick = bitmap.getTickBasisPoint(firstBit,tickSpacing)
-
     // Create insurance overview 
-    const userInsuranceContractsPDA = await getOrCreateUserInsuranceContracts(owner.publicKey,pool)
-
-    // Check if there is enough
-    let insuranceContractPDA;
-    let amountToPay = new anchor.BN(0);
-    let amountToCover = new anchor.BN(amount);
-    let amountCovered = new anchor.BN(0)
-    let tick = firstTick;
-    let txs = new anchor.web3.Transaction()
-
-    // Get tick account
-    let tickAccountPDA = await getTickAccountPDA(pool,tokenMint,firstTick)
-    let tickAccount = await program.account.tick.fetch(tickAccountPDA)
-    let availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
-
-    while (amountToCover.gt(new anchor.BN(0)) && tick !== -1 ) {
-        if (availableLiquidity.gte(new anchor.BN(amountToCover))){
-            // Enough liquidity for one tick
-            amountToPay = amountToCover;
-        }else {
-            // Buy all the liquidity for one tick
-            amountToPay = availableLiquidity
-        }
-
-
-        // Get or create insurance for tick
-        insuranceContractPDA = await getOrCreateInsuranceContractForTick(owner.publicKey,tickAccountPDA,pool,tokenMint,userInsuranceContractsPDA);
+    const insuredAmount = await getInsuredAmount(wallet.publicKey,tokenMint,pool)
+    let amountChange = new anchor.BN(0);
+    if (newInsuredAmountBN.gt(insuredAmount)){
+        const insuranceContractsPDA = await getOrCreateUserInsuranceContracts(wallet.publicKey,pool)
+        const liquidityPositionsPDA = await getLiquidityPositionBitmapPDA(pool,tokenMint,program)
+        const liquidityPositions = await program.account.bitMap.fetch(liquidityPositionsPDA)
+        const liquidityPositionsBitmap = bitmap.Bitmap.new(liquidityPositions)
        
-        // Buy insurance for tick
-        txs.add(program.instruction.buyInsuranceForTick(amountToPay,new anchor.BN(endTimestamp),{
-            accounts:{
-                buyer: owner.publicKey,
-                tokenAccount: tokenAccount.address,
-                pool: pool,
-                tickAccount:tickAccountPDA,
-                premiumVault: premiumVaultPDA,
-                insuranceContract: insuranceContractPDA,
-                tokenProgram: TOKEN_PROGRAM_ID,
-                systemProgram: SystemProgram.programId,
-            },
-        }
-        ))
+        amountChange = newInsuredAmountBN.sub(insuredAmount);
+        await increaseInsurancePosition(connection,amountChange,liquidityPositionsBitmap,endTimestamp,wallet,pool,tokenMint,insuranceContractsPDA)
+    }else{
 
-        amountToCover = amountToCover.sub(amountToPay)
+        const insuranceContractsPDA = await getOrCreateUserInsuranceContracts(wallet.publicKey,pool)
+        const insuranceContracts = await program.account.bitMap.fetch(insuranceContractsPDA)
+        const insuranceContractsBitmap = bitmap.Bitmap.new(insuranceContracts)
 
-        // find next liquidity
-        insurancePositionBitmapPDA = await getLiquidityPositionBitmapPDA(pool,tokenMint,program)
-        tick = await bitmap.getNextTick(tick,insurancePositionBitmapPDA,10)
-        tickAccountPDA = await getTickAccountPDA(pool,tokenMint,tick)
-        tickAccount = await program.account.tick.fetch(tickAccountPDA)
-        availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
-        amountCovered = amountCovered.add(amountToPay)
-    }
-    txs.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-    txs.feePayer = owner.publicKey;
-    
-    try{
-        await anchor.getProvider().send(txs)
-    }catch(err){
-        throw new Error("Sure.buyInsurance. Could not buy insurance. Cause: "+err)
+        amountChange = insuredAmount.sub(newInsuredAmountBN)
+        await reduceInsurancePositon(connection,amountChange,insuranceContractsBitmap,endTimestamp,wallet,pool,tokenMint)
     }
 }
 
-/**
- * Reduce Insurance Amount 
- * Move from largest tick insurance position and move downwards until 
- * the position is reduced 
- * 
- * @param amount<number>: the amount of insurance to buy
- * @param pool<publickey>: the pool to buy from 
- * 
- */
-export const reduceInsuranceAmount = async (connection: Connection,newInsuranceAmount: number,pool:PublicKey,tokenMint: PublicKey,owner: Wallet) => {
+const increaseInsurancePosition = async (connection: Connection,amountChange: anchor.BN ,bitmap: bitmap.Bitmap,endTs: number,wallet:Wallet,pool:PublicKey,tokenMint:PublicKey,insuranceContractsPDA:PublicKey) => {
+    console.log("// increaseInsurancePosition")
+    // Start from left and increase position
+    let currentTick = bitmap.getLowestTick();
 
-    // Load Accounts
-    const tokenAccount = await getOrCreateAssociatedTokenAccount(connection,(owner as NodeWallet).payer,tokenMint,owner.publicKey);
+    const tokenAccount = await getOrCreateAssociatedTokenAccount(connection,(wallet as NodeWallet).payer,tokenMint,wallet.publicKey);
     const premiumVaultPDA = await getPremiumVaultPDA(pool,tokenMint);
 
-
-    // Calculate amount insured 
-    const amountInsured = await getInsuredAmount(owner.publicKey,tokenMint,pool)
-    const newInsuranceAmountBN = new anchor.BN(newInsuranceAmount)
-    let insuranceReductionAmount = amountInsured.sub(newInsuranceAmountBN) 
-    if (insuranceReductionAmount.lte(new anchor.BN(0))){
-        throw new Error("Amount insured is less than new insured amount")
-    }
-
-    // Get Insurance Contract Bitmap
-    const userInsuranceContractsPDA = await getInsuranceContractsBitmapPDA(owner.publicKey, pool);
-    const userInsuranceContracts = await program.account.bitMap.fetch(userInsuranceContractsPDA)
-    
-    // Create insurance contract bitmap 
-    const insuranceContractBitmap = bitmap.Bitmap.new(userInsuranceContracts)
-
-    // Start from right and reduce position
-    let currentTick = insuranceContractBitmap.getHighestTick();
-
-    
     // Create Anchor Transaction
     let txs = new anchor.web3.Transaction()
     // Initialize parameters
+
     let tickAccountPDA;
     let insuranceContractForTickPDA;
     let insuranceContract;
     let amountToReduceForTick;
+    let amountToInsureForTick = new anchor.BN(0);
+    
 
     // Reduce position tick for tick 
-    while (insuranceReductionAmount.gt(new anchor.BN(0))){
+    while (amountChange.gt(new anchor.BN(0)) && (currentTick !== -1)){
         tickAccountPDA = await getTickAccountPDA(pool,tokenMint,currentTick);
-        insuranceContractForTickPDA =await getInsuranceContractPDA(tickAccountPDA,owner.publicKey);
+        insuranceContractForTickPDA = await getOrCreateInsuranceContractForTick(wallet.publicKey,tickAccountPDA,pool,tokenMint,insuranceContractsPDA)
+        
         insuranceContract = await program.account.insuranceContract.fetch(insuranceContractForTickPDA)
-        amountToReduceForTick = min(insuranceContract.amount,insuranceReductionAmount);
+        
+        amountToReduceForTick = min(insuranceContract.insuredAmount,amountChange);
+        amountToInsureForTick = insuranceContract.insuredAmount.sub(amountToReduceForTick)
+
         txs.add(
-            program.instruction.reduceInsuranceAmountForTick(amountToReduceForTick,{
+            program.instruction.buyInsuranceForTick(amountToInsureForTick,new anchor.BN(endTs),{
                 accounts: {
-                    holder: owner.publicKey,
+                    buyer: wallet.publicKey,
                     pool: pool,
                     tickAccount: tickAccountPDA,
                     tokenAccount: tokenAccount.address,
@@ -761,12 +686,12 @@ export const reduceInsuranceAmount = async (connection: Connection,newInsuranceA
             })
         )
 
-        insuranceReductionAmount = insuranceReductionAmount.sub(amountToReduceForTick)
-        // Get the previous tick in the bitmap
-        currentTick = insuranceContractBitmap.getPreviousTick(currentTick)
+            amountChange = amountChange.sub(amountToReduceForTick)
+            // Get the previous tick in the bitmap
+            currentTick = bitmap.getNextTick(currentTick)
     }
     txs.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
-    txs.feePayer = owner.publicKey;
+    txs.feePayer = wallet.publicKey;
     
     try{
         await anchor.getProvider().send(txs)
@@ -774,5 +699,59 @@ export const reduceInsuranceAmount = async (connection: Connection,newInsuranceA
         console.log("logs?: ",err?.logs)
         throw new Error("Sure.buyInsurance. Could not buy insurance. Cause: "+err)
     }
+}
 
+const reduceInsurancePositon = async (connection:Connection,amountChange: anchor.BN ,bitmap: bitmap.Bitmap,endTs: number,wallet:Wallet,pool:PublicKey,tokenMint:PublicKey) => {
+    // Start from right and reduce position
+    let currentTick = bitmap.getHighestTick();
+    const tokenAccount = await getOrCreateAssociatedTokenAccount(connection,(wallet as NodeWallet).payer,tokenMint,wallet.publicKey);
+    const premiumVaultPDA = await getPremiumVaultPDA(pool,tokenMint);
+
+    // Create Anchor Transaction
+    let txs = new anchor.web3.Transaction()
+    // Initialize parameters
+    let tickAccountPDA;
+    let insuranceContractForTickPDA;
+    let insuranceContract;
+    let amountToReduceForTick;
+    let amountToInsureForTick = new anchor.BN(0);
+    
+
+    // Reduce position tick for tick 
+    while (amountChange.gt(new anchor.BN(0))){
+
+        tickAccountPDA = await getTickAccountPDA(pool,tokenMint,currentTick);
+        insuranceContractForTickPDA =await getInsuranceContractPDA(tickAccountPDA,wallet.publicKey);
+        insuranceContract = await program.account.insuranceContract.fetch(insuranceContractForTickPDA)
+        amountToReduceForTick = min(insuranceContract.amount,amountChange);
+        amountToInsureForTick =  insuranceContract.amount.sub(amountToReduceForTick)
+
+        txs.add(
+            program.instruction.buyInsuranceForTick(amountToInsureForTick,new anchor.BN(endTs),{
+                accounts: {
+                    buyer: wallet.publicKey,
+                    pool: pool,
+                    tickAccount: tickAccountPDA,
+                    tokenAccount: tokenAccount.address,
+                    premiumVault: premiumVaultPDA,
+                    insuranceContract: insuranceContractForTickPDA,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                    systemProgram: SystemProgram.programId
+                }
+            })
+        )
+
+        amountChange = amountChange.sub(amountToReduceForTick)
+        // Get the previous tick in the bitmap
+        currentTick = bitmap.getPreviousTick(currentTick)
+    }
+    txs.recentBlockhash = (await connection.getLatestBlockhash()).blockhash
+    txs.feePayer = wallet.publicKey;
+    
+    try{
+        await anchor.getProvider().send(txs)
+    }catch(err){
+        console.log("logs?: ",err?.logs)
+        throw new Error("Sure.buyInsurance. Could not buy insurance. Cause: "+err)
+    }
 }
