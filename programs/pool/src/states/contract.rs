@@ -2,7 +2,7 @@
 ///! that a user has insurance
 use anchor_lang::prelude::*;
 
-/// Insurance Contract for each tick 
+/// Insurance Contract for each tick
 /// The account should be able to be reduced within a tick
 #[account]
 #[derive(Default)]
@@ -46,4 +46,11 @@ pub struct InsuranceContract {
 
 impl InsuranceContract {
     pub const SPACE: usize = 1 + 8 + 8 + 8 + 8 + 8 + 32 + 32 + 32 + 32 + 1 + 8;
+}
+
+#[event]
+pub struct ReduceInsuredAmountForTick {
+    pub owner: Pubkey,
+    pub tick: u16,
+    pub updated_insured_amount: u64,
 }

@@ -1,6 +1,6 @@
 use crate::states::{
     bitmap::BitMap,
-    contract::{InsuranceContract},
+    contract::InsuranceContract,
     liquidity::{self, LiquidityPosition},
     owner::ProtocolOwner,
     pool::{PoolAccount, PoolManager, SurePools},
@@ -503,8 +503,8 @@ impl<'info> Validate<'info> for InitializeInsuranceContract<'info> {
 }
 
 /// Initialize user insurance contract
-/// The account is used to have an overview over the 
-/// positions hebild by the user 
+/// The account is used to have an overview over the
+/// positions hebild by the user
 #[derive(Accounts)]
 pub struct InitializeUserInsuranceContracts<'info> {
     /// Signer
@@ -512,9 +512,9 @@ pub struct InitializeUserInsuranceContracts<'info> {
     pub signer: Signer<'info>,
 
     /// Pool associated with the insurance contracts
-    pub pool: Box<Account<'info,PoolAccount>>,
+    pub pool: Box<Account<'info, PoolAccount>>,
 
-    /// 
+    ///
     #[account(
         init,
         space = 8 + BitMap::SPACE,
@@ -529,7 +529,7 @@ pub struct InitializeUserInsuranceContracts<'info> {
     pub insurance_contracts: Box<Account<'info, BitMap>>,
 
     /// System program
-    pub system_program: Program<'info,System>
+    pub system_program: Program<'info, System>,
 }
 
 /// Buy Insurance Request

@@ -52,6 +52,14 @@ export class Bitmap {
         return u256.lastIndexOf("1")
     }
 
+    getLowestTick(): number {
+        return this.getTickFromBit(this.getLowestBit())
+    }
+
+    getHighestTick():number {
+        return this.getTickFromBit(this.getHighestBit())
+    }
+
     getTickFromBit(bit: number): number {
         return 0 + this.spacing*bit
     } 
@@ -83,12 +91,12 @@ export class Bitmap {
         const u256 = this.word.flatMap((word) => {
             return word.toString(2,64).split("").reverse().join("")
         })[0]
-
-        const priorBitmap = u256.slice(0,tick-1)
+        const priorBitmap = u256.slice(0,bit-1)
         const lastBit = priorBitmap.lastIndexOf("1")
         if (lastBit === -1){
             return lastBit
         }
+        console.log("")
 
         return this.getTickFromBit(lastBit)
 

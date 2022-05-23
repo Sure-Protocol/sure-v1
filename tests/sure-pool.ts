@@ -233,10 +233,10 @@ describe("Initialize Sure Pool",() => {
 
         try{
             const surePools = await program.account.surePools.fetch(surePoolsPDA)
-            console.log("surePools: ",surePools)
            
             assert.equal(surePools.pools.length,1)
             const firstContractInsured = surePools.pools[0]
+            
             // get the first pool 
             const poolPDA = await sureUtils.getPoolPDA(firstContractInsured,program)
             
@@ -390,7 +390,6 @@ describe("Initialize Sure Pool",() => {
 
         // Calculate cost of insurance 
         const [potentialAmountCovered,price] = await sureUtils.estimateYearlyPremium(amountToBuy,token0,poolPDA,wallet.publicKey)
-        console.log("potentialAmountCovered: ",potentialAmountCovered.toString(), " , price: ",price.toString())
 
         await sureUtils.buyInsurance(connection,amountToBuy,endTimestamp,token0,poolPDA,wallet);
 
@@ -398,21 +397,28 @@ describe("Initialize Sure Pool",() => {
         const insuranceContractsPDA = await sureUtils.getInsuranceContractsBitmapPDA(wallet.publicKey,poolPDA)
         const userInsuranceContractPositions = await program.account.bitMap.fetch(insuranceContractsPDA)
         const bitmap = sureUtils.Bitmap.new(userInsuranceContractPositions);
-        console.log(userInsuranceContractPositions)
         const lowestBit = bitmap.getLowestBit()
         const lowestTick = bitmap.getTickFromBit(lowestBit)
-        console.log("lowest bit: ",lowestBit)
-        console.log("lowest tick: ",lowestTick)
         const tickAccount = await sureUtils.getTickAccountPDA(poolPDA,token0,lowestTick);
         const insuranceContractPDA = await sureUtils.getInsuranceContractPDA(tickAccount,wallet.publicKey)
-        const insuranceContract = await program.account.insuranceContract.fetch(insuranceContractPDA)
-
-        console.log("insurance contract: ",insuranceContract)
-
 
     }),
     it("reduce insured amount for contract",async ()=> {
+        // Create eventlistener
+        const poolPDA = await sureUtils.getPoolPDA(
+            protcolToInsure0.publicKey,
+            program
+        )
 
+        const newInsuranceAmount = 5000;
+    
+        try{
+            await sureUtils.reduceInsuranceAmount(connection,newInsuranceAmount,poolPDA,token0,wallet)
+        }catch(err){
+            throw new Error(err)
+        }
 
+        const updatedInsuredAmount = await sureUtils.getInsuredAmount(wallet.publicKey,token0,poolPDA)
+        assert.isTrue(new anchor.BN(newInsuranceAmount).eq(updatedInsuredAmount))
     })
 })

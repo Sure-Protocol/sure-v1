@@ -421,14 +421,12 @@ pub mod sure_pool {
     /// * ctx: Contains the pool, insurance contract and signer
     ///
     pub fn initialize_insurance_contract(ctx: Context<InitializeInsuranceContract>) -> Result<()> {
-
         // Load insurance_contract
         let insurance_contract = &mut ctx.accounts.insurance_contract;
         let insurance_contracts = &mut ctx.accounts.insurance_contracts;
         let tick_account_state =
-        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
+            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let tick_account = tick_account_state.load()?;
-
 
         // Initialize insurance_contract
         insurance_contract.amount = 0;
@@ -449,13 +447,14 @@ pub mod sure_pool {
         Ok(())
     }
 
-    pub fn initialize_user_insurance_contracts(ctx: Context<InitializeUserInsuranceContracts>) -> Result<()> {
-        
+    pub fn initialize_user_insurance_contracts(
+        ctx: Context<InitializeUserInsuranceContracts>,
+    ) -> Result<()> {
         // Load accounts
         let insurance_contracts = &mut ctx.accounts.insurance_contracts;
 
-        // Initialize the insurance contract overview 
-        insurance_contracts.bump = unwrap_bump!(ctx,"insurance_contracts");
+        // Initialize the insurance contract overview
+        insurance_contracts.bump = unwrap_bump!(ctx, "insurance_contracts");
         insurance_contracts.spacing = 10;
         insurance_contracts.word = [0; 4];
 
@@ -547,7 +546,7 @@ pub mod sure_pool {
     ///
     pub fn reduce_insurance_amount_for_tick(
         ctx: Context<ReduceInsuranceAmount>,
-        new_insurance_amount: u64,
+        amount_reduction: u64,
     ) -> Result<()> {
         // ====== Validate =======
         let insurance_contract = &mut ctx.accounts.insurance_contract;
@@ -566,22 +565,21 @@ pub mod sure_pool {
         );
 
         require!(
-            new_insurance_amount < insurance_contract.amount,
+            amount_reduction <= insurance_contract.amount,
             SureError::InvalidAmount
         );
 
-        // Load accounts
+        //Load accounts
         let tick_account_state =
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let mut tick_account = tick_account_state.load_mut()?;
         let pool_account = &mut ctx.accounts.pool;
 
         // Get the remaining premium in the account
-        let current_insured_amount = insurance_contract.amount;
         let remaining_premium = insurance_contract.remaining_premium;
+        let new_insurance_amount = insurance_contract.amount - amount_reduction;
         let new_premium = remaining_premium * (new_insurance_amount / insurance_contract.amount);
         let premium_change = remaining_premium - new_premium;
-        let amount_reduction = current_insured_amount - new_insurance_amount;
 
         // # 1 Exit tick position
         tick_account
@@ -593,7 +591,7 @@ pub mod sure_pool {
 
         // # 3 Transfer money from premium vault to user - premium vault held by pool
         let pool_seed = [
-            &SURE_PREMIUM_POOL_SEED.as_bytes() as &[u8],
+            &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
             &pool_account.smart_contract.to_bytes() as &[u8],
             &[pool_account.bump],
         ];
@@ -612,8 +610,14 @@ pub mod sure_pool {
         )?;
 
         // # 4 update insurance contract
-        insurance_contract.amount -= new_insurance_amount;
+        insurance_contract.amount -= amount_reduction;
         insurance_contract.remaining_premium = new_premium;
+
+        emit!(contract::ReduceInsuredAmountForTick {
+            owner: ctx.accounts.holder.key().clone(),
+            tick: tick_account.tick,
+            updated_insured_amount: new_insurance_amount.clone()
+        });
 
         Ok(())
     }
