@@ -468,7 +468,9 @@ pub mod sure_pool {
     /// premium
     ///
     /// NOTE: Protocol fee will be subtracted continously from the premium vaults
-    ///
+    /// TODO: Rename method to adjust_contract_position
+    /// TODO: Allow for unlocking of insured amount
+    /// 
     /// # Arguments
     /// * ctx
     /// * Amount: the amount the user want to insure
@@ -489,12 +491,11 @@ pub mod sure_pool {
         let insurance_contract = &mut ctx.accounts.insurance_contract;
 
         // Calculate coverage amount
-        let available_liquidity_in_tick = tick_account.liquidity - tick_account.used_liquidity;
         let current_insured_amount = insurance_contract.insured_amount;
         let amount_diff = if insured_amount > current_insured_amount {insured_amount-current_insured_amount}else {current_insured_amount-insured_amount};
 
 
-        let (isIncreasePremium,premium) = insurance_contract.update_position_and_get_premium(tick_account.tick, insured_amount, end_ts)?;
+        let (is_increase_premium,premium) = insurance_contract.update_position_and_get_premium(tick_account.tick, insured_amount, end_ts)?;
         
         if insured_amount > current_insured_amount{
             tick_account
@@ -508,7 +509,7 @@ pub mod sure_pool {
             pool_account.used_liquidity -= amount_diff;
         }
         
-        if isIncreasePremium{
+        if is_increase_premium {
             token::transfer(
                 CpiContext::new(
                     ctx.accounts.token_program.to_account_info().clone(),

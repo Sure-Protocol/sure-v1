@@ -6,6 +6,26 @@ use crate::utils::errors::*;
 
 
 const SURE_TIME_LOCK_IN_SECONDS: u64 = solana_program::clock::SECONDS_PER_DAY;
+
+/// Pool insurance contract is meant to keep an
+/// overview over the relationship a user 
+/// has with the pool
+#[account]
+#[derive(Default)]
+pub struct PoolInsuranceContract {
+    /// The bump
+    pub bump: u8, //1 byte
+
+    /// Contract expiry
+    pub end_time: i64, // 8 byte
+
+    /// Owner of contract
+    pub owner: Pubkey, // 8 byte
+
+    /// Pool Insurance Tick Contracts
+    pub insurance_contracts: Pubkey, // 8 bytes 
+}
+
 /// Insurance Contract for each tick
 /// The account should be able to be reduced within a tick
 #[account]
@@ -56,6 +76,7 @@ pub struct InsuranceContract {
 
     /// Updated 
     pub updated_ts: i64, // 8 bytes
+
     /// Created
     pub created_ts: i64, // 8 bytes
 }
@@ -119,6 +140,7 @@ impl InsuranceContract {
     /// * premiumDiff<u64>: the premium diff.
     pub fn update_position_and_get_premium(&mut self,tick: u16,new_insured_amount: u64,new_end_ts:i64) -> Result<(bool,u64)> {
         let increase_premium_res = self.increase_premium(tick, new_insured_amount,new_end_ts);
+        
         let current_time = Clock::get()?.unix_timestamp;
         // Update insurance position
         let time_lock = false;
@@ -127,6 +149,7 @@ impl InsuranceContract {
             let amount_change = new_insured_amount - self.insured_amount;
             self.time_locked_insured_amount = amount_change;
             self.time_lock_end = current_time + (SURE_TIME_LOCK_IN_SECONDS as i64);
+            self.insured_amount = new_insured_amount;
         }else {
             // Reduction happens immidiately
             self.insured_amount = new_insured_amount;

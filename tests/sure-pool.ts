@@ -16,6 +16,7 @@ import {Metaplex} from "@metaplex-foundation/js-next"
 import { metadata } from "@metaplex/js/lib/programs";
 
 import * as sureUtils from "./utils"
+import { Bitmap } from './utils';
 
 /// =============== Variables ==================
 
@@ -342,12 +343,11 @@ describe("Initialize Sure Pool",() => {
     it("buy insurance from smart contract pool",async () => {
 
         /// Variables
-        const amountToBuy = 15000
-        const newLiquidity = 14000
+        let positionSize = 15000
         const tick = 120
         const dateNow = new Date()
-        const hours = 10
-        const endTimestamp = dateNow.setTime(dateNow.getTime() + 60*60*1000*hours)
+        let hours = 10
+        let contractExpiry = dateNow.setTime(dateNow.getTime() + 60*60*1000*hours)
 
        
 
@@ -355,7 +355,7 @@ describe("Initialize Sure Pool",() => {
         try{
             await sureUtils.depositLiquidity(
                 connection,
-            newLiquidity,
+                14000,
             tick,
             wallet.publicKey,
             walletATAPubkey,
@@ -389,21 +389,49 @@ describe("Initialize Sure Pool",() => {
         )
 
         // Calculate cost of insurance 
-        const [potentialAmountCovered,price] = await sureUtils.estimateYearlyPremium(amountToBuy,token0,poolPDA,wallet.publicKey)
+        //const [potentialAmountCovered,price] = await sureUtils.estimateYearlyPremium(positionSize,token0,poolPDA,wallet.publicKey)
 
-        await sureUtils.buyInsurance(connection,amountToBuy,endTimestamp,token0,poolPDA,wallet);
+        await sureUtils.buyInsurance(connection,positionSize,contractExpiry,token0,poolPDA,wallet);
 
         // Check the user positions
-        const insuranceContractsPDA = await sureUtils.getInsuranceContractsBitmapPDA(wallet.publicKey,poolPDA)
-        const userInsuranceContractPositions = await program.account.bitMap.fetch(insuranceContractsPDA)
-        const bitmap = sureUtils.Bitmap.new(userInsuranceContractPositions);
-        const lowestBit = bitmap.getLowestBit()
-        const lowestTick = bitmap.getTickFromBit(lowestBit)
-        const tickAccount = await sureUtils.getTickAccountPDA(poolPDA,token0,lowestTick);
-        const insuranceContractPDA = await sureUtils.getInsuranceContractPDA(tickAccount,wallet.publicKey)
+        console.log("Buy insurance > getInsured amount")
+        let insuredAmount = await sureUtils.getInsuredAmount(wallet.publicKey,token0,poolPDA)
+        assert.isTrue(insuredAmount.eq(new anchor.BN(positionSize)))
+        console.log("insurance: ",insuredAmount.toString())
 
-    }),
-    it("reduce insured amount for contract",async ()=> {
-        // Create eventlistener
+        // Buy more insurance 
+        positionSize = 17000;
+        await sureUtils.buyInsurance(connection,positionSize,contractExpiry,token0,poolPDA,wallet);
+        insuredAmount = await sureUtils.getInsuredAmount(wallet.publicKey,token0,poolPDA)
+        assert.isTrue(insuredAmount.eq(new anchor.BN(positionSize)))
+        console.log("insurance: ",insuredAmount.toString())
+        
+
+        // reduce position
+        positionSize = 11000;
+        await sureUtils.buyInsurance(connection,positionSize,contractExpiry,token0,poolPDA,wallet);
+        insuredAmount = await sureUtils.getInsuredAmount(wallet.publicKey,token0,poolPDA)
+        assert.isTrue(insuredAmount.eq(new anchor.BN(positionSize)))
+        console.log("insurance: ",insuredAmount.toString())
+
+        // Change contract expiry 
+        hours = 20;
+        contractExpiry = dateNow.setTime(dateNow.getTime() + 60*60*1000*hours)
+        await sureUtils.changeContractExpiry(wallet,connection,contractExpiry,poolPDA,token0);
+        
+        // fetch a contract 
+        const insuranceContractsPDA = await sureUtils.getInsuranceContractsBitmapPDA(wallet.publicKey,poolPDA)
+        const insuranceContracts = await program.account.bitMap.fetch(insuranceContractsPDA)
+        const insuranceContractsBitmap = Bitmap.new(insuranceContracts)
+        const firstTick = insuranceContractsBitmap.getLowestTick()
+        const tickAccountPDA = await sureUtils.getTickAccountPDA(poolPDA,token0,firstTick);
+        const insuranceContractPDA = await sureUtils.getInsuranceContractPDA(tickAccountPDA,wallet.publicKey)
+        const insuranceContract = await program.account.insuranceContract.fetch(insuranceContractPDA)
+        const insuranceContractExpiry =insuranceContract.endTs.toString()
+        assert.isTrue((new anchor.BN(contractExpiry)).eq(insuranceContract.endTs))
+
+        /// Test for different hours 
+
+        /// TODO: check premium calculations
     })
 })
