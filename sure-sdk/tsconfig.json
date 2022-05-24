@@ -1,0 +1,35 @@
+{
+  "include": [
+    "./src/**/*"
+  ],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "noImplicitAny": false,
+    "strictNullChecks": true,
+    "composite": true,
+    "skipLibCheck":true,
+    "baseUrl": ".",
+    "rootDir": "./src",
+    "outDir": "dist/cjs/",
+    "lib": ["es2018"],
+    "module": "commonjs",
+    "target": "es2019",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "typeRoots": [
+      "types/",
+      "node_modules/@types"
+    ],
+    "paths": {
+      "@solana/web3.js": [
+        "./node_modules/@solana/web3.js/lib"
+      ]
+    }
+  }
+}

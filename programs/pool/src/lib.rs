@@ -481,8 +481,6 @@ pub mod sure_pool {
         insured_amount: u64,
         end_ts: i64,
     ) -> Result<()> {
-
-  
         // Load accounts
         let tick_account_state =
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
@@ -496,7 +494,6 @@ pub mod sure_pool {
 
 
         let (is_increase_premium,premium) = insurance_contract.update_position_and_get_premium(tick_account.tick, insured_amount, end_ts)?;
-        
         if insured_amount > current_insured_amount{
             tick_account
             .buy_insurance(amount_diff)

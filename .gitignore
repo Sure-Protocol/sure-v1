@@ -6,3 +6,5 @@ target
 node_modules
 .vscode
 .yarn
+*/**/dist
+*/**/.rollup.cache
