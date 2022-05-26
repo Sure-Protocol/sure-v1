@@ -21,3 +21,10 @@ Test Project
 ```
     anchor test
 ```
+
+## Naming conventions
+
+- Insurance Buyer - policy holder, coverage holder
+- Buy insurance - buy coverage, get coverage
+- Sell insurance - close contract, exit insurance
+-

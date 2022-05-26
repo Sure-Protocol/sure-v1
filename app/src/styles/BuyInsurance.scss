@@ -1,0 +1,156 @@
+.sure-buy-insurance {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+}
+
+.sure-buy-insurance-container {
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: left;
+    align-items: left;
+    margin-bottom: 1rem;
+
+    &--centered{
+        @extend .sure-buy-insurance-container;
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+.sure-buy-insurance-selectors {
+    display: flex;
+    flex-grow: 2;
+    
+    &--horisontal{
+        @extend .sure-buy-insurance-selectors;
+        flex: 1 0 auto;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        flex-direction: row;
+    }
+}
+
+.sure-buy-insurance-selector {
+    border-radius: 5px;
+    &--amount{
+        @extend .sure-buy-insurance-selector;
+        margin-right: 1rem;
+        flex-grow: 2;
+        background-color: $sure-blue-4;
+        padding: 4px;
+        display: flex;
+        flex-direction: row;
+
+        &__button{
+            @extend .sure-button-default;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            &:hover{
+                background-color: $sure-blue-3;
+            }
+        }
+        
+        &__amount {
+            @extend .sure-button-default;
+            flex-grow: 2;
+            text-align: right;
+            background-color: transparent;
+            font-family: 'arvo-bold';
+
+            &:focus{
+                outline: none;
+            }
+        }
+
+        &__token{
+            @extend .sure-button-default;
+        }
+    }
+    &--date{
+        @extend .sure-buy-insurance-selector;
+        background-color: $sure-blue-4;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        &__select{
+            background-color: transparent;
+            border-radius: 5px;
+            border-width: 1px;
+            border-color: transparent;
+            padding: 5px;
+            width: fit-content;
+            text-align: center;
+            color: $sure-white;
+            &:focus{
+                outline: none;
+            }
+        }
+    }
+}
+
+.sure-token{
+    width: fit-content;
+    margin-right: 10px;
+
+    &--name{
+        @extend .sure-token;
+       
+    }
+}
+
+.sure-button-default{
+    background-color: $sure-blue-4;
+    color: $sure-white;
+    cursor: pointer;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: transparent;
+    padding: 5px;
+
+}
+
+.icon-small{
+    width:20px;
+    height: 20px;
+
+    &--white{
+        @extend .icon-small;
+    }
+}
+
+.sure-icon{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/// Insurance change
+.sure-buy-insurance-change {
+    display: flex;
+    flex-direction: row;
+    &__status{
+        padding: 5px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    &__amount{
+        justify-content: center;
+        align-items:flex-end;
+        padding: 5px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    &__date{
+        padding: 5px;
+        display: flex;
+        flex-direction: column;
+    }
+}

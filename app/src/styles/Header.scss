@@ -1,0 +1,17 @@
+
+.header{
+    right: 20%;
+    padding:10px;
+    display: flex;
+    justify-content: center;
+    
+}
+.header-navbar{
+    display: flex;
+    width:80%;
+    justify-content: right;
+}
+
+.wallet-button {
+        background-color: $sure-black;
+}

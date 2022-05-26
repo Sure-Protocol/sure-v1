@@ -1,0 +1,117 @@
+// Main colors Sure 
+$sure-black: #061122;
+$sure-pink: #ff008e;
+$sure-purple: #612897;
+$sure-blue: #0C1E7F;
+$sure-white: #FFEEF2;
+$sure-text-grey: #9CA3AF;
+
+// -- Shades ----
+// Blue layers 
+$sure-blue-2: #05152F;
+$sure-blue-3: #0C1E7F;
+$sure-blue-4: #324F7E;
+
+// Purple
+$sure-dark-purple:rgb(89, 36, 139);
+
+// Fonts
+
+@font-face {
+    font-family: 'arvo-bold';
+    src: url("./../assets/Arvo-Bold.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: 'arvo-bolditalic';
+    src: url("./../assets/Arvo-BoldItalic.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: 'arvo-italic';
+    src: url("./../assets/Arvo-Italic.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: 'arvo';
+    src: url("./../assets/Arvo-Regular.ttf") format("truetype");
+}
+
+// ---------------- Text styles ---------------
+p {
+    color: $sure-text-grey;   
+    font-family: 'arvo';
+  
+}
+
+h1,h2,h3,h4,h5{
+    color: $sure-text-grey;   
+    font-family: 'arvo';
+}
+
+.h1,.h2,.h3,.h4,.h5 {
+    
+    &--white{
+        color: $sure-white;
+    }
+
+    &--center{
+        text-align: center;
+    }
+
+    &--margin-s{
+        margin-bottom: 4px;
+        margin-top: 4px;
+    }
+
+    &--margin-m{
+        margin-bottom: 8px;
+        margin-top: 8px;
+    }
+
+}
+
+.p{
+    &--margin-0{
+        margin: 0;
+    }
+    &--margin-s{
+        margin-bottom: 4px;
+        margin-top: 4px;
+    }
+
+    &--margin-s{
+        margin-bottom: 8px;
+        margin-top: 8px;
+    }
+
+    &--margin-hs{
+        margin-left: 4px;
+        margin-right: 4px;
+    }
+
+    &--small{
+        font-size: small;
+    }
+
+    &--medium{
+        font-size: medium;
+    }
+
+    &--center{
+        text-align: center;
+    }
+
+    &--white{
+        color: $sure-white;
+    }
+
+    &--bold{
+        font-family: 'arvo-bold';
+    }
+
+    &--pink{
+        color: $sure-pink;
+    }
+}
+
