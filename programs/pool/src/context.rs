@@ -46,6 +46,7 @@ pub struct InitializeProtocol<'info> {
         bump,
         payer = owner,
         space = 8 + ProtocolOwner::SPACE,
+
     )]
     pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
 
@@ -61,12 +62,21 @@ pub struct InitializeProtocol<'info> {
     )]
     pub pools: Box<Account<'info, SurePools>>,
 
+    /// Sure pool program
+    pub program: Program<'info,crate::program::SurePool>,
+
+    pub program_data: Account<'info,ProgramData>,
+
     /// System Program to create a new account
     pub system_program: Program<'info, System>,
 }
 
+
 impl<'info> Validate<'info> for InitializeProtocol<'info> {
     fn validate(&self) -> Result<()> {
+        
+        assert_eq!(self.program.programdata_address()?,Some(self.program_data.key()));
+        assert_eq!(Some(self.owner.key()), self.program_data.upgrade_authority_address);
         Ok(())
     }
 }

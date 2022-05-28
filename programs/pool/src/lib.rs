@@ -17,7 +17,7 @@ use mpl_token_metadata::state::Creator;
 use std::cmp;
 use vipers::prelude::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("79zTSyMWgBpHQmkWmdiRH4Jz727UJzpUW5rEutseyMrP");
 
 #[program]
 pub mod sure_pool {
@@ -90,7 +90,6 @@ pub mod sure_pool {
     pub fn create_pool(
         ctx: Context<CreatePool>,
         insurance_fee: u16,
-        tick_spacing: u16,
         name: String,
     ) -> Result<()> {
         // ________________ Validation ________________
@@ -115,7 +114,6 @@ pub mod sure_pool {
         // Set up pool account
         pool_account.bump = *ctx.bumps.get("pool").unwrap();
         pool_account.insurance_fee = insurance_fee;
-        pool_account.tick_spacing = tick_spacing;
         pool_account.liquidity = 0;
         pool_account.used_liquidity = 0;
         pool_account.name = name;

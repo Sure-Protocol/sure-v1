@@ -1,0 +1,21 @@
+@import 'Styles';
+@import 'Header';
+@import 'Navigation';
+@import 'BuyInsurance';
+@import 'Button';
+@import 'Action';
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  background-color: $sure-black;
+  font-family: 'arvo';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: 'arvo';
+}
+

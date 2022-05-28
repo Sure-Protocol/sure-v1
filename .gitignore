@@ -8,3 +8,5 @@ node_modules
 .yarn
 */**/dist
 */**/.rollup.cache
+lerna-debug.log
+.editorconfig

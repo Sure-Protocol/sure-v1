@@ -1,7 +1,8 @@
 [features]
 seeds = false
+
 [programs.localnet]
-sure_pool = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+sure_pool = "79zTSyMWgBpHQmkWmdiRH4Jz727UJzpUW5rEutseyMrP"
 
 [registry]
 url = "https://anchor.projectserum.com"

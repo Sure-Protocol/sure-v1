@@ -1,0 +1,47 @@
+
+.main{
+   display: flex;
+   flex-direction: column;
+   justify-content: center;
+}
+
+.sure-page{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+}
+
+
+.sure-navbar{
+    background-color: $sure-dark-purple;
+    height:3rem;   
+    border-radius: 20px;
+    display: flex;
+    flex-direction: row;
+    padding: 2px;
+}
+
+.sure-navbar-link{
+    height: 100%;
+    color: $sure-white;
+    text-decoration: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-left: 40px;
+    padding-right: 40px;
+    border-radius: 20px;
+
+    &--active{
+        @extend .sure-navbar-link;
+        background-color:$sure-pink;
+    }
+
+    &--disabled{
+        @extend .sure-navbar-link;
+        color: grey;
+        pointer-events: none;
+
+    }
+}

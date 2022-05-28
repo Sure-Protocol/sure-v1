@@ -47,10 +47,6 @@ pub struct PoolAccount {
     /// in basis points
     pub insurance_fee: u16, // 4 bytes
 
-    /// Spacing of Ticks
-    /// Measured in basis points. Standard is 1 (basis point, 0.01%)
-    pub tick_spacing: u16, // 2 bytes
-
     /// The total liquidity in the pool
     pub liquidity: u64, // 8 bytes
 
@@ -72,7 +68,7 @@ pub struct PoolAccount {
 }
 
 impl PoolAccount {
-    pub const SPACE: usize = 1 + 4 + 200 + 4 + 2 + 8 + 8 + 32 + 8 + 32 + 1;
+    pub const SPACE: usize = 1 + 4 + 200 + 4 + 8 + 8 + 32 + 8 + 32 + 1;
 }
 
 #[event]
