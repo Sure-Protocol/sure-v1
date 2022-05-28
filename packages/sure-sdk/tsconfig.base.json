@@ -15,5 +15,11 @@
       "esModuleInterop": true,
       "resolveJsonModule": true,
       "composite": true,
+      "baseUrl": ".",
+      "typeRoots": [
+        "types/",
+        "src/acnhor/types",
+        "node_modules/@types"
+      ],
     }
   }

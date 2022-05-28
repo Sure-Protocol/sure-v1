@@ -21,6 +21,16 @@
           "isSigner": false
         },
         {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -91,10 +101,6 @@
       "args": [
         {
           "name": "insuranceFee",
-          "type": "u16"
-        },
-        {
-          "name": "tickSpacing",
           "type": "u16"
         },
         {
@@ -734,10 +740,6 @@
             "type": "u16"
           },
           {
-            "name": "tickSpacing",
-            "type": "u16"
-          },
-          {
             "name": "liquidity",
             "type": "u64"
           },
@@ -988,8 +990,5 @@
       "name": "CouldNotUpdateTimestamp",
       "msg": "could not update timestamp"
     }
-  ],
-  "metadata": {
-    "address": "79zTSyMWgBpHQmkWmdiRH4Jz727UJzpUW5rEutseyMrP"
-  }
+  ]
 }

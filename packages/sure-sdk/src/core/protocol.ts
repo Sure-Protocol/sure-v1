@@ -21,7 +21,9 @@ export const initializeProtocol = async (
 		new anchor.web3.PublicKey('BPFLoaderUpgradeab1e11111111111111111111111')
 	);
 
-	const protocolOwnerPDA = await getProtocolOwner(program.programId);
+	const [protocolOwnerPDA, protocolOwnerBump] = await getProtocolOwner(
+		program.programId
+	);
 	const poolsPDA = await getSurePools(program);
 
 	try {

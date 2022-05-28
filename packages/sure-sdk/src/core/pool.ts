@@ -34,13 +34,15 @@ export const createPool = async (
 	smartContractAddress: anchor.web3.PublicKey,
 	insuranceFee: number
 ) => {
-	const protocolOwnerPDA = await getProtocolOwner(program.programId);
+	const [protocolOwnerPDA, protocolOwnerBump] = await getProtocolOwner(
+		program.programId
+	);
 	const poolPDA = await getPoolPDA(program, smartContractAddress);
 	const surePoolsPDA = await getSurePools(program);
 
 	try {
 		await program.methods
-			.createPool(insuranceFee, name)
+			.createPool(insuranceFee, 'name')
 			.accounts({
 				poolCreator: wallet.publicKey,
 				protocolOwner: protocolOwnerPDA,

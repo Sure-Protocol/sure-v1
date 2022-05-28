@@ -211,7 +211,7 @@ describe('Initialize Sure Pool', () => {
 			// Create Poool
 			try {
 				await program.methods
-					.createPool(insuranceFee, tick_spacing, name)
+					.createPool(insuranceFee, name)
 					.accounts({
 						poolCreator: wallet.publicKey,
 						protocolOwner: protocolOwnerPDA,
@@ -227,7 +227,6 @@ describe('Initialize Sure Pool', () => {
 			}
 
 			const newPool = await program.account.poolAccount.fetch(poolPDA);
-			assert.equal(newPool.tickSpacing, tick_spacing);
 			assert.isAbove(newPool.bump, 0);
 		}),
 		it('create pool vaults -> For a given mint the isolated ', async () => {

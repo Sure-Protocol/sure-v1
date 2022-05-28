@@ -21,6 +21,16 @@ export type SurePool = {
           "isSigner": false
         },
         {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -91,10 +101,6 @@ export type SurePool = {
       "args": [
         {
           "name": "insuranceFee",
-          "type": "u16"
-        },
-        {
-          "name": "tickSpacing",
           "type": "u16"
         },
         {
@@ -731,10 +737,6 @@ export type SurePool = {
           },
           {
             "name": "insuranceFee",
-            "type": "u16"
-          },
-          {
-            "name": "tickSpacing",
             "type": "u16"
           },
           {
@@ -1014,6 +1016,16 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
+          "name": "program",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "programData",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -1084,10 +1096,6 @@ export const IDL: SurePool = {
       "args": [
         {
           "name": "insuranceFee",
-          "type": "u16"
-        },
-        {
-          "name": "tickSpacing",
           "type": "u16"
         },
         {
@@ -1724,10 +1732,6 @@ export const IDL: SurePool = {
           },
           {
             "name": "insuranceFee",
-            "type": "u16"
-          },
-          {
-            "name": "tickSpacing",
             "type": "u16"
           },
           {

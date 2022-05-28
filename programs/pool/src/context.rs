@@ -74,7 +74,6 @@ pub struct InitializeProtocol<'info> {
 
 impl<'info> Validate<'info> for InitializeProtocol<'info> {
     fn validate(&self) -> Result<()> {
-        
         assert_eq!(self.program.programdata_address()?,Some(self.program_data.key()));
         assert_eq!(Some(self.owner.key()), self.program_data.upgrade_authority_address);
         Ok(())

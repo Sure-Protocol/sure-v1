@@ -59,7 +59,6 @@ export const estimateYearlyPremium = async (
 	const insuranceFee = poolAccount.insuranceFee;
 
 	/// Estimate premium
-	const tickSpacing = poolAccount.tickSpacing;
 	let bitmapPDA = await liquidity.getLiquidityPositionBitmapPDA(
 		program,
 		pool,

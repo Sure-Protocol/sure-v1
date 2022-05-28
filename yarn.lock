@@ -4044,7 +4044,7 @@ __metadata:
     "@solana/wallet-adapter-react-ui": ^0.9.7
     "@solana/wallet-adapter-wallets": ^0.16.1
     "@solana/web3.js": ^1.43.1
-    "@sure/sdk": "workspace:^"
+    "@sure/sdk": ^0.0.9
     "@types/react": ^18.0.0
     "@types/react-dom": ^18.0.0
     "@vitejs/plugin-react": ^1.3.0
@@ -4058,7 +4058,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@sure/sdk@workspace:^, @sure/sdk@workspace:packages/sure-sdk":
+"@sure/sdk@^0.0.9, @sure/sdk@workspace:packages/sure-sdk":
   version: 0.0.0-use.local
   resolution: "@sure/sdk@workspace:packages/sure-sdk"
   dependencies:

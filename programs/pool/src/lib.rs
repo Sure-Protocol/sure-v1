@@ -106,10 +106,6 @@ pub mod sure_pool {
 
         let insured_token_account = ctx.accounts.insured_token_account.key();
         // Range size should be less than 100. Meaning that the premium should be less than 100%
-        require!(
-            tick_spacing < 100 * 100 && tick_spacing > 0,
-            utils::errors::SureError::InvalidRangeSize
-        );
 
         // Set up pool account
         pool_account.bump = *ctx.bumps.get("pool").unwrap();
