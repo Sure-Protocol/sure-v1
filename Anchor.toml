@@ -2,10 +2,13 @@
 seeds = false
 
 [programs.localnet]
-sure_pool = "79zTSyMWgBpHQmkWmdiRH4Jz727UJzpUW5rEutseyMrP"
+sure_pool = "sureLJ8UXoy3WF3Dk6Hy1ak8DscZkmHvv1hprvhVCxB"
+
+[programs.devnet]
+sure_pool = "sureLJ8UXoy3WF3Dk6Hy1ak8DscZkmHvv1hprvhVCxB"
 
 [registry]
-url = "https://anchor.projectserum.com"
+url = "https://github.com/Sure-Protocol/sure-v1"
 
 [provider]
 cluster = "localnet"

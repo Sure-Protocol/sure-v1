@@ -23,9 +23,8 @@ import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { u64 } from '@solana/buffer-layout-utils';
 const { SystemProgram } = anchor.web3;
 
-import * as sureSdk from '@sure/sdk';
 import { Money } from '@sure/sdk/src';
-
+import { SureSdk } from '@sure/sdk'
 /// =============== Variables ==================
 
 // PDA seeds
@@ -52,6 +51,8 @@ describe('Initialize Sure Pool', () => {
 	const provider = anchor.Provider.env();
 	const { connection, wallet } = anchor.getProvider();
 	anchor.setProvider(provider);
+	const sure = SureSdk.init(connection, wallet);
+	const ok =await  sure.insurance.getPremiumVaultPDA()
 
 	it('initialize', async () => {
 		minterWallet = anchor.web3.Keypair.generate();
@@ -154,8 +155,8 @@ describe('Initialize Sure Pool', () => {
 	});
 
 	it('create protocol owner ', async () => {
-		let [protocolOwnerPDA, _] = await sureSdk.getProtocolOwner();
-		let surePools = await sureSdk.getSurePools();
+		let [protocolOwnerPDA, _] = await sure.connection.commitment
+		let surePools = await sure.getSurePools();
 		await program.methods
 			.initializeProtocol()
 			.accounts({
@@ -197,7 +198,7 @@ describe('Initialize Sure Pool', () => {
 			const poolPDA = await sureSdk.getPoolPDA(protcolToInsure0.publicKey);
 
 			// Generate PDA for token vault
-			vault0 = await sureSdk.getLiquidityVaultPDA(poolPDA, tokenMint);
+			vault0 = await sure..getLiquidityVaultPDA(poolPDA, tokenMint);
 
 			let [protocolOwnerPDA, _] = await sureSdk.getProtocolOwner();
 

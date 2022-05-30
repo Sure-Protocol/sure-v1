@@ -523,6 +523,9 @@ pub struct InitializeUserInsuranceContracts<'info> {
     /// Pool associated with the insurance contracts
     pub pool: Box<Account<'info, PoolAccount>>,
 
+    /// Token mint used for the insurance contracts
+    pub token_mint: Box<Account<'info, Mint>>,
+
     ///
     #[account(
         init,
@@ -532,6 +535,7 @@ pub struct InitializeUserInsuranceContracts<'info> {
             SURE_INSURANCE_CONTRACTS.as_bytes(),
             signer.key().as_ref(),
             pool.key().as_ref(),
+            token_mint.key().as_ref(),
         ],
         bump,
     )]
