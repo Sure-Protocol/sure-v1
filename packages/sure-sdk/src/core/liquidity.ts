@@ -4,11 +4,13 @@ import {
 	getAccount,
 	TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
+
 import { PublicKey } from '@solana/web3.js';
 import * as pool from './pool';
 import * as protocol from './protocol';
 import * as Tick from './tickAccount';
-import { TokenMetadataProgram } from '@metaplex-foundation/js-next';
+
+import * as mp from '@metaplex-foundation/mpl-token-metadata';
 const { SystemProgram } = anchor.web3;
 import {
 	SURE_MP_METADATA_SEED,
@@ -26,12 +28,8 @@ export const getMetaplexMetadataPDA = async (
 	nftMintPDA: PublicKey
 ): Promise<PublicKey> => {
 	const [mpMetadataPDA, mpMetadataBump] = await PublicKey.findProgramAddress(
-		[
-			SURE_MP_METADATA_SEED,
-			TokenMetadataProgram.publicKey.toBuffer(),
-			nftMintPDA.toBytes(),
-		],
-		TokenMetadataProgram.publicKey
+		[SURE_MP_METADATA_SEED, mp.PROGRAM_ID.toBuffer(), nftMintPDA.toBytes()],
+		mp.PROGRAM_ID
 	);
 	return mpMetadataPDA;
 };
@@ -96,12 +94,8 @@ export const getNFTMetadataPDA = async (
 	nftMintPDA: PublicKey
 ): Promise<PublicKey> => {
 	const [mpMetadataPDA, mpMetadataBump] = await PublicKey.findProgramAddress(
-		[
-			SURE_MP_METADATA_SEED,
-			TokenMetadataProgram.publicKey.toBuffer(),
-			nftMintPDA.toBytes(),
-		],
-		TokenMetadataProgram.publicKey
+		[SURE_MP_METADATA_SEED, mp.PROGRAM_ID.toBuffer(), nftMintPDA.toBytes()],
+		mp.PROGRAM_ID
 	);
 	return mpMetadataPDA;
 };
@@ -238,7 +232,7 @@ export const depositLiquidity = async (
 				vault: vaultPDA,
 				nftMint: nftMint,
 				metadataAccount: mpMetadataAccountPDA,
-				metadataProgram: TokenMetadataProgram.publicKey,
+				metadataProgram: mp.PROGRAM_ID,
 				liquidityPosition: liquidityPositionPDA,
 				nftAccount: nftAccount,
 				bitmap: bitmapPDA,
@@ -313,7 +307,7 @@ export const redeemLiquidity = async (
 				vault: vaultAccountPDA,
 				tickAccount: tickAccount,
 				metadataAccount: metadataAccountPDA,
-				metadataProgram: TokenMetadataProgram.publicKey,
+				metadataProgram: mp.PROGRAM_ID,
 				pool: poolPDA,
 				tokenProgram: TOKEN_PROGRAM_ID,
 				systemProgram: SystemProgram.programId,

@@ -18,7 +18,7 @@
       "baseUrl": ".",
       "typeRoots": [
         "types/",
-        "src/acnhor/types",
+        "src/anchor/types",
         "node_modules/@types"
       ],
     }

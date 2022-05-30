@@ -2,15 +2,11 @@ import { assert } from 'chai';
 import * as anchor from '@project-serum/anchor';
 import {
 	createMint,
-	AccountLayout,
 	TOKEN_PROGRAM_ID,
-	getOrCreateAssociatedTokenAccount,
-	ASSOCIATED_TOKEN_PROGRAM_ID,
 	transfer,
 	mintTo,
 	getAccount,
 	createAssociatedTokenAccount,
-	Account,
 	getMint,
 	Mint,
 } from '@solana/spl-token';
@@ -27,7 +23,6 @@ import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { u64 } from '@solana/buffer-layout-utils';
 const { SystemProgram } = anchor.web3;
 
-import { Metaplex } from '@metaplex-foundation/js-next';
 import * as sureSdk from '@sure/sdk';
 import { Money } from '@sure/sdk/src';
 

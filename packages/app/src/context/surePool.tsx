@@ -1,5 +1,5 @@
 import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
-import { LOL, IDL } from '@sure/sdk';
+import { IDL } from '@sure/sdk';
 import * as anchor from '@project-serum/anchor';
 import { PROGRAM_ID_STR } from './../utils/constants';
 import React, { useEffect, useState } from 'react';
@@ -22,28 +22,16 @@ export const SurePoolProgramProvider: React.FunctionComponent<Props> = ({
 	const [surePoolProgram, setSurePoolProgram] = useState<
 		undefined | anchor.Program
 	>(undefined);
-
-	const provider = new anchor.AnchorProvider(connection, wallet as Wallet, {
-		skipPreflight: false,
-	});
 	console.log('SurePool: ', IDL);
+	console.log('wallet: ', wallet);
 
-	const sureProgram = new anchor.Program(IDL, PROGRAM_ID_STR, provider);
-	const smartContractAddress = anchor.web3.PublicKey.default;
-
-	// useEffect(() => {
-	// 	if (wallet !== null) {
-	// 		const provider = new anchor.AnchorProvider(connection, wallet as Wallet, {
-	// 			skipPreflight: false,
-	// 		});
-	// 		const surePool = new anchor.Program<sureSdk.SurePool>(
-	// 			sureSdk.IDL,
-	// 			PROGRAM_ID_STR,
-	// 			provider
-	// 		);
-	// 		setSurePoolProgram(surePool);
-	// 	}
-	// }, [surePoolProgram]);
+	if (wallet) {
+		const provider = new anchor.AnchorProvider(connection, wallet, {
+			skipPreflight: false,
+		});
+		const sureProgram = new anchor.Program(IDL, PROGRAM_ID_STR, provider);
+		const smartContractAddress = anchor.web3.PublicKey.default;
+	}
 
 	return (
 		<SurePoolProgramContext.Provider value={surePoolProgram}>

@@ -2,7 +2,6 @@ import down from './assets/icons/expand_more.svg';
 import MainButton from './components/MainButton';
 import InfoBox from './components/InfoBox';
 import { TokensContext } from './context/tokens';
-import { TokenListProvider } from '@solana/spl-token-registry';
 import { useContext } from 'react';
 import { SelectMarket } from './components/SelectMarket';
 import DateSelector from './components/DateSelector';
