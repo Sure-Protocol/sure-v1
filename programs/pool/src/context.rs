@@ -48,7 +48,7 @@ pub struct InitializeProtocol<'info> {
         space = 8 + ProtocolOwner::SPACE,
 
     )]
-    pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
+    pub protocol_owner: Account<'info, ProtocolOwner>,
 
     /// Sure Pools holding information about which protocols are insured
     #[account(
@@ -62,10 +62,10 @@ pub struct InitializeProtocol<'info> {
     )]
     pub pools: Box<Account<'info, SurePools>>,
 
-    /// Sure pool program
-    pub program: Program<'info,crate::program::SurePool>,
+    // /// Sure pool program
+    // pub program: Program<'info,crate::program::SurePool>,
 
-    pub program_data: Account<'info,ProgramData>,
+    // pub program_data: Account<'info,ProgramData>,
 
     /// System Program to create a new account
     pub system_program: Program<'info, System>,
@@ -74,14 +74,18 @@ pub struct InitializeProtocol<'info> {
 
 impl<'info> Validate<'info> for InitializeProtocol<'info> {
     fn validate(&self) -> Result<()> {
-        assert_eq!(self.program.programdata_address()?,Some(self.program_data.key()));
-        assert_eq!(Some(self.owner.key()), self.program_data.upgrade_authority_address);
+      //  assert_eq!(self.program.programdata_address()?,Some(self.program_data.key()));
+        //assert_eq!(Some(self.owner.key()), self.program_data.upgrade_authority_address);
         Ok(())
     }
 }
 
 #[derive(Accounts)]
 pub struct InitializePoolManager<'info> {
+    // The signer becomes the initial manager
+    #[account(mut)]
+    pub initial_manager: Signer<'info>,
+
     // Account for keeping track of the pool manager
     #[account(
         init,
@@ -92,9 +96,7 @@ pub struct InitializePoolManager<'info> {
     )]
     pub manager: Account<'info, PoolManager>,
 
-    // The signer becomes the initial manager
-    #[account(mut)]
-    pub initial_manager: Signer<'info>,
+
 
     // System program
     pub system_program: Program<'info, System>,
@@ -114,7 +116,7 @@ pub struct CreatePool<'info> {
     pub pool_creator: Signer<'info>,
 
     /// Protocol owner
-    pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
+    pub protocol_owner: Account<'info, ProtocolOwner>,
 
     #[account(
         init,
@@ -150,10 +152,6 @@ pub struct CreatePool<'info> {
 
 impl<'info> Validate<'info> for CreatePool<'info> {
     fn validate(&self) -> Result<()> {
-        // To start, only the protocol owner can create a pool
-        //assert_keys_eq!(self.pool_creator, self.protocol_owner);
-        //
-        //
         assert_keys_eq!(self.pool.smart_contract, self.insured_token_account);
 
         Ok(())
@@ -252,7 +250,7 @@ pub struct DepositLiquidity<'info> {
     pub liquidity_provider: Signer<'info>,
 
     /// Protocol owner as the authority of mints
-    pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
+    pub protocol_owner: Account<'info, ProtocolOwner>,
 
     /// Associated token accoun to credit
     #[account(mut)]
@@ -368,7 +366,7 @@ pub struct RedeemLiquidity<'info> {
     pub nft_account: Box<Account<'info, TokenAccount>>,
 
     /// Protocol owner as the authority of mints
-    pub protocol_owner: AccountLoader<'info, ProtocolOwner>,
+    pub protocol_owner: Account<'info, ProtocolOwner>,
 
     /// Liquidity position
     #[account(mut)]

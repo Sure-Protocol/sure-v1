@@ -151,10 +151,9 @@ impl InsuranceContract {
             let amount_change = new_insured_amount - self.insured_amount;
             self.time_locked_insured_amount = amount_change;
             self.time_lock_end = current_time + (SURE_TIME_LOCK_IN_SECONDS as i64);
-            self.insured_amount = new_insured_amount;
+            
         }else {
             // Reduction happens immidiately
-            self.insured_amount = new_insured_amount;
         }
 
         if increase_premium {
@@ -166,6 +165,7 @@ impl InsuranceContract {
         self.end_ts = new_end_ts;
         self.updated_ts =current_time;
         self.period_ts = new_end_ts - current_time;
+        self.insured_amount = new_insured_amount;
         
        
         return Ok((increase_premium,premium));

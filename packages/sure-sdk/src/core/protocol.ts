@@ -14,25 +14,29 @@ export class Protocol extends Common {
 	}
 
 	async initializeProtocol() {
-		const [programData] = await anchor.web3.PublicKey.findProgramAddress(
-			[this.program.programId.toBuffer()],
-			new anchor.web3.PublicKey('BPFLoaderUpgradeab1e11111111111111111111111')
-		);
-
-		const [protocolOwnerPDA, protocolOwnerBump] = await this.getProtocolOwner();
-		const poolsPDA = await this.getSurePools();
-
 		try {
-			await this.program.methods.initializeProtocol().accounts({
-				owner: this.wallet.publicKey,
-				protocolOwner: protocolOwnerPDA,
-				pools: poolsPDA,
-				program: this.program.programId,
-				programData: programData,
-				systemProgram: SystemProgram.programId,
-			});
+			const [programData] = await anchor.web3.PublicKey.findProgramAddress(
+				[this.program.programId.toBuffer()],
+				new anchor.web3.PublicKey('BPFLoaderUpgradeab1e11111111111111111111111')
+			);
+
+			const [protocolOwnerPDA, protocolOwnerBump] =
+				await this.getProtocolOwner();
+			const poolsPDA = await this.getSurePools();
+
+			await this.program.methods
+				.initializeProtocol()
+				.accounts({
+					owner: this.wallet.publicKey,
+					protocolOwner: protocolOwnerPDA,
+					pools: poolsPDA,
+					// program: this.program.programId,
+					// programData: programData,
+					systemProgram: SystemProgram.programId,
+				})
+				.rpc();
 		} catch (err) {
-			throw new Error('');
+			throw new Error('sure.sdk.protocol.initializeProtocol. Cause: ' + err);
 		}
 	}
 }

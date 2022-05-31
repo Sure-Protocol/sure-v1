@@ -38,18 +38,6 @@ export class Liquidity extends Common {
 		return mpMetadataPDA;
 	}
 
-	async getLiquidityVaultPDA(
-		pool: PublicKey,
-		tokenMint: PublicKey
-	): Promise<PublicKey> {
-		const [liquidityVaultPDA, liquidityVaultBump] =
-			await PublicKey.findProgramAddress(
-				[SURE_VAULT_POOL_SEED, pool.toBytes(), tokenMint.toBytes()],
-				this.program.programId
-			);
-		return liquidityVaultPDA;
-	}
-
 	async getLiquidityPositionPDA(nftAccountPDA: PublicKey): Promise<PublicKey> {
 		const [liquidityPositionPDA, liquidityPositionBump] =
 			await PublicKey.findProgramAddress(

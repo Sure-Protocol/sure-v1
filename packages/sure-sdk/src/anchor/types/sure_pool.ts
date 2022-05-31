@@ -21,16 +21,6 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "program",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "programData",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -42,14 +32,14 @@ export type SurePool = {
       "name": "initializePoolManager",
       "accounts": [
         {
-          "name": "manager",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "initialManager",
           "isMut": true,
           "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": true,
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -376,6 +366,11 @@ export type SurePool = {
         },
         {
           "name": "pool",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenMint",
           "isMut": false,
           "isSigner": false
         },
@@ -1016,16 +1011,6 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "program",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "programData",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -1037,14 +1022,14 @@ export const IDL: SurePool = {
       "name": "initializePoolManager",
       "accounts": [
         {
-          "name": "manager",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "initialManager",
           "isMut": true,
           "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": true,
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -1371,6 +1356,11 @@ export const IDL: SurePool = {
         },
         {
           "name": "pool",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenMint",
           "isMut": false,
           "isSigner": false
         },

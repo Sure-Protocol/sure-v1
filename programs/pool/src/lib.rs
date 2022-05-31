@@ -38,7 +38,7 @@ pub mod sure_pool {
     ///
     pub fn initialize_protocol(ctx: Context<InitializeProtocol>) -> Result<()> {
         // load accounts
-        let protocol_owner = &mut ctx.accounts.protocol_owner.load_init()?;
+        let protocol_owner = &mut ctx.accounts.protocol_owner;
         let pools = &mut ctx.accounts.pools;
 
         protocol_owner.bump = unwrap_bump!(ctx, "protocol_owner");
@@ -187,7 +187,7 @@ pub mod sure_pool {
         // Load Accounts
         let bitmap = &mut ctx.accounts.bitmap;
         let pool = &mut ctx.accounts.pool;
-        let protocol_owner = &ctx.accounts.protocol_owner.load()?;
+        let protocol_owner = &ctx.accounts.protocol_owner;
         let vault = &ctx.accounts.vault;
 
         // The existence of a liquidity position should be checked by anchor.
@@ -203,7 +203,7 @@ pub mod sure_pool {
                     to: ctx.accounts.nft_account.to_account_info().clone(),
                     authority: ctx.accounts.protocol_owner.to_account_info().clone(),
                 },
-                &[&[&[ctx.accounts.protocol_owner.load()?.bump] as &[u8]]],
+                &[&[&[ctx.accounts.protocol_owner.bump] as &[u8]]],
             ),
             1,
         )?;
@@ -337,7 +337,7 @@ pub mod sure_pool {
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.tick_account.to_account_info())?;
         let mut tick_account = tick_account_state.load_mut()?;
 
-        let protocol_owner = &ctx.accounts.protocol_owner.load()?;
+        let protocol_owner = &ctx.accounts.protocol_owner;
         let pool = &ctx.accounts.pool;
 
         /// Available liquidity
@@ -485,7 +485,6 @@ pub mod sure_pool {
         // Calculate coverage amount
         let current_insured_amount = insurance_contract.insured_amount;
         let amount_diff = if insured_amount > current_insured_amount {insured_amount-current_insured_amount}else {current_insured_amount-insured_amount};
-
 
         let (is_increase_premium,premium) = insurance_contract.update_position_and_get_premium(tick_account.tick, insured_amount, end_ts)?;
         if insured_amount > current_insured_amount{

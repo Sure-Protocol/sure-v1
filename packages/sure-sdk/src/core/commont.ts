@@ -1,11 +1,13 @@
 import * as anchor from '@project-serum/anchor';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
 import { IDL, SurePool } from './../anchor/types/sure_pool';
 import {
 	SURE_POOLS_SEED,
 	SURE_TICK_SEED,
 	POOL_SEED,
 	SURE_BITMAP,
+	SURE_PREMIUM_POOL_SEED,
+	SURE_VAULT_POOL_SEED,
 } from './seeds';
 import { PROGRAM_ID } from './constants';
 
@@ -31,12 +33,16 @@ export class Common {
 	}
 
 	async getSurePools(): Promise<PublicKey> {
-		const [surePoolsPDA, surePoolsBump] = await PublicKey.findProgramAddress(
-			[SURE_POOLS_SEED],
-			this.program.programId
-		);
+		try {
+			const [surePoolsPDA, surePoolsBump] = await PublicKey.findProgramAddress(
+				[SURE_POOLS_SEED],
+				this.program.programId
+			);
 
-		return surePoolsPDA;
+			return surePoolsPDA;
+		} catch (err) {
+			throw new Error('sure.common.getSurePools. Cause: ' + err);
+		}
 	}
 
 	async getPoolPDA(
@@ -83,25 +89,21 @@ export class Common {
 	/// Check if tick account exists for the pool,
 	/// if not, create the account.
 	async createTickAccount(
-		poolPDA: PublicKey,
+		pool: PublicKey,
 		tokenMint: PublicKey,
-		tick: number,
-		creator: PublicKey
+		tick: number
 	): Promise<PublicKey> {
-		const tickAccountPDA = await this.getTickAccountPDA(
-			poolPDA,
-			tokenMint,
-			tick
-		);
+		const tickAccountPDA = await this.getTickAccountPDA(pool, tokenMint, tick);
 
 		try {
 			await this.program.methods
-				.initializeTick(poolPDA, tokenMint, tick)
+				.initializeTick(pool, tokenMint, tick)
 				.accounts({
-					creator: creator,
+					creator: this.wallet.publicKey,
 					tickAccount: tickAccountPDA,
-					systemProgram: this.program.programId,
-				});
+					systemProgram: SystemProgram.programId,
+				})
+				.rpc();
 		} catch (e) {
 			console.log('logs?: ', e.logs);
 			throw new Error('Could not create tick account: ' + e);
@@ -126,7 +128,7 @@ export class Common {
 			);
 			// create account
 			try {
-				await this.createTickAccount(pool, tokenMint, tick, owner);
+				await this.createTickAccount(pool, tokenMint, tick);
 			} catch (e) {
 				throw new Error(
 					'sure.createTickAccount.error. could not create tick account. cause: ' +
@@ -157,5 +159,35 @@ export class Common {
 		} catch (e) {
 			throw new Error('Tick account does not exist. Cause: ' + e);
 		}
+	}
+
+	/**
+	 * Get the Premium Vault PDA
+	 *
+	 * @param pool      Pool associated with the premium vault
+	 * @param tokenMint The token mint for the premium vault
+	 */
+	public async getPremiumVaultPDA(
+		pool: PublicKey,
+		tokenMint: PublicKey
+	): Promise<PublicKey> {
+		const [premiumVaultPDA, premiumVaultBump] =
+			await PublicKey.findProgramAddress(
+				[SURE_PREMIUM_POOL_SEED, pool.toBytes(), tokenMint.toBytes()],
+				this.program.programId
+			);
+		return premiumVaultPDA;
+	}
+
+	async getLiquidityVaultPDA(
+		pool: PublicKey,
+		tokenMint: PublicKey
+	): Promise<PublicKey> {
+		const [liquidityVaultPDA, liquidityVaultBump] =
+			await PublicKey.findProgramAddress(
+				[SURE_VAULT_POOL_SEED, pool.toBytes(), tokenMint.toBytes()],
+				this.program.programId
+			);
+		return liquidityVaultPDA;
 	}
 }

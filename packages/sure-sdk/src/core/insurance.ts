@@ -1,6 +1,6 @@
 import * as anchor from '@project-serum/anchor';
 
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
 import {
 	SURE_PREMIUM_POOL_SEED,
 	SURE_INSURANCE_CONTRACT,
@@ -13,7 +13,7 @@ import {
 	TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
-import { min } from 'bn.js';
+import { BN, min } from 'bn.js';
 
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
@@ -25,24 +25,6 @@ export class Insurance extends Common {
 		readonly wallet: anchor.Wallet
 	) {
 		super(program, connection, wallet);
-	}
-
-	/**
-	 * Get the Premium Vault PDA
-	 *
-	 * @param pool      Pool associated with the premium vault
-	 * @param tokenMint The token mint for the premium vault
-	 */
-	public async getPremiumVaultPDA(
-		pool: PublicKey,
-		tokenMint: PublicKey
-	): Promise<PublicKey> {
-		const [premiumVaultPDA, premiumVaultBump] =
-			await PublicKey.findProgramAddress(
-				[SURE_PREMIUM_POOL_SEED, pool.toBytes(), tokenMint.toBytes()],
-				this.program.programId
-			);
-		return premiumVaultPDA;
 	}
 
 	/**
@@ -111,6 +93,7 @@ export class Insurance extends Common {
 	): Promise<PublicKey> => {
 		const insuranceContractsBitmapPDA =
 			await this.getInsuranceContractsBitmapPDA(pool, tokenMint);
+
 		// Get insurance contract with pool
 		const insuranceContractPDA = await this.getInsuranceContractPDA(
 			tickAccount
@@ -126,7 +109,7 @@ export class Insurance extends Common {
 					tickAccount: tickAccount,
 					insuranceContract: insuranceContractPDA,
 					insuranceContracts: insuranceContractsBitmapPDA,
-					systemProgram: this.program.programId,
+					systemProgram: SystemProgram.programId,
 				})
 				.rpc();
 
@@ -232,7 +215,9 @@ export class Insurance extends Common {
 			if (insuranceContract !== null) {
 				return insuranceContractPDA;
 			}
-			throw new Error();
+			throw new Error(
+				'insurance contract does not exist: ' + insuranceContract
+			);
 		} catch (_) {
 			// Insurance contract does not exist. Create it
 			await this.createInsuranceContractForTick(
@@ -259,14 +244,18 @@ export class Insurance extends Common {
 		pool: PublicKey,
 		tokenMint: PublicKey
 	): Promise<anchor.BN> {
-		const userInsuranceContractsPDA = await this.getInsuranceContractsBitmapPDA(
-			pool,
-			tokenMint
-		);
 		try {
-			const userInsuranceContracts = await this.program.account.bitMap.fetch(
-				userInsuranceContractsPDA
-			);
+			const userInsuranceContractsPDA =
+				await this.getInsuranceContractsBitmapPDA(pool, tokenMint);
+
+			let userInsuranceContracts;
+			try {
+				userInsuranceContracts = await this.program.account.bitMap.fetch(
+					userInsuranceContractsPDA
+				);
+			} catch (err) {
+				throw new Error(' insurance contracts:' + err);
+			}
 			// Create insurance contract bitmap
 			const insuranceContractBitmap = Bitmap.new(userInsuranceContracts);
 
@@ -283,17 +272,26 @@ export class Insurance extends Common {
 				const insuranceContractForTickPDA = await this.getInsuranceContractPDA(
 					tickAccountPDA
 				);
-				const insuranceContractForTick =
-					await this.program.account.insuranceContract.fetch(
-						insuranceContractForTickPDA
-					);
+				let insuranceContractForTick;
+				try {
+					insuranceContractForTick =
+						await this.program.account.insuranceContract.fetch(
+							insuranceContractForTickPDA
+						);
+				} catch (err) {
+					throw new Error('InsuranceContract:' + err);
+				}
+				console.log(
+					'> getInsuredAmount insuranceContractForTick: ',
+					insuranceContractForTick
+				);
 				amount = amount.add(insuranceContractForTick.insuredAmount);
 				currentTick = insuranceContractBitmap.getPreviousTick(currentTick);
 			}
 			return amount;
 		} catch (err) {
-			console.log('Could not calculate insured amount. cause: ', err);
-			return new anchor.BN(0);
+			console.log('sure.insurance.getInsuredAmount.warning. Cause: ' + err);
+			return new BN(0);
 		}
 	}
 
@@ -302,7 +300,7 @@ export class Insurance extends Common {
 		tokenMint: PublicKey
 	): Promise<PublicKey> {
 		try {
-			const insuranceContractPDA = await this.getInsuranceContractsBitmapPDA(
+			const insuranceContracstPDA = await this.getInsuranceContractsBitmapPDA(
 				pool,
 				tokenMint
 			);
@@ -311,12 +309,13 @@ export class Insurance extends Common {
 				.accounts({
 					signer: this.wallet.publicKey,
 					pool: pool,
-					insuranceContracts: insuranceContractPDA,
-					systemProgram: this.program.programId,
+					tokenMint: tokenMint,
+					insuranceContracts: insuranceContracstPDA,
+					systemProgram: SystemProgram.programId,
 				})
 				.rpc();
 
-			return insuranceContractPDA;
+			return insuranceContracstPDA;
 		} catch (err) {
 			throw new Error(
 				'Could not initialize Insurance Contracts. Cause: ' + err
@@ -362,49 +361,56 @@ export class Insurance extends Common {
 		newInsuredAmount: number,
 		endTimestamp: number
 	) {
-		console.log('// Buy insurance ');
-		const newInsuredAmountBN = new anchor.BN(newInsuredAmount);
+		try {
+			const newInsuredAmountBN = new anchor.BN(newInsuredAmount);
 
-		// Create insurance overview
-		const insuredAmount = await this.getInsuredAmount(pool, tokenMint);
-		let amountChange = new anchor.BN(0);
-		// Check if amount is changed
-		if (newInsuredAmountBN.gte(insuredAmount)) {
-			const insuranceContractsPDA =
-				await this.getOrCreateUserInsuranceContracts(pool, tokenMint);
-			const liquidityPositionsPDA = await this.getLiquidityPositionBitmapPDA(
-				pool,
-				tokenMint
-			);
-			const liquidityPositions = await this.program.account.bitMap.fetch(
-				liquidityPositionsPDA
-			);
-			const liquidityPositionsBitmap = Bitmap.new(liquidityPositions);
+			// Create insurance overview
+			const insuredAmount = await this.getInsuredAmount(pool, tokenMint);
+			let amountChange = new anchor.BN(0);
+			// Check if amount is changed
+			if (newInsuredAmountBN.gte(insuredAmount)) {
+				console.log('increaseInsurancePosition');
+				const insuranceContracts = await this.getOrCreateUserInsuranceContracts(
+					pool,
+					tokenMint
+				);
+				console.log('insuranceContract');
+				const liquidityPositionsPDA = await this.getLiquidityPositionBitmapPDA(
+					pool,
+					tokenMint
+				);
+				const liquidityPositions = await this.program.account.bitMap.fetch(
+					liquidityPositionsPDA
+				);
+				const liquidityPositionsBitmap = Bitmap.new(liquidityPositions);
 
-			amountChange = newInsuredAmountBN.sub(insuredAmount);
-			await this.increaseInsurancePosition(
-				pool,
-				tokenMint,
-				amountChange,
-				liquidityPositionsBitmap,
-				endTimestamp
-			);
-		} else {
-			const insuranceContractsPDA =
-				await this.getOrCreateUserInsuranceContracts(pool, tokenMint);
-			const insuranceContracts = await this.program.account.bitMap.fetch(
-				insuranceContractsPDA
-			);
-			const insuranceContractsBitmap = Bitmap.new(insuranceContracts);
+				amountChange = newInsuredAmountBN.sub(insuredAmount);
+				await this.increaseInsurancePosition(
+					pool,
+					tokenMint,
+					amountChange,
+					liquidityPositionsBitmap,
+					endTimestamp
+				);
+			} else {
+				const insuranceContractsPDA =
+					await this.getOrCreateUserInsuranceContracts(pool, tokenMint);
+				const insuranceContracts = await this.program.account.bitMap.fetch(
+					insuranceContractsPDA
+				);
+				const insuranceContractsBitmap = Bitmap.new(insuranceContracts);
 
-			amountChange = insuredAmount.sub(newInsuredAmountBN);
-			await this.reduceInsurancePositon(
-				pool,
-				tokenMint,
-				amountChange,
-				insuranceContractsBitmap,
-				endTimestamp
-			);
+				amountChange = insuredAmount.sub(newInsuredAmountBN);
+				await this.reduceInsurancePositon(
+					pool,
+					tokenMint,
+					amountChange,
+					insuranceContractsBitmap,
+					endTimestamp
+				);
+			}
+		} catch (err) {
+			throw new Error('sure.insurance.buyInsurance.error. Cause: ' + err);
 		}
 	}
 
@@ -479,7 +485,7 @@ export class Insurance extends Common {
 							premiumVault: premiumVaultPDA,
 							insuranceContract: insuranceContractForTickPDA,
 							tokenProgram: TOKEN_PROGRAM_ID,
-							systemProgram: this.program.programId,
+							systemProgram: SystemProgram.programId,
 						},
 					}
 				)
@@ -507,12 +513,11 @@ export class Insurance extends Common {
 		pool: PublicKey,
 		tokenMint: PublicKey,
 		amountChange: anchor.BN,
-		bitmap: Bitmap,
+		liquidityPositions: Bitmap,
 		endTs: number
 	) {
-		console.log('// increaseInsurancePosition');
 		// Start from left and increase position
-		let currentTick = bitmap.getLowestTick();
+		let currentTick = liquidityPositions.getLowestTick();
 
 		const tokenAccount = await getOrCreateAssociatedTokenAccount(
 			this.connection,
@@ -523,7 +528,7 @@ export class Insurance extends Common {
 		const premiumVaultPDA = await this.getPremiumVaultPDA(pool, tokenMint);
 
 		// Create Anchor Transaction
-		let txs = new anchor.web3.Transaction();
+		let tx = new anchor.web3.Transaction();
 		// Initialize parameters
 		let tickAccount;
 		let tickAccountPDA;
@@ -539,7 +544,7 @@ export class Insurance extends Common {
 			console.log('> current_tick: ', currentTick);
 
 			// Get tick account
-			tickAccountPDA = await tickAccount.getTickAccountPDA(
+			tickAccountPDA = await this.getTickAccountPDA(
 				pool,
 				tokenMint,
 				currentTick
@@ -559,43 +564,39 @@ export class Insurance extends Common {
 			);
 
 			availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
-			console.log('> availableLiquidity: ', availableLiquidity.toString());
 			amountToBuyForTick = min(availableLiquidity, amountChange);
 			insureAmountForTick =
 				insuranceContract.insuredAmount.add(amountToBuyForTick);
-			console.log('> amountToInsureForTick: ', insureAmountForTick.toString());
-			txs.add(
-				this.program.instruction.buyInsuranceForTick(
-					insureAmountForTick,
-					new anchor.BN(endTs),
-					{
-						accounts: {
-							buyer: this.wallet.publicKey,
-							pool: pool,
-							tickAccount: tickAccountPDA,
-							tokenAccount: tokenAccount.address,
-							premiumVault: premiumVaultPDA,
-							insuranceContract: insuranceContractForTickPDA,
-							tokenProgram: TOKEN_PROGRAM_ID,
-							systemProgram: this.program.programId,
-						},
-					}
-				)
+			console.log(
+				'> increaseInsurancePosition.insureAmountForTick: ',
+				insureAmountForTick.toString()
+			);
+			tx.add(
+				await this.program.methods
+					.buyInsuranceForTick(insureAmountForTick, new anchor.BN(endTs))
+					.accounts({
+						buyer: this.wallet.publicKey,
+						pool: pool,
+						tickAccount: tickAccountPDA,
+						tokenAccount: tokenAccount.address,
+						premiumVault: premiumVaultPDA,
+						insuranceContract: insuranceContractForTickPDA,
+						tokenProgram: TOKEN_PROGRAM_ID,
+						systemProgram: SystemProgram.programId,
+					})
+					.instruction()
 			);
 
 			amountChange = amountChange.sub(amountToBuyForTick);
 
 			// Get the previous tick in the bitmap
-			currentTick = bitmap.getNextTick(currentTick);
+			currentTick = liquidityPositions.getNextTick(currentTick);
 		}
-		txs.recentBlockhash = (
-			await this.connection.getLatestBlockhash()
-		).blockhash;
-		txs.feePayer = this.wallet.publicKey;
+		tx.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
+		tx.feePayer = this.wallet.publicKey;
 
 		try {
-			const provider = await anchor.getProvider();
-			await provider.send?.(txs);
+			await this.program.provider.sendAndConfirm?.(tx);
 		} catch (err) {
 			console.log('logs?: ', err?.logs);
 			throw new Error(
@@ -664,7 +665,7 @@ export class Insurance extends Common {
 							premiumVault: premiumVaultPDA,
 							insuranceContract: insuranceContractForTickPDA,
 							tokenProgram: TOKEN_PROGRAM_ID,
-							systemProgram: this.program.programId,
+							systemProgram: SystemProgram.programId,
 						},
 					}
 				)

@@ -8,7 +8,7 @@ use anchor_lang::prelude::*;
 /// * Mint tokens
 ///
 
-#[account(zero_copy)]
+#[account]
 pub struct ProtocolOwner {
     /// Bump
     pub bump: u8, // 1 bytes

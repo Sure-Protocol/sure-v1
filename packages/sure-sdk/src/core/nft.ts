@@ -4,7 +4,6 @@ import * as anchor from '@project-serum/anchor';
 import { TokenAccount } from '../types';
 
 import { SurePool } from './../anchor/types/sure_pool';
-import { SureSdk } from '.';
 import { Common } from './commont';
 
 export class NFT extends Common {

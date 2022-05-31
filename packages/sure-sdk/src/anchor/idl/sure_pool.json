@@ -21,16 +21,6 @@
           "isSigner": false
         },
         {
-          "name": "program",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "programData",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "systemProgram",
           "isMut": false,
           "isSigner": false
@@ -42,14 +32,14 @@
       "name": "initializePoolManager",
       "accounts": [
         {
-          "name": "manager",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "initialManager",
           "isMut": true,
           "isSigner": true
+        },
+        {
+          "name": "manager",
+          "isMut": true,
+          "isSigner": false
         },
         {
           "name": "systemProgram",
@@ -376,6 +366,11 @@
         },
         {
           "name": "pool",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenMint",
           "isMut": false,
           "isSigner": false
         },

@@ -22,3 +22,6 @@ export const SURE_INSURANCE_CONTRACTS = anchor.utils.bytes.utf8.encode(
 	'sure-insurance-contracts'
 );
 export const SURE_POOLS_SEED = anchor.utils.bytes.utf8.encode('sure-pools');
+
+export const SURE_POOL_MANAGER_SEED =
+	anchor.utils.bytes.utf8.encode('sure-pool-manager');
