@@ -19,7 +19,6 @@ import {
 
 import { Program } from '@project-serum/anchor';
 import { SurePool } from './../anchor/types/sure_pool';
-import { SureSdk } from '.';
 import { Common } from './commont';
 
 export class Liquidity extends Common {
@@ -39,12 +38,16 @@ export class Liquidity extends Common {
 		return mpMetadataPDA;
 	}
 
-	async getNFTMintPDA(nftAccountPDA: PublicKey): Promise<PublicKey> {
-		const [nftMintPDA, nftMintBump] = await PublicKey.findProgramAddress(
-			[SURE_NFT_MINT_SEED, nftAccountPDA.toBytes()],
-			this.program.programId
-		);
-		return nftMintPDA;
+	async getLiquidityVaultPDA(
+		pool: PublicKey,
+		tokenMint: PublicKey
+	): Promise<PublicKey> {
+		const [liquidityVaultPDA, liquidityVaultBump] =
+			await PublicKey.findProgramAddress(
+				[SURE_VAULT_POOL_SEED, pool.toBytes(), tokenMint.toBytes()],
+				this.program.programId
+			);
+		return liquidityVaultPDA;
 	}
 
 	async getLiquidityPositionPDA(nftAccountPDA: PublicKey): Promise<PublicKey> {
@@ -56,7 +59,7 @@ export class Liquidity extends Common {
 		return liquidityPositionPDA;
 	}
 
-	async getLiquidityProviderTokenAccountPDA(
+	async getLiquidityPositionTokenAccountPDA(
 		poolPDA: PublicKey,
 		vaultPDA: PublicKey,
 		tickBN: anchor.BN,
@@ -75,19 +78,9 @@ export class Liquidity extends Common {
 		return nftAccountPDA;
 	}
 
-	async getLiquidityVaultPDA(
-		pool: PublicKey,
-		tokenMint: PublicKey
+	async getLiquidityPositionMetadataPDA(
+		nftMintPDA: PublicKey
 	): Promise<PublicKey> {
-		const [liquidityVaultPDA, liquidityVaultBump] =
-			await PublicKey.findProgramAddress(
-				[SURE_VAULT_POOL_SEED, pool.toBytes(), tokenMint.toBytes()],
-				this.program.programId
-			);
-		return liquidityVaultPDA;
-	}
-
-	async getNFTMetadataPDA(nftMintPDA: PublicKey): Promise<PublicKey> {
 		const [mpMetadataPDA, mpMetadataBump] = await PublicKey.findProgramAddress(
 			[SURE_MP_METADATA_SEED, mp.PROGRAM_ID.toBuffer(), nftMintPDA.toBytes()],
 			mp.PROGRAM_ID
@@ -95,7 +88,7 @@ export class Liquidity extends Common {
 		return mpMetadataPDA;
 	}
 
-	async getLiquidityProviderMintPDA(
+	async getLiquidityPositionMintPDA(
 		nftAccountPDA: PublicKey
 	): Promise<PublicKey> {
 		const [nftMintPDA, nftMintBump] = await PublicKey.findProgramAddress(
@@ -170,13 +163,13 @@ export class Liquidity extends Common {
 		const nextTickPositionBN = new anchor.BN(tickPosition + 1);
 
 		// Generate nft accounts
-		const nftAccount = await this.getLiquidityProviderTokenAccountPDA(
+		const nftAccount = await this.getLiquidityPositionTokenAccountPDA(
 			poolPDA,
 			vaultPDA,
 			tickBN,
 			nextTickPositionBN
 		);
-		const nftMint = await this.getNFTMintPDA(nftAccount);
+		const nftMint = await this.getLiquidityPositionMintPDA(nftAccount);
 
 		let liquidityPositionPDA = await this.getLiquidityPositionPDA(nftAccount);
 
@@ -233,7 +226,6 @@ export class Liquidity extends Common {
 	 */
 	async redeemLiquidity(
 		wallet: PublicKey,
-		program: Program<SurePool>,
 		walletATA: PublicKey,
 		nftAccount: PublicKey,
 		insuredTokenAccount: PublicKey
@@ -241,7 +233,7 @@ export class Liquidity extends Common {
 		const liquidityPositionPDA = await this.getLiquidityPositionPDA(nftAccount);
 		let liquidityPosition;
 		try {
-			liquidityPosition = await program.account.liquidityPosition.fetch(
+			liquidityPosition = await this.program.account.liquidityPosition.fetch(
 				liquidityPositionPDA
 			);
 		} catch (e) {
@@ -249,7 +241,7 @@ export class Liquidity extends Common {
 		}
 
 		const poolPDA = liquidityPosition.pool;
-		const pool = await program.account.poolAccount.fetch(poolPDA);
+		const pool = await this.program.account.poolAccount.fetch(poolPDA);
 		const tokenMint = liquidityPosition.tokenMint;
 		const tick = liquidityPosition.tick;
 		const nftMint = liquidityPosition.nftMint;
@@ -261,7 +253,7 @@ export class Liquidity extends Common {
 		let tickAccount = await this.getTickAccountPDA(poolPDA, tokenMint, tick);
 		let metadataAccountPDA = await this.getMetaplexMetadataPDA(nftMint);
 		try {
-			await program.rpc.redeemLiquidity({
+			await this.program.rpc.redeemLiquidity({
 				accounts: {
 					nftHolder: wallet,
 					nftAccount: nftAccount,

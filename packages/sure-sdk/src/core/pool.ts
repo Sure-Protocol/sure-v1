@@ -1,7 +1,6 @@
 import * as anchor from '@project-serum/anchor';
 import { Connection } from '@solana/web3.js';
 import { SurePool } from './../anchor/types/sure_pool';
-import { SureSdk } from '.';
 import { Common } from './commont';
 
 export class Pool extends Common {

@@ -53,12 +53,15 @@ export class Insurance extends Common {
 	 * @param owner The user that owns the insurance contract
 	 */
 	public async getInsuranceContractPDA(
-		owner: PublicKey,
 		tickAccount: PublicKey
 	): Promise<PublicKey> {
 		const [insuranceContractPDA, insuranceContractBump] =
 			await PublicKey.findProgramAddress(
-				[SURE_INSURANCE_CONTRACT, owner.toBytes(), tickAccount.toBytes()],
+				[
+					SURE_INSURANCE_CONTRACT,
+					this.wallet.publicKey.toBytes(),
+					tickAccount.toBytes(),
+				],
 				this.program.programId
 			);
 
@@ -74,7 +77,6 @@ export class Insurance extends Common {
 	 * @param tokenMint The mint of the token used in the pool
 	 */
 	async getInsuranceContractsBitmapPDA(
-		owner: PublicKey,
 		pool: PublicKey,
 		tokenMint: PublicKey
 	): Promise<PublicKey> {
@@ -82,7 +84,7 @@ export class Insurance extends Common {
 			await PublicKey.findProgramAddress(
 				[
 					SURE_INSURANCE_CONTRACTS,
-					owner.toBytes(),
+					this.wallet.publicKey.toBytes(),
 					pool.toBytes(),
 					tokenMint.toBytes(),
 				],
@@ -108,11 +110,10 @@ export class Insurance extends Common {
 		tickAccount: PublicKey
 	): Promise<PublicKey> => {
 		const insuranceContractsBitmapPDA =
-			await this.getInsuranceContractsBitmapPDA(owner, pool, tokenMint);
+			await this.getInsuranceContractsBitmapPDA(pool, tokenMint);
 		// Get insurance contract with pool
 		const insuranceContractPDA = await this.getInsuranceContractPDA(
-			tickAccount,
-			owner
+			tickAccount
 		);
 
 		try {
@@ -220,8 +221,7 @@ export class Insurance extends Common {
 		tickAccount: PublicKey
 	): Promise<PublicKey> {
 		const insuranceContractPDA = await this.getInsuranceContractPDA(
-			tickAccount,
-			owner
+			tickAccount
 		);
 
 		try {
@@ -256,12 +256,10 @@ export class Insurance extends Common {
 	 * @returns Promise for a Big Number - BN
 	 */
 	async getInsuredAmount(
-		owner: PublicKey,
 		pool: PublicKey,
 		tokenMint: PublicKey
 	): Promise<anchor.BN> {
 		const userInsuranceContractsPDA = await this.getInsuranceContractsBitmapPDA(
-			owner,
 			pool,
 			tokenMint
 		);
@@ -283,8 +281,7 @@ export class Insurance extends Common {
 					currentTick
 				);
 				const insuranceContractForTickPDA = await this.getInsuranceContractPDA(
-					tickAccountPDA,
-					owner
+					tickAccountPDA
 				);
 				const insuranceContractForTick =
 					await this.program.account.insuranceContract.fetch(
@@ -301,20 +298,18 @@ export class Insurance extends Common {
 	}
 
 	async createUserInsuranceContracts(
-		owner: PublicKey,
 		pool: PublicKey,
 		tokenMint: PublicKey
 	): Promise<PublicKey> {
 		try {
 			const insuranceContractPDA = await this.getInsuranceContractsBitmapPDA(
-				owner,
 				pool,
 				tokenMint
 			);
 			await this.program.methods
 				.initializeUserInsuranceContracts()
 				.accounts({
-					signer: owner,
+					signer: this.wallet.publicKey,
 					pool: pool,
 					insuranceContracts: insuranceContractPDA,
 					systemProgram: this.program.programId,
@@ -330,12 +325,10 @@ export class Insurance extends Common {
 	}
 
 	async getOrCreateUserInsuranceContracts(
-		owner: PublicKey,
 		pool: PublicKey,
 		tokenMint: PublicKey
 	): Promise<PublicKey> {
 		const insuranceContractPDA = await this.getInsuranceContractsBitmapPDA(
-			owner,
 			pool,
 			tokenMint
 		);
@@ -348,7 +341,7 @@ export class Insurance extends Common {
 			}
 			throw new Error();
 		} catch (_) {
-			return this.createUserInsuranceContracts(owner, pool, tokenMint);
+			return this.createUserInsuranceContracts(pool, tokenMint);
 		}
 	}
 
@@ -373,20 +366,12 @@ export class Insurance extends Common {
 		const newInsuredAmountBN = new anchor.BN(newInsuredAmount);
 
 		// Create insurance overview
-		const insuredAmount = await this.getInsuredAmount(
-			this.wallet.publicKey,
-			pool,
-			tokenMint
-		);
+		const insuredAmount = await this.getInsuredAmount(pool, tokenMint);
 		let amountChange = new anchor.BN(0);
 		// Check if amount is changed
 		if (newInsuredAmountBN.gte(insuredAmount)) {
 			const insuranceContractsPDA =
-				await this.getOrCreateUserInsuranceContracts(
-					this.wallet.publicKey,
-					pool,
-					tokenMint
-				);
+				await this.getOrCreateUserInsuranceContracts(pool, tokenMint);
 			const liquidityPositionsPDA = await this.getLiquidityPositionBitmapPDA(
 				pool,
 				tokenMint
@@ -402,16 +387,11 @@ export class Insurance extends Common {
 				tokenMint,
 				amountChange,
 				liquidityPositionsBitmap,
-				endTimestamp,
-				insuranceContractsPDA
+				endTimestamp
 			);
 		} else {
 			const insuranceContractsPDA =
-				await this.getOrCreateUserInsuranceContracts(
-					this.wallet.publicKey,
-					pool,
-					tokenMint
-				);
+				await this.getOrCreateUserInsuranceContracts(pool, tokenMint);
 			const insuranceContracts = await this.program.account.bitMap.fetch(
 				insuranceContractsPDA
 			);
@@ -444,7 +424,6 @@ export class Insurance extends Common {
 		endTimestamp: number
 	) {
 		const insuranceContractsPDA = await this.getOrCreateUserInsuranceContracts(
-			this.wallet.publicKey,
 			pool,
 			tokenMint
 		);
@@ -529,8 +508,7 @@ export class Insurance extends Common {
 		tokenMint: PublicKey,
 		amountChange: anchor.BN,
 		bitmap: Bitmap,
-		endTs: number,
-		insuranceContractsPDA: PublicKey
+		endTs: number
 	) {
 		console.log('// increaseInsurancePosition');
 		// Start from left and increase position
@@ -660,7 +638,6 @@ export class Insurance extends Common {
 				currentTick
 			);
 			insuranceContractForTickPDA = await this.getInsuranceContractPDA(
-				this.wallet.publicKey,
 				tickAccountPDA
 			);
 			insuranceContract = await this.program.account.insuranceContract.fetch(

@@ -1,10 +1,11 @@
 import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
-import { IDL, SurePool } from '@sure/sdk';
+import { SurePool, IDL, SureSdk } from '@sure/sdk';
 import * as anchor from '@project-serum/anchor';
 import { PROGRAM_ID, PROGRAM_ID_STR } from './../utils/constants';
 import React, { useEffect, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
+import { NodeWallet } from '@metaplex/js';
 
 export const SurePoolProgramContext = React.createContext<
 	undefined | anchor.Program<SurePool>
@@ -27,11 +28,7 @@ export const SurePoolProgramProvider: React.FunctionComponent<Props> = ({
 
 	useEffect(() => {
 		if (wallet !== null) {
-			const provider = new anchor.AnchorProvider(connection, wallet, {
-				skipPreflight: false,
-			});
-			const sureProgram = new anchor.Program(IDL, PROGRAM_ID, provider);
-			setSurePoolProgram(sureProgram);
+			const sureSdk = SureSdk.init(connection, wallet as NodeWallet);
 		}
 	}, [wallet]);
 
