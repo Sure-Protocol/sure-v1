@@ -45,7 +45,12 @@ export class Pool extends Common {
 				})
 				.rpc();
 		} catch (err) {
-			throw new Error('sure.pool.createPool.error. Cause: ' + err);
+			throw new Error(
+				'addr: ' +
+					this.program.programId +
+					' sure.pool.createPool.error. Cause: ' +
+					err
+			);
 		}
 	}
 

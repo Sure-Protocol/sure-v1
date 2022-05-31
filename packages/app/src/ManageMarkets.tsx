@@ -2,7 +2,6 @@ import { useContext } from 'react';
 import MainButton from './components/MainButton';
 import { css } from '@emotion/css';
 import { useForm } from 'react-hook-form';
-import * as sureSDK from '@sure/sdk';
 import { SurePoolProgramContext } from './context/surePool';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
@@ -26,12 +25,7 @@ export const ManageMarkets = () => {
 	const onSubmit = async (data: CreateMarkets) => {
 		console.log('Lets go ', data);
 		const programIdPK = new PublicKey(data.programId);
-		await sureSDK.pool.createPool(
-			sureProgram,
-			wallet.publicKey,
-			programIdPK,
-			0
-		);
+		await sureProgram?.pool.createPool(programIdPK, 0);
 	};
 
 	return (

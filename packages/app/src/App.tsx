@@ -58,7 +58,7 @@ const App: FC = () => {
 
 	return (
 		<BrowserRouter>
-			<ConnectionProvider endpoint={endpoint}>
+			<ConnectionProvider endpoint={'http://localhost:8899'}>
 				<WalletProvider wallets={wallets} autoConnect>
 					<WalletModalProvider>
 						<SurePoolProgramProvider>

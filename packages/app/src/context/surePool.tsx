@@ -7,9 +7,9 @@ import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { NodeWallet } from '@metaplex/js';
 
-export const SurePoolProgramContext = React.createContext<
-	undefined | anchor.Program<SurePool>
->(undefined);
+export const SurePoolProgramContext = React.createContext<undefined | SureSdk>(
+	undefined
+);
 
 interface Props {
 	children: JSX.Element;
@@ -20,15 +20,16 @@ export const SurePoolProgramProvider: React.FunctionComponent<Props> = ({
 }) => {
 	const { connection } = useConnection();
 	const wallet = useWallet();
-	const [surePoolProgram, setSurePoolProgram] = useState<
-		undefined | anchor.Program<SurePool>
-	>(undefined);
-	console.log('SurePool: ', IDL);
-	console.log('wallet: ', wallet);
+	const [surePoolProgram, setSurePoolProgram] = useState<undefined | SureSdk>(
+		undefined
+	);
 
 	useEffect(() => {
-		if (wallet !== null) {
-			const sureSdk = SureSdk.init(connection, wallet as NodeWallet);
+		if (wallet.publicKey) {
+			console.log('SurePool: ', IDL);
+			console.log('wallet: ', wallet);
+			console.log('connection: ', connection);
+			setSurePoolProgram(SureSdk.init(connection, wallet));
 		}
 	}, [wallet]);
 
