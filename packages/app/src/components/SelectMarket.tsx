@@ -2,8 +2,10 @@ import down from './../assets/icons/expand_more.svg';
 import { css } from '@emotion/css';
 import { theme } from './Themes';
 import SearchMarket from './SearchMarket';
+import { useState } from 'react';
 
 export const SelectMarket = () => {
+	const [showPools, toggleMarket] = useState(false);
 	return (
 		<div>
 			<div
@@ -35,6 +37,7 @@ export const SelectMarket = () => {
 							background-color: ${theme.colors.sureBlue2};
 						}
 					`}
+					onClick={() => toggleMarket(!showPools)}
 				>
 					<div className="sure-token">sol</div>
 					<div className="sure-token--name">
@@ -81,6 +84,7 @@ export const SelectMarket = () => {
 					<p className="p--margin-0">USDC</p>
 				</button>
 			</div>
+			{showPools && <SearchMarket />}
 		</div>
 	);
 };

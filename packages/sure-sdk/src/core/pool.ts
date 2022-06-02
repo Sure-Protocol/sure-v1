@@ -23,13 +23,14 @@ export class Pool extends Common {
 	}
 
 	async createPool(
+		tokenMint: PublicKey,
 		smartContractAddress: PublicKey,
 		insuranceFee: number,
 		name?: string
 	) {
 		const [protocolOwnerPDA, protocolOwnerBump] = await this.getProtocolOwner();
 		const poolPDA = await this.getPoolPDA(smartContractAddress);
-		const surePoolsPDA = await this.getSurePools();
+		const poolsPDA = await this.getSurePoolsPDA();
 
 		try {
 			await this.program.methods
@@ -38,8 +39,8 @@ export class Pool extends Common {
 					poolCreator: this.wallet.publicKey,
 					protocolOwner: protocolOwnerPDA,
 					pool: poolPDA,
-					surePools: surePoolsPDA,
-					insuredTokenAccount: smartContractAddress,
+					pools: poolsPDA,
+					smartContract: smartContractAddress,
 					rent: anchor.web3.SYSVAR_RENT_PUBKEY,
 					systemProgram: SystemProgram.programId,
 				})
@@ -56,9 +57,9 @@ export class Pool extends Common {
 
 	async createPoolVault(tokenMint: PublicKey, smartContractAddress: PublicKey) {
 		const poolPDA = await this.getPoolPDA(smartContractAddress);
-		const liquidityVault = await this.getLiquidityVaultPDA(poolPDA, tokenMint);
-		const premiumVault = await this.getPremiumVaultPDA(poolPDA, tokenMint);
-		const liqudityPositionBitmap = await this.getLiquidityPositionBitmapPDA(
+		const liquidityVaultPDA = await this.getPoolVaultPDA(poolPDA, tokenMint);
+		const premiumVaultPDA = await this.getPremiumVaultPDA(poolPDA, tokenMint);
+		const poolLiquidityTickBitmapPDA = await this.getPoolLiquidityTickBitmapPDA(
 			poolPDA,
 			tokenMint
 		);
@@ -69,10 +70,10 @@ export class Pool extends Common {
 				.accounts({
 					creator: this.wallet.publicKey,
 					pool: poolPDA,
-					tokenMint: tokenMint,
-					liquidityVault: liquidityVault,
-					premiumVault: premiumVault,
-					bitmap: liqudityPositionBitmap,
+					poolVaultTokenMint: tokenMint,
+					poolVault: liquidityVaultPDA,
+					premiumVault: premiumVaultPDA,
+					poolLiquidityTickBitmap: poolLiquidityTickBitmapPDA,
 					rent: anchor.web3.SYSVAR_RENT_PUBKEY,
 					tokenProgram: TOKEN_PROGRAM_ID,
 					systemProgram: SystemProgram.programId,

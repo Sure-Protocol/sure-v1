@@ -32,7 +32,7 @@ export class Common {
 		return await PublicKey.findProgramAddress([], this.program.programId);
 	}
 
-	async getSurePools(): Promise<PublicKey> {
+	async getSurePoolsPDA(): Promise<PublicKey> {
 		try {
 			const [surePoolsPDA, surePoolsBump] = await PublicKey.findProgramAddress(
 				[SURE_POOLS_SEED],
@@ -40,6 +40,18 @@ export class Common {
 			);
 
 			return surePoolsPDA;
+		} catch (err) {
+			throw new Error('sure.common.getSurePoolsPDA. Cause: ' + err);
+		}
+	}
+
+	async getSurePools() {
+		try {
+			const surePoolsPDA = await this.getSurePoolsPDA();
+			const surePools = await this.program.account.surePools.fetch(
+				surePoolsPDA
+			);
+			const pool = surePools.pools;
 		} catch (err) {
 			throw new Error('sure.common.getSurePools. Cause: ' + err);
 		}
@@ -55,7 +67,7 @@ export class Common {
 		return poolPDA;
 	}
 
-	async getLiquidityPositionBitmapPDA(
+	async getPoolLiquidityTickBitmapPDA(
 		pool: PublicKey,
 		tokenMint: PublicKey
 	): Promise<anchor.web3.PublicKey> {
@@ -67,7 +79,7 @@ export class Common {
 	}
 
 	/// ============ TICK =================
-	getTickAccountPDA = async (
+	getLiquidityTickInfoPDA = async (
 		pool: PublicKey,
 		tokenMint: PublicKey,
 		tick: number
@@ -88,19 +100,23 @@ export class Common {
 
 	/// Check if tick account exists for the pool,
 	/// if not, create the account.
-	async createTickAccount(
+	async createLiquidityTickInfo(
 		pool: PublicKey,
 		tokenMint: PublicKey,
 		tick: number
 	): Promise<PublicKey> {
-		const tickAccountPDA = await this.getTickAccountPDA(pool, tokenMint, tick);
+		const liquidityTickInfoPDA = await this.getLiquidityTickInfoPDA(
+			pool,
+			tokenMint,
+			tick
+		);
 
 		try {
 			await this.program.methods
-				.initializeTick(pool, tokenMint, tick)
+				.initializePoolLiquidityTick(pool, tokenMint, tick)
 				.accounts({
 					creator: this.wallet.publicKey,
-					tickAccount: tickAccountPDA,
+					liquidityTickInfo: liquidityTickInfoPDA,
 					systemProgram: SystemProgram.programId,
 				})
 				.rpc();
@@ -109,26 +125,29 @@ export class Common {
 			throw new Error('Could not create tick account: ' + e);
 		}
 
-		return tickAccountPDA;
+		return liquidityTickInfoPDA;
 	}
 
-	async getOrCreateTickAccount(
-		owner: PublicKey,
+	async getOrCreateLiquidityTickInfo(
 		pool: PublicKey,
 		tokenMint: PublicKey,
 		tick: number
 	): Promise<anchor.web3.PublicKey> {
-		const tickAccountPDA = await this.getTickAccountPDA(pool, tokenMint, tick);
+		const liquidityTickInfo = await this.getLiquidityTickInfoPDA(
+			pool,
+			tokenMint,
+			tick
+		);
 
 		try {
-			await this.program.account.tick.fetch(tickAccountPDA);
+			await this.program.account.tick.fetch(liquidityTickInfo);
 		} catch (e) {
 			console.log(
 				'sure.getTickAccount.error Could not fetch tick account. Cause: ' + e
 			);
 			// create account
 			try {
-				await this.createTickAccount(pool, tokenMint, tick);
+				await this.createLiquidityTickInfo(pool, tokenMint, tick);
 			} catch (e) {
 				throw new Error(
 					'sure.createTickAccount.error. could not create tick account. cause: ' +
@@ -136,7 +155,7 @@ export class Common {
 				);
 			}
 		}
-		return tickAccountPDA;
+		return liquidityTickInfo;
 	}
 
 	/**
@@ -152,10 +171,16 @@ export class Common {
 		tokenMint: PublicKey,
 		tick: number
 	): Promise<number> {
-		const tickPDA = await this.getTickAccountPDA(poolPDA, tokenMint, tick);
+		const liquidityTickInfoPDA = await this.getLiquidityTickInfoPDA(
+			poolPDA,
+			tokenMint,
+			tick
+		);
 		try {
-			const tickAccount = await this.program.account.tick.fetch(tickPDA);
-			return tickAccount.lastLiquidityPositionIdx;
+			const liquidityTickInfo = await this.program.account.tick.fetch(
+				liquidityTickInfoPDA
+			);
+			return liquidityTickInfo.lastLiquidityPositionIdx;
 		} catch (e) {
 			throw new Error('Tick account does not exist. Cause: ' + e);
 		}
@@ -179,7 +204,7 @@ export class Common {
 		return premiumVaultPDA;
 	}
 
-	async getLiquidityVaultPDA(
+	async getPoolVaultPDA(
 		pool: PublicKey,
 		tokenMint: PublicKey
 	): Promise<PublicKey> {

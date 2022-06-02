@@ -22,7 +22,7 @@ export class Protocol extends Common {
 
 			const [protocolOwnerPDA, protocolOwnerBump] =
 				await this.getProtocolOwner();
-			const poolsPDA = await this.getSurePools();
+			const poolsPDA = await this.getSurePoolsPDA();
 
 			await this.program.methods
 				.initializeProtocol()

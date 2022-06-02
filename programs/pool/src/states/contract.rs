@@ -2,35 +2,52 @@
 ///! that a user has insurance
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
-use crate::utils::errors::*;
+use crate::BitMap;
+
+use crate::states::{
+    pool::{PoolAccount,},
+    seeds::{SURE_INSURANCE_CONTRACTS_BITMAP,SURE_INSURANCE_CONTRACTS_INFO,SURE_INSURANCE_CONTRACT},
+    tick::Tick,
+};
+
+use anchor_spl::{
+    token::{Mint, Token, TokenAccount},
+};
+
+use vipers::{assert_is_ata, prelude::*};
 
 
 const SURE_TIME_LOCK_IN_SECONDS: u64 = solana_program::clock::SECONDS_PER_DAY;
 
-/// Pool insurance contract is meant to keep an
-/// overview over the relationship a user 
-/// has with the pool
+/// --- Pool insurance contract ---
+/// 
+/// Accumulation of all insurance contracts for a user in  
+/// a given pool.
 #[account]
-#[derive(Default)]
 pub struct PoolInsuranceContract {
     /// The bump
     pub bump: u8, //1 byte
 
     /// Contract expiry
-    pub end_time: i64, // 8 byte
+    pub expiry_ts: i64, // 8 byte
+
+    /// Contract Amount
+    pub insured_amount: u64, // 8 byte
 
     /// Owner of contract
     pub owner: Pubkey, // 8 byte
-
-    /// Pool Insurance Tick Contracts
-    pub insurance_contracts: Pubkey, // 8 bytes 
 }
 
-/// Insurance Contract for each tick
-/// The account should be able to be reduced within a tick
+impl PoolInsuranceContract{
+    pub const SPACE: usize = 1 + 8 + 8;
+}
+
+/// --- Insurance Contract -- 
+/// 
+/// Holds state about an insurance contract for a specific tick
 #[account]
 #[derive(Default)]
-pub struct InsuranceContract {
+pub struct InsuranceTickContract {
     /// The bump identity of the PDA
     pub bump: u8, // 1 byte
 
@@ -60,7 +77,7 @@ pub struct InsuranceContract {
     pub pool: Pubkey, // 32 bytes
 
     /// Tick Account used to buy from
-    pub tick_account: Pubkey, // 32 bytes
+    pub liquidity_tick_info: Pubkey, // 32 bytes
 
     // Token Mint
     pub token_mint: Pubkey, // 32 bytes
@@ -78,7 +95,7 @@ pub struct InsuranceContract {
     pub created_ts: i64, // 8 bytes
 }
 
-impl InsuranceContract {
+impl InsuranceTickContract {
     pub const SPACE: usize = 1 + 8 + 8 + 8 + 8 + 8 + 8 + 8 + 32 + 32 + 32 + 32 + 1 + 8+8;
 
     /// Calculate premium required to cover the 
@@ -191,6 +208,184 @@ impl InsuranceContract {
     }
 }
 
+// ?---------------------------------.----------------- //
+// ?%%%%%%%%%%%%%%%% Method Accounts %%%%%%%%%%%%%%%%! //
+// ?-------------------------------------------------- //
+
+/// --- Initialize User Insurance Contract --- 
+/// 
+/// Accounts used to initialize a user for a new pool
+/// 
+/// seeds: [
+///     signer,
+///     pool
+///     token_mint
+/// ] 
+#[derive(Accounts)]
+pub struct InitializeUserPoolInsuranceContract<'info> {
+    /// Signer
+    #[account(mut)]
+    pub signer: Signer<'info>,
+
+    /// Pool associated with the insurance contracts
+    pub pool: Box<Account<'info, PoolAccount>>,
+
+    /// Token mint used for the insurance contracts
+    pub token_mint: Box<Account<'info, Mint>>,
+
+    /// Insurance Contracts Bitmap
+    /// Bitmap for identifying for which ticks the user's 
+    /// insurance contract is located
+    #[account(
+        init,
+        space = 8 + BitMap::SPACE,
+        payer = signer,
+        seeds = [
+            SURE_INSURANCE_CONTRACTS_BITMAP.as_bytes(),
+            signer.key().as_ref(),
+            pool.key().as_ref(),
+            token_mint.key().as_ref(),
+        ],
+        bump,
+    )]
+    pub pool_insurance_contract_bitmap: Box<Account<'info,BitMap>>,
+    
+    /// Insurance pool contract info
+    /// Holds aggregate information on all the 
+    /// insurance contracts for a given user 
+    #[account(
+        init,
+        space = 8 + PoolInsuranceContract::SPACE,
+        payer = signer,
+        seeds = [
+            SURE_INSURANCE_CONTRACTS_INFO.as_bytes(),
+            signer.key().as_ref(),
+            pool.key().as_ref(),
+            token_mint.key().as_ref(),
+        ],
+        bump,
+    )]
+    pub pool_insurance_contract_info: Box<Account<'info, PoolInsuranceContract>>,
+
+    /// System program
+    pub system_program: Program<'info, System>,
+}
+/// --- Initialize Insurance Contract ---
+/// 
+/// Initializes an insurance contract for a specific tick 
+/// account. 
+/// 
+/// side effects: 
+/// Pool contracts is updated:
+///     - Info
+///     - Bitmap overview 
+/// 
+#[derive(Accounts)]
+pub struct InitializeInsuranceContract<'info> {
+    /// Signer of contract
+    #[account(mut)]
+    pub owner: Signer<'info>,
+
+    /// Pool to buy insurance from
+    pub pool: Box<Account<'info, PoolAccount>>,
+
+    /// Token mint used to insure with
+    pub token_mint: Box<Account<'info, Mint>>,
+
+    /// Tick account to insure against
+    pub liquidity_tick_info: AccountLoader<'info, Tick>,
+
+    /// Insurance Contract
+    #[account(
+        init,
+        space = 8 + InsuranceTickContract::SPACE,
+        payer = owner,
+        seeds = [
+            SURE_INSURANCE_CONTRACT.as_bytes(),
+            owner.key().as_ref(),
+            liquidity_tick_info.key().as_ref(),
+        ],
+        bump,
+    )]
+    pub insurance_tick_contract: Box<Account<'info, InsuranceTickContract>>,
+
+    /// Insurance Contracts 
+    #[account(mut)]
+    pub pool_insurance_contract_info: Box<Account<'info, PoolInsuranceContract>>,
+
+    #[account(mut)]
+    pub pool_insurance_contract_bitmap: Box<Account<'info,BitMap>>,
+
+    /// System Contract used to create accounts
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> Validate<'info> for InitializeInsuranceContract<'info> {
+    fn validate(&self) -> Result<()> {
+        Ok(())
+    }
+}
+
+
+/// --- Update Insurance Tick Contract --- 
+///
+/// Updates the insurance contract for the given tick account
+/// 
+/// Method adjust the position and expiry and calculates the 
+/// new premium that has to be refunded or paid
+#[derive(Accounts)]
+pub struct UpdateInsuranceTickContract<'info> {
+    /// Buyer
+    #[account(mut)]
+    pub buyer: Signer<'info>,
+
+    /// Account to buy tokens with
+    #[account(mut)]
+    pub token_account: Box<Account<'info, TokenAccount>>,
+
+    /// Pool to buy from
+    #[account(mut)]
+    pub pool: Box<Account<'info, PoolAccount>>,
+
+    /// Tick account to buy
+    #[account(mut)]
+    pub liquidity_tick_info: AccountLoader<'info, Tick>,
+
+    /// Premium Vault
+    #[account(
+        mut,
+        constraint = premium_vault.owner ==  pool.key(),
+        constraint = premium_vault.mint == token_account.mint,
+    )]
+    pub premium_vault: Box<Account<'info, TokenAccount>>,
+
+    /// Insurance Contract
+    #[account(mut,
+    constraint = insurance_tick_contract.pool == pool.key(),
+    constraint = insurance_tick_contract.owner == buyer.key(),
+    )]
+    pub insurance_tick_contract: Box<Account<'info, InsuranceTickContract>>,
+
+    /// Insurance Contracts 
+    #[account(mut)]
+    pub pool_insurance_contract_info: Box<Account<'info, PoolInsuranceContract>>,
+
+    /// Token program, needed to transfer tokens
+    pub token_program: Program<'info, Token>,
+
+    /// System Contract used to create accounts
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> Validate<'info> for UpdateInsuranceTickContract<'info> {
+    fn validate(&self) -> Result<()> {
+        Ok(())
+    }
+}
+
+// ?----------------------------------------- //
+// ?%%%%%%%%%%%%%%%% Events %%%%%%%%%%%%%%%%! //
+// ?----------------------------------------- //
 #[event]
 pub struct ReduceInsuredAmountForTick {
     pub owner: Pubkey,

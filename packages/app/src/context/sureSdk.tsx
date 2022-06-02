@@ -1,13 +1,13 @@
 import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
 import { SurePool, IDL, SureSdk } from '@sure/sdk';
 import * as anchor from '@project-serum/anchor';
-import { PROGRAM_ID, PROGRAM_ID_STR } from './../utils/constants';
-import React, { useEffect, useState } from 'react';
+import { PROGRAM_ID, PROGRAM_ID_STR } from '../utils/constants';
+import React, { useContext, useEffect, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { NodeWallet } from '@metaplex/js';
 
-export const SurePoolProgramContext = React.createContext<undefined | SureSdk>(
+export const SureSdkContext = React.createContext<undefined | SureSdk>(
 	undefined
 );
 
@@ -15,7 +15,7 @@ interface Props {
 	children: JSX.Element;
 }
 
-export const SurePoolProgramProvider: React.FunctionComponent<Props> = ({
+export const SureSdkProvider: React.FunctionComponent<Props> = ({
 	children,
 }) => {
 	const { connection } = useConnection();
@@ -26,16 +26,17 @@ export const SurePoolProgramProvider: React.FunctionComponent<Props> = ({
 
 	useEffect(() => {
 		if (wallet.publicKey) {
-			console.log('SurePool: ', IDL);
-			console.log('wallet: ', wallet);
-			console.log('connection: ', connection);
 			setSurePoolProgram(SureSdk.init(connection, wallet));
 		}
 	}, [wallet]);
 
 	return (
-		<SurePoolProgramContext.Provider value={surePoolProgram}>
+		<SureSdkContext.Provider value={surePoolProgram}>
 			{children}
-		</SurePoolProgramContext.Provider>
+		</SureSdkContext.Provider>
 	);
+};
+
+export const useSureSdk = (): SureSdk | undefined => {
+	return useContext(SureSdkContext);
 };

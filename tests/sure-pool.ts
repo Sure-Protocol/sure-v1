@@ -24,7 +24,7 @@ import { u64 } from '@solana/buffer-layout-utils';
 const { SystemProgram } = anchor.web3;
 
 import { Money } from '@sure/sdk/src';
-import { SureSdk, SureDate, Bitmap, seeds } from '@sure/sdk';
+import { SureSdk, SureDate, Bitmap, seeds, pool } from '@sure/sdk';
 /// =============== Variables ==================
 
 // PDA seeds
@@ -177,46 +177,71 @@ describe('Initialize Sure Pool', () => {
 	}),
 		it('create sure pool', async () => {
 			const insuranceFee = 0;
-			const tick_spacing = 10; // tick size in basispoints
 			const name = 'my awesome sure pool';
 
 			// Generate PDA for Sure Pool
-			const poolPDA = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
+			const poolPDA = await sureSdk?.pool.getPoolPDA(
+				protcolToInsure0.publicKey
+			);
 
-			await sureSdk.pool.createPool(protcolToInsure0.publicKey, insuranceFee);
+			await sureSdk.pool.createPool(
+				tokenMint,
+				protcolToInsure0.publicKey,
+				insuranceFee
+			);
 
 			const newPool = await program.account.poolAccount.fetch(poolPDA);
 			assert.isAbove(newPool.bump, 0);
+
+			const surePoolsPDA = await sureSdk.pool.getSurePoolsPDA();
+			const surePoolsAccount = await program.account.surePools.fetch(
+				surePoolsPDA
+			);
+			const surePools = surePoolsAccount.pools;
+			let isInPool = false;
+			surePools.forEach((poolPDAItem) => {
+				console.log(
+					'poolPDA: ',
+					poolPDA.toBase58(),
+					' , poolPDAItem: ',
+					poolPDAItem.toBase58()
+				);
+				if (poolPDA.toBase58() === poolPDAItem.toBase58()) {
+					isInPool = true;
+				}
+			});
+
+			assert.isTrue(isInPool);
 		}),
 		it('create pool vaults -> For a given mint the isolated ', async () => {
 			// Smart contract that sure should insure.
 
 			// Generate PDA for Sure Pool
 			const pool = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
-			const liqudityPositionBitmap =
-				await sureSdk.pool.getLiquidityPositionBitmapPDA(pool, tokenMint);
+
+			const poolLiquidityTickBitmap =
+				await sureSdk.pool.getPoolLiquidityTickBitmapPDA(pool, tokenMint);
+
 			await sureSdk.pool.createPoolVault(tokenMint, protcolToInsure0.publicKey);
 
 			const bitmapAccount = await program.account.bitMap.fetch(
-				liqudityPositionBitmap
+				poolLiquidityTickBitmap
 			);
 			assert.equal(bitmapAccount.spacing, 10);
 		}),
 		it('get list of existing pools', async () => {
 			/// the full list of pools should be returned
-			const surePoolsPDA = await sureSdk.pool.getSurePools();
+			const surePoolsPDA = await sureSdk.pool.getSurePoolsPDA();
 
 			try {
 				const surePools = await program.account.surePools.fetch(surePoolsPDA);
 
 				assert.equal(surePools.pools.length, 1);
-				const firstContractInsured = surePools.pools[0];
-
-				// get the first pool
-				const poolPDA = await sureSdk.pool.getPoolPDA(firstContractInsured);
+				const firstPoolPDA = surePools.pools[0];
+				console.log('surePools.pools: ', surePools.pools);
 
 				try {
-					const pool = await program.account.poolAccount.fetch(poolPDA);
+					const pool = await program.account.poolAccount.fetch(firstPoolPDA);
 				} catch (err) {
 					throw new Error('Pool does not exist. Cause: ' + err);
 				}
@@ -227,9 +252,13 @@ describe('Initialize Sure Pool', () => {
 		it('create tick account for pool', async () => {
 			const tick = 440;
 			const poolPDA = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
-			await sureSdk.tickAccount.createTickAccount(poolPDA, tokenMint, tick);
+			await sureSdk.tickAccount.createLiquidityTickInfo(
+				poolPDA,
+				tokenMint,
+				tick
+			);
 
-			const tickPDA = await sureSdk.pool.getTickAccountPDA(
+			const tickPDA = await sureSdk.pool.getLiquidityTickInfoPDA(
 				poolPDA,
 				tokenMint,
 				tick
@@ -263,7 +292,7 @@ describe('Initialize Sure Pool', () => {
 			}
 
 			const poolPDA = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
-			const vaultPDA = await sureSdk.liquidity.getLiquidityVaultPDA(
+			const vaultPDA = await sureSdk.liquidity.getPoolVaultPDA(
 				poolPDA,
 				tokenMint
 			);
@@ -272,7 +301,7 @@ describe('Initialize Sure Pool', () => {
 				tokenMint,
 				tick
 			);
-			const tickAccountPDA = await sureSdk.tickAccount.getTickAccountPDA(
+			const tickAccountPDA = await sureSdk.tickAccount.getLiquidityTickInfoPDA(
 				poolPDA,
 				tokenMint,
 				tick
@@ -303,10 +332,7 @@ describe('Initialize Sure Pool', () => {
 		it('redeem liquidity based on NFT', async () => {
 			//  Allow user to provide only the NFT to get the
 			// liquidity position and redeem it.
-			const sureNfts = await sureSdk.nft.getSureNfts(
-				connection,
-				wallet.publicKey
-			);
+			const sureNfts = await sureSdk.nft.getSureNfts();
 			/// Select one NFT to redeem
 			const reedemableNFT = sureNfts[0];
 
@@ -372,13 +398,11 @@ describe('Initialize Sure Pool', () => {
 			contractExpiryInSeconds
 		);
 		const userInsuranceContractsPDA =
-			await sureSdk.insurance.getInsuranceContractsBitmapPDA(
-				poolPDA,
-				tokenMint
+			await sureSdk.insurance.getInsurancePoolContractsPDA(poolPDA, tokenMint);
+		const userInsuranceContracts =
+			await program.account.insuranceTickContract.fetch(
+				userInsuranceContractsPDA
 			);
-		const userInsuranceContracts = await program.account.bitMap.fetch(
-			userInsuranceContractsPDA
-		);
 		console.log('userInsuranceContracts: ', userInsuranceContracts);
 		// Check the user positions
 		console.log('Buy insurance > getInsured amount');

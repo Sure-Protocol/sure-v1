@@ -30,7 +30,8 @@ import {
 import BuyInsurance from './BuyInsurance';
 import Navigation from './Navigation';
 import { TokensProvider } from './context/tokens';
-import { SurePoolProgramProvider } from './context/surePool';
+import { SureSdkProvider } from './context/sureSdk';
+import { SurePoolsProvider } from './context/surePools';
 
 // Default styles that can be overridden by your app
 //require('@solana/wallet-adapter-react-ui/styles.css');
@@ -58,14 +59,16 @@ const App: FC = () => {
 
 	return (
 		<BrowserRouter>
-			<ConnectionProvider endpoint={'http://localhost:8899'}>
+			<ConnectionProvider endpoint={'http://127.0.0.1:8899'}>
 				<WalletProvider wallets={wallets} autoConnect>
 					<WalletModalProvider>
-						<SurePoolProgramProvider>
-							<TokensProvider>
-								<Navigation />
-							</TokensProvider>
-						</SurePoolProgramProvider>
+						<SureSdkProvider>
+							<SurePoolsProvider>
+								<TokensProvider>
+									<Navigation />
+								</TokensProvider>
+							</SurePoolsProvider>
+						</SureSdkProvider>
 					</WalletModalProvider>
 				</WalletProvider>
 			</ConnectionProvider>

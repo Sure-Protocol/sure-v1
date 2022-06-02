@@ -4,9 +4,11 @@ use std::ops::BitXor;
 
 use crate::utils::uint::U256;
 
+
 /// Bitmap used to keep track of liquidity at each tick
-///
+
 #[account]
+#[derive(Default)]
 pub struct BitMap {
     /// Bump
     pub bump: u8, // 1 byte
@@ -14,15 +16,8 @@ pub struct BitMap {
     pub word_pos: i16, // 2 bytes
 
     pub spacing: u16, // 2 byts
-
     /// Map
     pub word: [u64; 4], // 8*4 = 32 bytes
-}
-
-#[derive(Accounts)]
-pub struct UpdateBitmap<'info> {
-    #[account(mut)]
-    pub bitmap: Account<'info, BitMap>,
 }
 
 pub struct NextBit {

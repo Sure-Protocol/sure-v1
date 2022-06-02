@@ -68,12 +68,12 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "surePools",
+          "name": "pools",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "insuredTokenAccount",
+          "name": "smartContract",
           "isMut": false,
           "isSigner": false
         },
@@ -113,12 +113,12 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "tokenMint",
+          "name": "poolVaultTokenMint",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "liquidityVault",
+          "name": "poolVault",
           "isMut": true,
           "isSigner": false
         },
@@ -128,7 +128,7 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "bitmap",
+          "name": "poolLiquidityTickBitmap",
           "isMut": true,
           "isSigner": false
         },
@@ -164,7 +164,7 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "liquidityProviderAccount",
+          "name": "liquidityProviderAta",
           "isMut": true,
           "isSigner": false
         },
@@ -174,12 +174,7 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "nftMint",
+          "name": "poolVault",
           "isMut": true,
           "isSigner": false
         },
@@ -199,17 +194,22 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "nftAccount",
+          "name": "liquidityPositionNftMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "bitmap",
+          "name": "liquidityPositionNftAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "poolLiquidityTickBitmap",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -240,10 +240,6 @@ export type SurePool = {
           "type": "u16"
         },
         {
-          "name": "tickPos",
-          "type": "u64"
-        },
-        {
           "name": "amount",
           "type": "u64"
         }
@@ -258,7 +254,12 @@ export type SurePool = {
           "isSigner": true
         },
         {
-          "name": "nftAccount",
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityPositionNftAccount",
           "isMut": false,
           "isSigner": false
         },
@@ -273,17 +274,17 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "tokenAccount",
+          "name": "liquidityProviderAta",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "vault",
+          "name": "poolVault",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -298,13 +299,44 @@ export type SurePool = {
           "isSigner": false
         },
         {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initializeUserPoolInsuranceContract",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
           "name": "pool",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "poolInsuranceContractBitmap",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "tokenProgram",
-          "isMut": false,
+          "name": "poolInsuranceContractInfo",
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -334,48 +366,22 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "insuranceContract",
+          "name": "insuranceTickContract",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "insuranceContracts",
+          "name": "poolInsuranceContractInfo",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "initializeUserInsuranceContracts",
-      "accounts": [
-        {
-          "name": "signer",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "pool",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "insuranceContracts",
+          "name": "poolInsuranceContractBitmap",
           "isMut": true,
           "isSigner": false
         },
@@ -388,7 +394,7 @@ export type SurePool = {
       "args": []
     },
     {
-      "name": "buyInsuranceForTick",
+      "name": "updateInsuranceForTick",
       "accounts": [
         {
           "name": "buyer",
@@ -406,7 +412,7 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -416,7 +422,12 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "insuranceContract",
+          "name": "insuranceTickContract",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "poolInsuranceContractInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -433,17 +444,17 @@ export type SurePool = {
       ],
       "args": [
         {
-          "name": "insuredAmount",
+          "name": "newInsuredAmountOnTick",
           "type": "u64"
         },
         {
-          "name": "endTs",
+          "name": "newExpiryTs",
           "type": "i64"
         }
       ]
     },
     {
-      "name": "initializeTick",
+      "name": "initializePoolLiquidityTick",
       "accounts": [
         {
           "name": "creator",
@@ -451,7 +462,7 @@ export type SurePool = {
           "isSigner": true
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -477,7 +488,7 @@ export type SurePool = {
       ]
     },
     {
-      "name": "closeTick",
+      "name": "closePoolLiquidityTick",
       "accounts": [
         {
           "name": "recipient",
@@ -485,7 +496,7 @@ export type SurePool = {
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         }
@@ -533,22 +544,22 @@ export type SurePool = {
             "type": "u8"
           },
           {
-            "name": "endTime",
+            "name": "expiryTs",
             "type": "i64"
           },
           {
-            "name": "owner",
-            "type": "publicKey"
+            "name": "insuredAmount",
+            "type": "u64"
           },
           {
-            "name": "insuranceContracts",
+            "name": "owner",
             "type": "publicKey"
           }
         ]
       }
     },
     {
-      "name": "insuranceContract",
+      "name": "insuranceTickContract",
       "type": {
         "kind": "struct",
         "fields": [
@@ -589,7 +600,7 @@ export type SurePool = {
             "type": "publicKey"
           },
           {
-            "name": "tickAccount",
+            "name": "liquidityTickInfo",
             "type": "publicKey"
           },
           {
@@ -731,6 +742,10 @@ export type SurePool = {
             "type": "string"
           },
           {
+            "name": "tokenMint",
+            "type": "publicKey"
+          },
+          {
             "name": "insuranceFee",
             "type": "u16"
           },
@@ -743,12 +758,12 @@ export type SurePool = {
             "type": "u64"
           },
           {
-            "name": "bitmap",
-            "type": "publicKey"
-          },
-          {
             "name": "premiumRate",
             "type": "u64"
+          },
+          {
+            "name": "poolLiquidityTickBitmap",
+            "type": "publicKey"
           },
           {
             "name": "smartContract",
@@ -1058,12 +1073,12 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "surePools",
+          "name": "pools",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "insuredTokenAccount",
+          "name": "smartContract",
           "isMut": false,
           "isSigner": false
         },
@@ -1103,12 +1118,12 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "tokenMint",
+          "name": "poolVaultTokenMint",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "liquidityVault",
+          "name": "poolVault",
           "isMut": true,
           "isSigner": false
         },
@@ -1118,7 +1133,7 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "bitmap",
+          "name": "poolLiquidityTickBitmap",
           "isMut": true,
           "isSigner": false
         },
@@ -1154,7 +1169,7 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "liquidityProviderAccount",
+          "name": "liquidityProviderAta",
           "isMut": true,
           "isSigner": false
         },
@@ -1164,12 +1179,7 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "vault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "nftMint",
+          "name": "poolVault",
           "isMut": true,
           "isSigner": false
         },
@@ -1189,17 +1199,22 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "nftAccount",
+          "name": "liquidityPositionNftMint",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "bitmap",
+          "name": "liquidityPositionNftAccount",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "poolLiquidityTickBitmap",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -1230,10 +1245,6 @@ export const IDL: SurePool = {
           "type": "u16"
         },
         {
-          "name": "tickPos",
-          "type": "u64"
-        },
-        {
           "name": "amount",
           "type": "u64"
         }
@@ -1248,7 +1259,12 @@ export const IDL: SurePool = {
           "isSigner": true
         },
         {
-          "name": "nftAccount",
+          "name": "pool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityPositionNftAccount",
           "isMut": false,
           "isSigner": false
         },
@@ -1263,17 +1279,17 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "tokenAccount",
+          "name": "liquidityProviderAta",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "vault",
+          "name": "poolVault",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -1288,13 +1304,44 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initializeUserPoolInsuranceContract",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
           "name": "pool",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "poolInsuranceContractBitmap",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "tokenProgram",
-          "isMut": false,
+          "name": "poolInsuranceContractInfo",
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1324,48 +1371,22 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": false,
           "isSigner": false
         },
         {
-          "name": "insuranceContract",
+          "name": "insuranceTickContract",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "insuranceContracts",
+          "name": "poolInsuranceContractInfo",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "initializeUserInsuranceContracts",
-      "accounts": [
-        {
-          "name": "signer",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
-          "name": "pool",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "insuranceContracts",
+          "name": "poolInsuranceContractBitmap",
           "isMut": true,
           "isSigner": false
         },
@@ -1378,7 +1399,7 @@ export const IDL: SurePool = {
       "args": []
     },
     {
-      "name": "buyInsuranceForTick",
+      "name": "updateInsuranceForTick",
       "accounts": [
         {
           "name": "buyer",
@@ -1396,7 +1417,7 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -1406,7 +1427,12 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "insuranceContract",
+          "name": "insuranceTickContract",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "poolInsuranceContractInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -1423,17 +1449,17 @@ export const IDL: SurePool = {
       ],
       "args": [
         {
-          "name": "insuredAmount",
+          "name": "newInsuredAmountOnTick",
           "type": "u64"
         },
         {
-          "name": "endTs",
+          "name": "newExpiryTs",
           "type": "i64"
         }
       ]
     },
     {
-      "name": "initializeTick",
+      "name": "initializePoolLiquidityTick",
       "accounts": [
         {
           "name": "creator",
@@ -1441,7 +1467,7 @@ export const IDL: SurePool = {
           "isSigner": true
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         },
@@ -1467,7 +1493,7 @@ export const IDL: SurePool = {
       ]
     },
     {
-      "name": "closeTick",
+      "name": "closePoolLiquidityTick",
       "accounts": [
         {
           "name": "recipient",
@@ -1475,7 +1501,7 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
-          "name": "tickAccount",
+          "name": "liquidityTickInfo",
           "isMut": true,
           "isSigner": false
         }
@@ -1523,22 +1549,22 @@ export const IDL: SurePool = {
             "type": "u8"
           },
           {
-            "name": "endTime",
+            "name": "expiryTs",
             "type": "i64"
           },
           {
-            "name": "owner",
-            "type": "publicKey"
+            "name": "insuredAmount",
+            "type": "u64"
           },
           {
-            "name": "insuranceContracts",
+            "name": "owner",
             "type": "publicKey"
           }
         ]
       }
     },
     {
-      "name": "insuranceContract",
+      "name": "insuranceTickContract",
       "type": {
         "kind": "struct",
         "fields": [
@@ -1579,7 +1605,7 @@ export const IDL: SurePool = {
             "type": "publicKey"
           },
           {
-            "name": "tickAccount",
+            "name": "liquidityTickInfo",
             "type": "publicKey"
           },
           {
@@ -1721,6 +1747,10 @@ export const IDL: SurePool = {
             "type": "string"
           },
           {
+            "name": "tokenMint",
+            "type": "publicKey"
+          },
+          {
             "name": "insuranceFee",
             "type": "u16"
           },
@@ -1733,12 +1763,12 @@ export const IDL: SurePool = {
             "type": "u64"
           },
           {
-            "name": "bitmap",
-            "type": "publicKey"
-          },
-          {
             "name": "premiumRate",
             "type": "u64"
+          },
+          {
+            "name": "poolLiquidityTickBitmap",
+            "type": "publicKey"
           },
           {
             "name": "smartContract",

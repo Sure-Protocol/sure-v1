@@ -18,8 +18,11 @@ export const SURE_MP_METADATA_SEED = anchor.utils.bytes.utf8.encode('metadata');
 export const SURE_INSURANCE_CONTRACT = anchor.utils.bytes.utf8.encode(
 	'sure-insurance-contract'
 );
-export const SURE_INSURANCE_CONTRACTS = anchor.utils.bytes.utf8.encode(
-	'sure-insurance-contracts'
+export const SURE_INSURANCE_CONTRACTS_INFO = anchor.utils.bytes.utf8.encode(
+	'sure-insurance-contracts-info'
+);
+export const SURE_INSURANCE_CONTRACTS_BITMAP = anchor.utils.bytes.utf8.encode(
+	'sure-insurance-contracts-bitmap'
 );
 export const SURE_POOLS_SEED = anchor.utils.bytes.utf8.encode('sure-pools');
 

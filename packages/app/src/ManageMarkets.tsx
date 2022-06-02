@@ -1,8 +1,8 @@
 import { useContext } from 'react';
 import MainButton from './components/MainButton';
 import { css } from '@emotion/css';
-import { useForm } from 'react-hook-form';
-import { SurePoolProgramContext } from './context/surePool';
+import { FieldValue, FieldValues, useForm } from 'react-hook-form';
+import { useSureSdk } from './context/sureSdk';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 
@@ -14,7 +14,7 @@ interface CreateMarkets {
 }
 
 export const ManageMarkets = () => {
-	const sureProgram = useContext(SurePoolProgramContext);
+	const sureProgram = useSureSdk();
 	const wallet = useWallet();
 	console.log('sureProgram ', sureProgram);
 	const {
@@ -22,11 +22,11 @@ export const ManageMarkets = () => {
 		handleSubmit,
 		formState: { errors },
 	} = useForm();
-	const onSubmit = async (data: CreateMarkets) => {
+	const onSubmit = handleSubmit(async (data) => {
 		console.log('Lets go ', data);
 		const programIdPK = new PublicKey(data.programId);
 		await sureProgram?.pool.createPool(programIdPK, 0);
-	};
+	});
 
 	return (
 		<div className="action-container">
@@ -36,7 +36,7 @@ export const ManageMarkets = () => {
 						display: flex;
 						flex-direction: column;
 					`}
-					onSubmit={handleSubmit(onSubmit)}
+					onSubmit={onSubmit}
 				>
 					<p>Create new Sure market</p>
 					<input {...register('protocolnNme')} placeholder="Protocol Name " />

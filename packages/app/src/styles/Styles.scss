@@ -72,6 +72,7 @@ h1,h2,h3,h4,h5{
 }
 
 .p{
+    font-family: 'arvo';
     &--margin-0{
         margin: 0;
     }
@@ -115,3 +116,32 @@ h1,h2,h3,h4,h5{
     }
 }
 
+.a{
+    &--no-highlight{
+        color: $sure-text-grey;
+    }
+}
+
+.button{
+    &--round{
+        background-color: transparent;
+        color: $sure-pink;
+        cursor: pointer;
+        width: 30px;
+        height: 30px;
+
+        border-radius: 0 20% 0 0;
+        border-width: 1px;
+        border-color: transparent;
+        padding: 5px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+            background-color: $sure-pink;
+            color: $sure-white;
+        }
+    }
+}

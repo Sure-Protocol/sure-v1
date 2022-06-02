@@ -10,6 +10,8 @@ use std::{error::Error, fmt::Display, fmt::Formatter, result::Result};
 
 pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: usize = 255;
 pub const SECONDS_IN_A_YEAR: usize = 31556926;
+
+
 /// Tick acount (PDA) is used to hold information about
 /// the liquidity at a current tick
 /// Token mint:
