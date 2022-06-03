@@ -56,11 +56,19 @@ export class Bitmap {
 	}
 
 	getLowestTick(): number {
-		return this.getTickFromBit(this.getLowestBit());
+		const lowestBit = this.getLowestBit();
+		if (lowestBit === -1) {
+			return -1;
+		}
+		return this.getTickFromBit(lowestBit);
 	}
 
 	getHighestTick(): number {
-		return this.getTickFromBit(this.getHighestBit());
+		const highestBit = this.getHighestBit();
+		if (highestBit === -1) {
+			return -1;
+		}
+		return this.getTickFromBit(highestBit);
 	}
 
 	getNextTick(tick: number): number {

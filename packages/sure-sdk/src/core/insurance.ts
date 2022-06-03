@@ -415,22 +415,31 @@ export class Insurance extends Common {
 			const [poolInsuranceContractInfoPDA, poolInsuranceContractBitmapPDA] =
 				await this.getOrCreateUserPoolInsuranceContract(pool, tokenMint);
 
-			const poolInsuranceContract = await this.program.account.bitMap.fetch(
-				poolInsuranceContractBitmapPDA
-			);
-			const poolInsuranceContractBitmap = Bitmap.new(poolInsuranceContract);
-
 			if (newInsuredAmountBN.gte(insuredAmount)) {
+				const tickAccountPDA = await this.getPoolLiquidityTickBitmapPDA(
+					pool,
+					tokenMint
+				);
+				const tickAccount = await this.program.account.bitMap.fetch(
+					tickAccountPDA
+				);
+				const tickAccountBitmap = Bitmap.new(tickAccount);
+
 				amountChange = newInsuredAmountBN.sub(insuredAmount);
 				await this.increaseInsurancePosition(
 					pool,
 					tokenMint,
 					amountChange,
-					poolInsuranceContractBitmap,
+					tickAccountBitmap,
 					endTimestamp
 				);
 			} else {
 				amountChange = insuredAmount.sub(newInsuredAmountBN);
+
+				const poolInsuranceContract = await this.program.account.bitMap.fetch(
+					poolInsuranceContractBitmapPDA
+				);
+				const poolInsuranceContractBitmap = Bitmap.new(poolInsuranceContract);
 				await this.reduceInsurancePositon(
 					pool,
 					tokenMint,

@@ -1,7 +1,9 @@
 import * as anchor from '@project-serum/anchor';
 import {
 	ASSOCIATED_TOKEN_PROGRAM_ID,
+	createAssociatedTokenAccount,
 	getAccount,
+	getOrCreateAssociatedTokenAccount,
 	TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 
@@ -20,6 +22,7 @@ import {
 import { Program } from '@project-serum/anchor';
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
+import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
 export class Liquidity extends Common {
 	constructor(
@@ -98,8 +101,6 @@ export class Liquidity extends Common {
 	 * @return Nothing
 	 */
 	depositLiquidity = async (
-		liquidityProvider: PublicKey,
-		liquidityProviderATA: PublicKey,
 		protocolToInsure: PublicKey,
 		tokenMint: PublicKey,
 		liquidityAmount: number,
@@ -112,6 +113,13 @@ export class Liquidity extends Common {
 		} catch (err) {
 			throw new Error('Pool does not exist. Cause: ' + err);
 		}
+
+		const liquidityProviderAtaAccount = await getOrCreateAssociatedTokenAccount(
+			this.connection,
+			(this.wallet as NodeWallet).payer,
+			tokenMint,
+			this.wallet.publicKey
+		);
 
 		// Protocol Owner
 		let [protocolOwnerPDA, _] = await this.getProtocolOwner();
@@ -130,13 +138,13 @@ export class Liquidity extends Common {
 		}
 
 		// Get tick account
-		const liquidityTickInfo = await this.getOrCreateLiquidityTickInfo(
+		const liquidityTickInfoPDA = await this.getOrCreateLiquidityTickInfo(
 			poolPDA,
 			tokenMint,
 			tick
 		);
 		try {
-			await this.program.account.tick.fetch(liquidityTickInfo);
+			await this.program.account.tick.getAccountInfo(liquidityTickInfoPDA);
 		} catch (err) {
 			throw new Error(
 				'Liquidity Tick Info account does not exist. Cause: ' + err
@@ -153,15 +161,17 @@ export class Liquidity extends Common {
 		const nextTickPositionBN = new anchor.BN(tickPosition + 1);
 
 		// Generate nft accounts
-		const nftAccount = await this.getLiquidityPositionTokenAccountPDA(
+		const nftAccountPDA = await this.getLiquidityPositionTokenAccountPDA(
 			poolPDA,
 			poolVaultPDA,
 			tickBN,
 			nextTickPositionBN
 		);
-		const nftMint = await this.getLiquidityPositionMintPDA(nftAccount);
+		const nftMint = await this.getLiquidityPositionMintPDA(nftAccountPDA);
 
-		let liquidityPositionPDA = await this.getLiquidityPositionPDA(nftAccount);
+		let liquidityPositionPDA = await this.getLiquidityPositionPDA(
+			nftAccountPDA
+		);
 
 		// Get bitmap
 		const poolLiquidityTickBitmapPDA = await this.getPoolLiquidityTickBitmapPDA(
@@ -180,20 +190,20 @@ export class Liquidity extends Common {
 		try {
 			const amountBN = new anchor.BN(liquidityAmount);
 			await this.program.methods
-				.depositLiquidity(tick, amountBN)
+				.depositLiquidity(tick, nextTickPositionBN, amountBN)
 				.accounts({
-					liquidityProvider: liquidityProvider,
+					liquidityProvider: this.wallet.publicKey,
 					protocolOwner: protocolOwnerPDA,
-					liquidityProviderAta: liquidityProviderATA,
+					liquidityProviderAta: liquidityProviderAtaAccount.address,
 					pool: poolPDA,
-					poolVault: poolPDA,
+					poolVault: poolVaultPDA,
+					liquidityPosition: liquidityPositionPDA,
 					liquidityPositionNftMint: nftMint,
 					metadataAccount: mpMetadataAccountPDA,
 					metadataProgram: mp.PROGRAM_ID,
-					liquidityPosition: liquidityPositionPDA,
-					liquidityPositionNftAccount: nftAccount,
+					liquidityPositionNftAccount: nftAccountPDA,
 					poolLiquidityTickBitmap: poolLiquidityTickBitmapPDA,
-					liquidityTickInfo: liquidityTickInfo,
+					liquidityTickInfo: liquidityTickInfoPDA,
 					rent: anchor.web3.SYSVAR_RENT_PUBKEY,
 					tokenProgram: TOKEN_PROGRAM_ID,
 					systemProgram: SystemProgram.programId,
@@ -202,7 +212,10 @@ export class Liquidity extends Common {
 				.rpc();
 		} catch (e) {
 			console.log(e?.logs);
-			throw new Error('sure.error! Could not deposit liqudity. Cause: ' + e);
+			throw new Error(
+				'sure.liquidity.depositLiquidity.error. Could not deposit liqudity. Cause: ' +
+					e
+			);
 		}
 	};
 

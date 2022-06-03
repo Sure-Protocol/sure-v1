@@ -240,6 +240,10 @@
           "type": "u16"
         },
         {
+          "name": "tickPos",
+          "type": "u64"
+        },
+        {
           "name": "amount",
           "type": "u64"
         }

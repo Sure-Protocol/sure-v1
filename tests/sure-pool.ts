@@ -279,8 +279,6 @@ describe('Initialize Sure Pool', () => {
 
 			try {
 				await sureSdk.liquidity.depositLiquidity(
-					wallet.publicKey,
-					walletATAPubkey,
 					protcolToInsure0.publicKey,
 					tokenMint,
 					amount.convertToDecimals(),
@@ -306,7 +304,11 @@ describe('Initialize Sure Pool', () => {
 				tokenMint,
 				tick
 			);
-			const tickAccount = await program.account.tick.fetch(tickAccountPDA);
+			try {
+				const tickAccount = await program.account.tick.fetch(tickAccountPDA);
+			} catch (err) {
+				throw new Error('sure.test.depositLiquidity.error. Cause: ' + err);
+			}
 
 			const nftAccountPDA =
 				await sureSdk.liquidity.getLiquidityPositionTokenAccountPDA(
@@ -315,11 +317,20 @@ describe('Initialize Sure Pool', () => {
 					new anchor.BN(tick),
 					new anchor.BN(tickPosition)
 				);
-			let nftAccount = await getAccount(connection, nftAccountPDA);
-			assert.equal(nftAccount.amount, 1);
+			let nftAccount;
+			try {
+				nftAccount = await getAccount(connection, nftAccountPDA);
+				assert.equal(nftAccount.amount, 1);
+			} catch (err) {
+				throw new Error(
+					'sure.test.depositLiquidity.error. NFT account.  Cause: ' + err
+				);
+			}
+
 			/// Get liquidity position
 			const liquidityPositionPDA =
 				await sureSdk.liquidity.getLiquidityPositionPDA(nftAccountPDA);
+
 			let liquidityPosition = await program.account.liquidityPosition.fetch(
 				liquidityPositionPDA
 			);
@@ -361,8 +372,6 @@ describe('Initialize Sure Pool', () => {
 		// deposit liquidity
 		try {
 			await sureSdk.liquidity.depositLiquidity(
-				wallet.publicKey,
-				walletATAPubkey,
 				protcolToInsure0.publicKey,
 				tokenMint,
 				liquidity.convertToDecimals(),
@@ -374,8 +383,6 @@ describe('Initialize Sure Pool', () => {
 
 		try {
 			await sureSdk.liquidity.depositLiquidity(
-				wallet.publicKey,
-				walletATAPubkey,
 				protcolToInsure0.publicKey,
 				tokenMint,
 				liquidity.setAmount(1000).convertToDecimals(),
@@ -398,11 +405,13 @@ describe('Initialize Sure Pool', () => {
 			contractExpiryInSeconds
 		);
 		const userInsuranceContractsPDA =
-			await sureSdk.insurance.getInsurancePoolContractsPDA(poolPDA, tokenMint);
-		const userInsuranceContracts =
-			await program.account.insuranceTickContract.fetch(
-				userInsuranceContractsPDA
+			await sureSdk.insurance.getPoolInsuranceContractBitmapPDA(
+				poolPDA,
+				tokenMint
 			);
+		const userInsuranceContracts = await program.account.bitMap.fetch(
+			userInsuranceContractsPDA
+		);
 		console.log('userInsuranceContracts: ', userInsuranceContracts);
 		// Check the user positions
 		console.log('Buy insurance > getInsured amount');

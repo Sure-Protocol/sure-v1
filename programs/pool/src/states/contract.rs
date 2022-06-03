@@ -35,11 +35,11 @@ pub struct PoolInsuranceContract {
     pub insured_amount: u64, // 8 byte
 
     /// Owner of contract
-    pub owner: Pubkey, // 8 byte
+    pub owner: Pubkey, // 32 byte
 }
 
 impl PoolInsuranceContract{
-    pub const SPACE: usize = 1 + 8 + 8;
+    pub const SPACE: usize = 1 + 8 + 8 + 32;
 }
 
 /// --- Insurance Contract -- 

@@ -240,6 +240,10 @@ export type SurePool = {
           "type": "u16"
         },
         {
+          "name": "tickPos",
+          "type": "u64"
+        },
+        {
           "name": "amount",
           "type": "u64"
         }
@@ -1243,6 +1247,10 @@ export const IDL: SurePool = {
         {
           "name": "tick",
           "type": "u16"
+        },
+        {
+          "name": "tickPos",
+          "type": "u64"
         },
         {
           "name": "amount",

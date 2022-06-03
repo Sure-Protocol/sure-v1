@@ -1,8 +1,5 @@
-use std::thread::AccessError;
 
 use anchor_lang::{prelude::*, solana_program::account_info::Account};
-use anchor_spl::token::TokenAccount;
-use crate::BitMap;
 
 /// Account describing the pool manager
 ///
@@ -74,7 +71,7 @@ pub struct PoolAccount {
 }
 
 impl PoolAccount {
-    pub const SPACE: usize = 1 + 4 + 200 + 4 + 32 + 8 + 8  + 8 + 32 + 32 + 1;
+    pub const SPACE: usize = 1 + 4 + 200 + 32 + 4 + 8 + 8  + 8 + 32 + 32 + 1;
 }
 
 #[event]

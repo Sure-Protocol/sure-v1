@@ -175,6 +175,7 @@ pub mod sure_pool {
     pub fn deposit_liquidity(
         ctx: Context<DepositLiquidity>,
         tick: u16,
+        tick_pos: u64,
         amount: u64,
     ) -> Result<()> {
         // ___________________ Validation ____________________________
@@ -212,7 +213,6 @@ pub mod sure_pool {
 
         // Add metadata to nft in order to represent position
         let create_metadata_accounts_ix = create_metadata_accounts_v2(
-            /// TODO: Find correct metadata id
             ctx.accounts.metadata_program.key(),
             ctx.accounts.metadata_account.key(),
             ctx.accounts.liquidity_position_nft_mint.key(),
@@ -236,6 +236,7 @@ pub mod sure_pool {
 
         // Protocol owner signs the transaction with seeds
         // and bump
+       
         solana_program::program::invoke_signed(
             &create_metadata_accounts_ix,
             &[
@@ -304,7 +305,6 @@ pub mod sure_pool {
             tick: tick,
             liquidity: amount
         });
-        //require!(true == false, SureError::InvalidAmount);
         Ok(())
     }
 
@@ -431,12 +431,12 @@ pub mod sure_pool {
         let current_time = Clock::get()?.unix_timestamp;
        
         // Initialize the insurance contract overview
-        pool_insurance_contract_info.bump = unwrap_bump!(ctx, "insurance_contracts");
-        pool_insurance_contract_info.bump = *ctx.bumps.get("insurance_contracts").unwrap();
+        pool_insurance_contract_info.bump = unwrap_bump!(ctx, "pool_insurance_contract_info");
         pool_insurance_contract_info.expiry_ts = current_time;
         pool_insurance_contract_info.insured_amount=0;
         pool_insurance_contract_info.owner = ctx.accounts.signer.key();
 
+        pool_insurance_contract_bitmap.bump = unwrap_bump!(ctx, "pool_insurance_contract_bitmap");
         pool_insurance_contract_bitmap.spacing = 10;
         pool_insurance_contract_bitmap.word = [0; 4];
 
@@ -470,7 +470,7 @@ pub mod sure_pool {
         // Initialize insurance_contract
         insurance_tick_contract.insured_amount = 0;
         insurance_tick_contract.premium = 0;
-        insurance_tick_contract.bump = *ctx.bumps.get("insurance_contract").unwrap();
+        insurance_tick_contract.bump = *ctx.bumps.get("insurance_tick_contract").unwrap();
         insurance_tick_contract.pool = ctx.accounts.pool.key();
         insurance_tick_contract.liquidity_tick_info = ctx.accounts.liquidity_tick_info.key();
         insurance_tick_contract.token_mint = ctx.accounts.token_mint.key();
