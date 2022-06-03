@@ -50,6 +50,27 @@ export type SurePool = {
       "args": []
     },
     {
+      "name": "initializePolicyHolder",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "insuranceContracts",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "createPool",
       "accounts": [
         {
@@ -334,6 +355,11 @@ export type SurePool = {
           "isSigner": false
         },
         {
+          "name": "insuranceContracts",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "poolInsuranceContractBitmap",
           "isMut": true,
           "isSigner": false
@@ -539,6 +565,28 @@ export type SurePool = {
       }
     },
     {
+      "name": "insuranceContracts",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "pools",
+            "type": {
+              "vec": "publicKey"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "poolInsuranceContract",
       "type": {
         "kind": "struct",
@@ -554,6 +602,10 @@ export type SurePool = {
           {
             "name": "insuredAmount",
             "type": "u64"
+          },
+          {
+            "name": "tokenMint",
+            "type": "publicKey"
           },
           {
             "name": "owner",
@@ -939,6 +991,16 @@ export type SurePool = {
       ]
     },
     {
+      "name": "InitializePolicyHolderEvent",
+      "fields": [
+        {
+          "name": "owner",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
       "name": "NewLiquidityPosition",
       "fields": [
         {
@@ -969,7 +1031,7 @@ export type SurePool = {
       ]
     },
     {
-      "name": "InitializedPool",
+      "name": "CreatePool",
       "fields": [
         {
           "name": "name",
@@ -979,6 +1041,11 @@ export type SurePool = {
         {
           "name": "smartContract",
           "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "insuranceFee",
+          "type": "u16",
           "index": false
         }
       ]
@@ -1059,6 +1126,27 @@ export const IDL: SurePool = {
       "args": []
     },
     {
+      "name": "initializePolicyHolder",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "insuranceContracts",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "createPool",
       "accounts": [
         {
@@ -1343,6 +1431,11 @@ export const IDL: SurePool = {
           "isSigner": false
         },
         {
+          "name": "insuranceContracts",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "poolInsuranceContractBitmap",
           "isMut": true,
           "isSigner": false
@@ -1548,6 +1641,28 @@ export const IDL: SurePool = {
       }
     },
     {
+      "name": "insuranceContracts",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "pools",
+            "type": {
+              "vec": "publicKey"
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "poolInsuranceContract",
       "type": {
         "kind": "struct",
@@ -1563,6 +1678,10 @@ export const IDL: SurePool = {
           {
             "name": "insuredAmount",
             "type": "u64"
+          },
+          {
+            "name": "tokenMint",
+            "type": "publicKey"
           },
           {
             "name": "owner",
@@ -1948,6 +2067,16 @@ export const IDL: SurePool = {
       ]
     },
     {
+      "name": "InitializePolicyHolderEvent",
+      "fields": [
+        {
+          "name": "owner",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
       "name": "NewLiquidityPosition",
       "fields": [
         {
@@ -1978,7 +2107,7 @@ export const IDL: SurePool = {
       ]
     },
     {
-      "name": "InitializedPool",
+      "name": "CreatePool",
       "fields": [
         {
           "name": "name",
@@ -1988,6 +2117,11 @@ export const IDL: SurePool = {
         {
           "name": "smartContract",
           "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "insuranceFee",
+          "type": "u16",
           "index": false
         }
       ]

@@ -4,8 +4,6 @@ import * as anchor from '@project-serum/anchor';
 import { PROGRAM_ID, PROGRAM_ID_STR } from '../utils/constants';
 import React, { useContext, useEffect, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey } from '@solana/web3.js';
-import { NodeWallet } from '@metaplex/js';
 
 export const SureSdkContext = React.createContext<undefined | SureSdk>(
 	undefined

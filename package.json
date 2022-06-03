@@ -21,6 +21,7 @@
 	"scripts": {
 		"lerna:bootstrap": "lerna bootstrap",
 		"build": "lerna run build",
+		"init:sure": "lerna run initialize",
 		"watch": "lerna run --parallel watch"
 	},
 	"workspaces": [

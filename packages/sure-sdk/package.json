@@ -1,6 +1,6 @@
 {
 	"name": "@sure/sdk",
-	"version": "0.0.10",
+	"version": "0.0.1",
 	"description": "Sure Protocol SDK",
 	"packageManager": "yarn@3.2.0",
 	"main": "./dist/cjs/index.js",

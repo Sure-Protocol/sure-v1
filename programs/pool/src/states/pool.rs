@@ -27,7 +27,7 @@ pub struct SurePools {
 }
 
 impl SurePools {
-    pub const SIZE: usize = 1 + 4 + 32 * 256;
+    pub const SPACE: usize = 1 + 4 + 32 * 256;
 }
 
 /// Pool Account (PDA) contains information describing the
@@ -75,10 +75,11 @@ impl PoolAccount {
 }
 
 #[event]
-pub struct InitializedPool {
+pub struct CreatePool {
     #[index]
     pub name: String,
     pub smart_contract: Pubkey,
+    pub insurance_fee: u16,
 }
 
 #[event]

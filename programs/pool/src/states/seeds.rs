@@ -7,6 +7,7 @@ pub const SURE_VAULT_POOL_SEED: &str = "sure-liquidity-vault";
 pub const SURE_LIQUIDITY_POSITION: &str = "sure-lp";
 pub const SURE_PROTOCOL_OWNER: &str = "sure-protocol-owner";
 pub const SURE_INSURANCE_CONTRACT: &str = "sure-insurance-contract";
+pub const SURE_INSURANCE_CONTRACTS: &str = "sure-insurance-contracts";
 pub const SURE_INSURANCE_CONTRACTS_BITMAP: &str = "sure-insurance-contracts-bitmap";
 pub const SURE_INSURANCE_CONTRACTS_INFO: &str = "sure-insurance-contracts-info";
 pub const SURE_BITMAP: &str = "sure-bitmap";

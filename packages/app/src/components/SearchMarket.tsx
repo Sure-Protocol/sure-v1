@@ -1,14 +1,15 @@
 import { css, cx } from '@emotion/css';
-import { SurePool, useSurePools } from '../context/surePools';
+import { PoolAccount } from '@sure/sdk';
+import { useSurePools } from '../context/surePools';
 import { explorerLink } from '../utils/links';
 import { prettyPublicKey } from '../utils/publickey';
 import { theme } from './Themes';
 
 interface MarketListProps {
-	surePools: SurePool[];
+	surePools: PoolAccount[];
 }
 
-const MarketListItem: React.FunctionComponent<{ surePool: SurePool }> = ({
+const MarketListItem: React.FunctionComponent<{ surePool: PoolAccount }> = ({
 	surePool,
 }) => {
 	return (
@@ -46,7 +47,7 @@ const MarketListItem: React.FunctionComponent<{ surePool: SurePool }> = ({
 				`}
 			>
 				<p className="p--small p--margin-0">{`Liquidity: ${surePool.liquidity.toString()}`}</p>
-				<p className="p--small p--margin-0">{`Premium: ${2.5}%`}</p>
+				<p className="p--small p--margin-0">{`Premium: ${surePool.premiumRate}%`}</p>
 			</div>
 		</button>
 	);

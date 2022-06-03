@@ -1,6 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
+import { PoolAccount } from 'src/types';
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
 import { SURE_POOL_MANAGER_SEED } from './seeds';
@@ -22,11 +23,38 @@ export class Pool extends Common {
 		return managerPDA;
 	}
 
+	/**
+	 * Get All Sure Pools
+	 *
+	 * Find all available pools
+	 *
+	 * @returns Pool accounts
+	 */
+	async getPools(): Promise<PoolAccount[]> {
+		const surePools = await this.getSurePoolsPDA();
+		const pools = await this.program.account.surePools.fetch(surePools);
+		const poolAccounts: PoolAccount[] = [];
+		for (const poolPDA of pools.pools) {
+			const pool = await this.program.account.poolAccount.fetch(poolPDA);
+			poolAccounts.push({
+				name: pool.name,
+				tokenMint: pool.tokenMint,
+				insuranceFee: pool.insuranceFee,
+				liquidity: pool.liquidity,
+				usedLiquidity: pool.usedLiquidity,
+				premiumRate: pool.premiumRate,
+				smartContract: pool.smartContract,
+				locked: pool.locked,
+			});
+		}
+
+		return poolAccounts;
+	}
+
 	async createPool(
-		tokenMint: PublicKey,
 		smartContractAddress: PublicKey,
 		insuranceFee: number,
-		name?: string
+		name: string
 	) {
 		const [protocolOwnerPDA, protocolOwnerBump] = await this.getProtocolOwner();
 		const poolPDA = await this.getPoolPDA(smartContractAddress);
@@ -34,7 +62,7 @@ export class Pool extends Common {
 
 		try {
 			await this.program.methods
-				.createPool(insuranceFee, name ? name : 'sure-untitled')
+				.createPool(insuranceFee, name)
 				.accounts({
 					poolCreator: this.wallet.publicKey,
 					protocolOwner: protocolOwnerPDA,

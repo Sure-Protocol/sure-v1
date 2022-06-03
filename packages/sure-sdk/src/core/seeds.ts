@@ -15,6 +15,9 @@ export const SURE_NFT_MINT_SEED = anchor.utils.bytes.utf8.encode('sure-nft');
 export const SURE_TOKEN_ACCOUNT_SEED =
 	anchor.utils.bytes.utf8.encode('sure-token-account');
 export const SURE_MP_METADATA_SEED = anchor.utils.bytes.utf8.encode('metadata');
+export const SURE_INSURANCE_CONTRACTS = anchor.utils.bytes.utf8.encode(
+	'sure-insurance-contracts'
+);
 export const SURE_INSURANCE_CONTRACT = anchor.utils.bytes.utf8.encode(
 	'sure-insurance-contract'
 );
@@ -28,3 +31,7 @@ export const SURE_POOLS_SEED = anchor.utils.bytes.utf8.encode('sure-pools');
 
 export const SURE_POOL_MANAGER_SEED =
 	anchor.utils.bytes.utf8.encode('sure-pool-manager');
+
+export const SURE_PROTOCOL_OWNER = anchor.utils.bytes.utf8.encode(
+	'sure-protocol-owner'
+);

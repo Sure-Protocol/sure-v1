@@ -31,7 +31,6 @@ pub const SURE_NFT_MINT_SEED: &str = "sure-nft";
 pub const SURE_TOKEN_ACCOUNT_SEED: &str = "sure-token-account";
 pub const SURE_MP_METADATA_SEED: &str = "metadata";
 pub const SURE_POOLS_SEED: &str = "sure-pools";
-
 /// Initialize Sure Protocol
 /// by setting the owner of the protocol
 #[derive(Accounts)]
@@ -43,7 +42,7 @@ pub struct InitializeProtocol<'info> {
     ///
     #[account(
         init,
-        seeds=[],
+        seeds=[SURE_PROTOCOL_OWNER.as_bytes()],
         bump,
         payer = owner,
         space = 8 + ProtocolOwner::SPACE,
@@ -55,7 +54,7 @@ pub struct InitializeProtocol<'info> {
     #[account(
         init,
         payer = owner,
-        space = SurePools::SIZE,
+        space = 8 + SurePools::SPACE,
         seeds = [
             SURE_POOLS_SEED.as_bytes(),
         ],

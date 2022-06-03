@@ -17,11 +17,10 @@ use anchor_spl::{
 
 use vipers::{assert_is_ata, prelude::*};
 
-// Liquidity Position holds information about a given
-/// token position
-/// Each token position references an NFT mint
+/// -- Liquidity Position --
+/// 
+/// Holds information about liquidity at a given tick
 ///
-/// At each tick liquidity
 #[account]
 #[derive(Default)]
 pub struct LiquidityPosition {

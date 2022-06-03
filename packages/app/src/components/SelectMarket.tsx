@@ -3,9 +3,11 @@ import { css } from '@emotion/css';
 import { theme } from './Themes';
 import SearchMarket from './SearchMarket';
 import { useState } from 'react';
+import { useTokens } from '../context/tokens';
 
 export const SelectMarket = () => {
 	const [showPools, toggleMarket] = useState(false);
+	const tokens = useTokens();
 	return (
 		<div>
 			<div
@@ -84,7 +86,7 @@ export const SelectMarket = () => {
 					<p className="p--margin-0">USDC</p>
 				</button>
 			</div>
-			{showPools && <SearchMarket />}
+			{showPools && <SearchMarket toggle={() => toggleMarket(false)} />}
 		</div>
 	);
 };

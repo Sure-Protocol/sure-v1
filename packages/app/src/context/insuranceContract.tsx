@@ -1,8 +1,10 @@
 import * as anchor from '@project-serum/anchor';
 import { token } from '@project-serum/anchor/dist/cjs/utils';
 import { PublicKey } from '@solana/web3.js';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { useSureSdk } from './sureSdk';
+import * as sureSDK from '@sure/sdk';
+import { PoolAccount } from '@sure/sdk';
 
 interface InsuranceContractData {
 	iconUrl: string;
@@ -19,7 +21,7 @@ interface InsuranceContract {
 	contract: InsuranceContractData;
 	setInsuranceContract: () => void;
 }
-const InsuranceContractContext = createContext<InsuranceContract | undefined>(
+const InsuranceContractContext = createContext<PoolAccount | undefined>(
 	undefined
 );
 
@@ -28,16 +30,15 @@ export const InsuranceContractProvider: React.FunctionComponent<{
 }> = ({ children }) => {
 	const [insuranceContract, setInsuranceContract] = useState(undefined);
 	const sureSdk = useSureSdk();
-	const updateInsuranceContract = (pool: PublicKey, tokenMint: PublicKey) => {
-		
-        const insuredAmount = await sureSdk?.insurance.getInsuredAmount(
-			pool,
-			tokenMint
-		);
-        const contractExpiry = await sureSdk?.insurance.
-        const contractExpiry = sureSdk?.insurance.
 
+	const setInsuranceContract = async (
+		pool: PoolAccount
+	): Promise<sureSDK.InsuranceContractsInfo> => {
+		sureSdk?.insurance.get;
 	};
+
+	useEffect(() => {}, []);
+
 	return (
 		<InsuranceContractContext.Provider value={insuranceContract}>
 			{children}

@@ -6,6 +6,7 @@ import {
 	SURE_INSURANCE_CONTRACTS_BITMAP,
 	SURE_INSURANCE_CONTRACTS_INFO,
 	SURE_INSURANCE_CONTRACT,
+	SURE_INSURANCE_CONTRACTS,
 } from './seeds';
 
 import { Bitmap, BitmapType } from '../utils/bitmap';
@@ -18,7 +19,8 @@ import { BN, min } from 'bn.js';
 
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
-import { liquidity } from '.';
+import { liquidity, pool } from '.';
+import { InsuranceContractsInfo } from 'src/types';
 
 export class Insurance extends Common {
 	constructor(
@@ -90,6 +92,94 @@ export class Insurance extends Common {
 				this.program.programId
 			);
 		return poolInsuranceContractInfoPDA;
+	}
+
+	/**
+	 * Get Insurance Contracts PDA
+	 *
+	 * Method gets the PDA for the insurance contract held by
+	 * a user/policy holder
+	 */
+	async getInsuranceContractsPDA(): Promise<PublicKey> {
+		const [insuranceContractsPDA, insuranceContractsBump] =
+			await PublicKey.findProgramAddress(
+				[SURE_INSURANCE_CONTRACTS, this.wallet.publicKey.toBytes()],
+				this.program.programId
+			);
+		return insuranceContractsPDA;
+	}
+
+	/**
+	 * Create a New Policy Holder
+	 * The insurance contract holds information about the positions
+	 * in a given pool
+	 *
+	 * @param pool: The pool to buy insurance from. Ex: Ray - USDC
+	 * @param tokenMint: The mint for the token used in the pool
+	 *
+	 */
+	async createPolicyHolder(): Promise<PublicKey> {
+		try {
+			const insuranceContractsPDA = await this.getInsuranceContractsPDA();
+			await this.program.methods
+				.initializePolicyHolder()
+				.accounts({
+					signer: this.wallet.publicKey,
+					insuranceContracts: insuranceContractsPDA,
+					systemProgram: SystemProgram.programId,
+				})
+				.rpc();
+			return insuranceContractsPDA;
+		} catch (err) {
+			throw new Error(
+				'sure-sdk.insurance.createPolicyHolder.error. Cause: ' + err
+			);
+		}
+	}
+
+	/**
+	 * Create insurance contract for given POOL
+	 * The insurance contract holds information about the positions
+	 * in a given pool
+	 *
+	 * @param pool: The pool to buy insurance from. Ex: Ray - USDC
+	 * @param tokenMint: The mint for the token used in the pool
+	 *
+	 */
+	async createUserPoolInsuranceContract(
+		pool: PublicKey,
+		tokenMint: PublicKey
+	): Promise<
+		[
+			poolInsuranceContractInfo: PublicKey,
+			poolInsuranceContractBitmap: PublicKey
+		]
+	> {
+		try {
+			const poolInsuranceContractBitmapPDA =
+				await this.getPoolInsuranceContractBitmapPDA(pool, tokenMint);
+			const poolInsuranceContractInfoPDA =
+				await this.getPoolInsuranceContractInfoPDA(pool, tokenMint);
+			const insuranceContracts = await this.getInsuranceContractsPDA();
+			await this.program.methods
+				.initializeUserPoolInsuranceContract()
+				.accounts({
+					signer: this.wallet.publicKey,
+					pool: pool,
+					tokenMint: tokenMint,
+					insuranceContracts: insuranceContracts,
+					poolInsuranceContractBitmap: poolInsuranceContractBitmapPDA,
+					poolInsuranceContractInfo: poolInsuranceContractInfoPDA,
+					systemProgram: SystemProgram.programId,
+				})
+				.rpc();
+
+			return [poolInsuranceContractInfoPDA, poolInsuranceContractBitmapPDA];
+		} catch (err) {
+			throw new Error(
+				'Could not initialize Pool Insurance Contracts. Cause: ' + err
+			);
+		}
 	}
 
 	/**
@@ -324,38 +414,31 @@ export class Insurance extends Common {
 		}
 	}
 
-	async createUserPoolInsuranceContract(
+	/**
+	 * Get Pool Insurance Contracts Info
+	 *
+	 * Get information about a user's insurance positions in a given
+	 * pool for a given mint.
+	 *
+	 * @param pool<publickey>: Pool
+	 * @param tokenMint<publickey>: mint of the deposited token
+	 *
+	 * @returns InsuranceContractsInfo
+	 */
+	async getPoolInsuranceContractsInfo(
 		pool: PublicKey,
 		tokenMint: PublicKey
-	): Promise<
-		[
-			poolInsuranceContractInfo: PublicKey,
-			poolInsuranceContractBitmap: PublicKey
-		]
-	> {
-		try {
-			const poolInsuranceContractBitmapPDA =
-				await this.getPoolInsuranceContractBitmapPDA(pool, tokenMint);
-			const poolInsuranceContractInfoPDA =
-				await this.getPoolInsuranceContractInfoPDA(pool, tokenMint);
-			await this.program.methods
-				.initializeUserPoolInsuranceContract()
-				.accounts({
-					signer: this.wallet.publicKey,
-					pool: pool,
-					tokenMint: tokenMint,
-					poolInsuranceContractBitmap: poolInsuranceContractBitmapPDA,
-					poolInsuranceContractInfo: poolInsuranceContractInfoPDA,
-					systemProgram: SystemProgram.programId,
-				})
-				.rpc();
-
-			return [poolInsuranceContractInfoPDA, poolInsuranceContractBitmapPDA];
-		} catch (err) {
-			throw new Error(
-				'Could not initialize Insurance Contracts. Cause: ' + err
+	): Promise<InsuranceContractsInfo> {
+		const insuranceContractsInfoPDA =
+			await this.getPoolInsuranceContractInfoPDA(pool, tokenMint);
+		const insuranceContractsInfo =
+			await this.program.account.poolInsuranceContract.fetch(
+				insuranceContractsInfoPDA
 			);
-		}
+		return {
+			insuredAmount: insuranceContractsInfo.insuredAmount,
+			expiryTs: insuranceContractsInfo.expiryTs,
+		};
 	}
 
 	async getOrCreateUserPoolInsuranceContract(

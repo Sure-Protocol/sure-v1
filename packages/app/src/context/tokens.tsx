@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { TokenInfo, TokenListProvider, ENV } from '@solana/spl-token-registry';
 
-export const TokensContext = React.createContext<
-	Map<string, TokenInfo> | undefined
->(undefined);
+const TokensContext = React.createContext<Map<string, TokenInfo> | undefined>(
+	undefined
+);
 
 interface Props {
 	children: JSX.Element;
@@ -32,4 +32,8 @@ export const TokensProvider: React.FunctionComponent<Props> = ({
 	return (
 		<TokensContext.Provider value={tokens}>{children}</TokensContext.Provider>
 	);
+};
+
+export const useTokens = (): Map<string, TokenInfo> | undefined => {
+	return useContext(TokensContext);
 };

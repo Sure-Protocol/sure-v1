@@ -80,6 +80,29 @@ pub mod sure_pool {
         Ok(())
     }
 
+
+    /// --- Initialize Policy Holder ----
+    ///
+    /// Prepare a new user for buying insurance 
+    ///
+    /// # Arguments
+    ///
+    /// * ctx - initialize the manager
+    ///
+    pub fn initialize_policy_holder(ctx: Context<InitializePolicyHolder>) -> Result<()> {
+        let insurance_contracts = &mut ctx.accounts.insurance_contracts;
+        insurance_contracts.owner = ctx.accounts.signer.key();
+        insurance_contracts.bump = *ctx.bumps.get("insurance_contracts").unwrap();
+        insurance_contracts.pools = Vec::new();
+        
+        emit!(InitializePolicyHolderEvent {
+            owner: ctx.accounts.signer.key()
+        });
+        Ok(())
+    }
+
+
+
     // ------------ Pool -----------------------------------------------
     /// Create an insurance pool for a smart contract
     /// also create an associated vault to hold the tokens
@@ -114,7 +137,7 @@ pub mod sure_pool {
         pool.insurance_fee = insurance_fee;
         pool.liquidity = 0;
         pool.used_liquidity = 0;
-        pool.name = name;
+        pool.name = name.clone();
         pool.premium_rate = 0;
         pool.smart_contract = insured_smart_contract.clone();
         pool.locked = false;
@@ -122,9 +145,10 @@ pub mod sure_pool {
         // Update the pools
         sure_pools.pools.push(pool.key().clone());
 
-        emit!(pool::InitializedPool {
-            name: "".to_string(),
-            smart_contract: ctx.accounts.smart_contract.key()
+        emit!(pool::CreatePool {
+            name: name,
+            smart_contract: ctx.accounts.smart_contract.key(),
+            insurance_fee: insurance_fee
         });
 
         Ok(())
@@ -197,6 +221,10 @@ pub mod sure_pool {
 
         // _________________ Functionality _________________________
 
+        let protocol_owner_seeds = [
+            &SURE_PROTOCOL_OWNER.as_bytes() as &[u8],
+            &[protocol_owner.bump],
+        ];
         // # 1. Mint NFT to represent liquidity position
         token::mint_to(
             CpiContext::new_with_signer(
@@ -206,7 +234,7 @@ pub mod sure_pool {
                     to: ctx.accounts.liquidity_position_nft_account.to_account_info().clone(),
                     authority: ctx.accounts.protocol_owner.to_account_info().clone(),
                 },
-                &[&[&[ctx.accounts.protocol_owner.bump] as &[u8]]],
+                &[&protocol_owner_seeds[..]],
             ),
             1,
         )?;
@@ -247,7 +275,7 @@ pub mod sure_pool {
                 ctx.accounts.system_program.to_account_info().clone(),
                 ctx.accounts.rent.to_account_info().clone(),
             ],
-            &[&[&[protocol_owner.bump]]],
+            &[&protocol_owner_seeds[..]],
         )?;
 
         // # 2. Transfer tokens from liquidity provider account into vault
@@ -427,7 +455,9 @@ pub mod sure_pool {
         // Load accounts
         let pool_insurance_contract_bitmap = &mut ctx.accounts.pool_insurance_contract_bitmap;
         let pool_insurance_contract_info = &mut ctx.accounts.pool_insurance_contract_info;
-        
+        let pool = &mut ctx.accounts.pool;
+        let insurance_contracts = &mut ctx.accounts.insurance_contracts;
+
         let current_time = Clock::get()?.unix_timestamp;
        
         // Initialize the insurance contract overview
@@ -439,6 +469,9 @@ pub mod sure_pool {
         pool_insurance_contract_bitmap.bump = unwrap_bump!(ctx, "pool_insurance_contract_bitmap");
         pool_insurance_contract_bitmap.spacing = 10;
         pool_insurance_contract_bitmap.word = [0; 4];
+
+        // update Insurance contracts
+        insurance_contracts.pools.push(pool.key().clone());
 
         Ok(())
     }

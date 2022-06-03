@@ -8,6 +8,7 @@ import {
 	SURE_BITMAP,
 	SURE_PREMIUM_POOL_SEED,
 	SURE_VAULT_POOL_SEED,
+	SURE_PROTOCOL_OWNER,
 } from './seeds';
 import { PROGRAM_ID } from './constants';
 
@@ -29,7 +30,10 @@ export class Common {
 	}
 
 	async getProtocolOwner(): Promise<[PublicKey, number]> {
-		return await PublicKey.findProgramAddress([], this.program.programId);
+		return await PublicKey.findProgramAddress(
+			[SURE_PROTOCOL_OWNER],
+			this.program.programId
+		);
 	}
 
 	async getSurePoolsPDA(): Promise<PublicKey> {
