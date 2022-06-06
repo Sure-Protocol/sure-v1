@@ -13,7 +13,6 @@ async function run() {
 			)
 		)
 	);
-	console.log('using wallet ', keypair.publicKey.toBase58());
 	const wallet = new NodeWallet(keypair);
 	const network = process.env.NETWORK!;
 	const connection = new Connection(network, {});

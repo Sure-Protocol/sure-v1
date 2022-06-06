@@ -33,8 +33,6 @@ impl SurePools {
 /// Pool Account (PDA) contains information describing the
 /// insurance pool
 #[account]
-
-
 pub struct PoolAccount {
     /// Bump to identify the PDA
     pub bump: u8, // 1 byte

@@ -51,6 +51,20 @@ export class Pool extends Common {
 		return poolAccounts;
 	}
 
+	async getOrCreatePool(
+		smartContractAddress: PublicKey,
+		insuranceFee: number,
+		name: string
+	) {
+		const poolPDA = await this.getPoolPDA(smartContractAddress);
+		try {
+			await this.program.account.poolAccount.fetch(poolPDA);
+		} catch (_) {
+			await this.createPool(smartContractAddress, insuranceFee, name);
+		}
+
+		return poolPDA;
+	}
 	async createPool(
 		smartContractAddress: PublicKey,
 		insuranceFee: number,

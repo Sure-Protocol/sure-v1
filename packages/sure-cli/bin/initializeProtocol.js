@@ -20,7 +20,6 @@ function run() {
         const keypair = web3_js_1.Keypair.fromSecretKey(Buffer.from(JSON.parse(require('fs').readFileSync(process.env.WALLET, {
             encoding: 'utf-8',
         }))));
-        console.log('using wallet ', keypair.publicKey.toBase58());
         const wallet = new nodewallet_1.default(keypair);
         const network = process.env.NETWORK;
         const connection = new web3_js_1.Connection(network, {});

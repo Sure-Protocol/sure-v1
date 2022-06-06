@@ -11,3 +11,4 @@ node_modules
 lerna-debug.log
 .editorconfig
 test-ledger
+*/**/bin

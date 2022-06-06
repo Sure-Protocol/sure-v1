@@ -31,12 +31,6 @@ export const InsuranceContractProvider: React.FunctionComponent<{
 	const [insuranceContract, setInsuranceContract] = useState(undefined);
 	const sureSdk = useSureSdk();
 
-	const setInsuranceContract = async (
-		pool: PoolAccount
-	): Promise<sureSDK.InsuranceContractsInfo> => {
-		sureSdk?.insurance.get;
-	};
-
 	useEffect(() => {}, []);
 
 	return (
@@ -46,6 +40,6 @@ export const InsuranceContractProvider: React.FunctionComponent<{
 	);
 };
 
-export const useInsuranceContract = (): undefined | InsuranceContract => {
+export const useInsuranceContract = (): undefined | PoolAccount => {
 	return useContext(InsuranceContractContext);
 };

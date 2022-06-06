@@ -28,7 +28,15 @@ export const ManageMarkets = () => {
 	const onSubmit = handleSubmit(async (data) => {
 		console.log('Lets go ', data);
 		const programIdPK = new PublicKey(data.programId);
-		await sureProgram?.pool.createPool(programIdPK, 0, data.protocolnName);
+		const tokenMint = new PublicKey(data.tokenId);
+		const poolPDA = await sureProgram?.pool.getOrCreatePool(
+			programIdPK,
+			10,
+			data.protocolnName
+		);
+		console.log('poolPDA: ', poolPDA);
+
+		await sureProgram?.pool.createPoolVault(tokenMint, programIdPK);
 	});
 
 	useEffect(() => {
@@ -61,6 +69,7 @@ export const ManageMarkets = () => {
 					<input {...register('protocolnName')} placeholder="Protocol Name " />
 					<input {...register('ticker')} placeholder="Ticker" />
 					<input {...register('programId')} placeholder="Program Id " />
+					<input {...register('tokenId')} placeholder="Token program Id " />
 					<MainButton>
 						<p className="p--white p--margin-0">Submit</p>
 					</MainButton>
