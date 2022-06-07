@@ -114,7 +114,7 @@ pub struct DepositLiquidity<'info> {
 
     /// Program id for metadata program
     /// CHECK: checks that the address matches the mpl token metadata id
-    #[account(address =mpl_token_metadata::ID )]
+    //#[account(address =mpl_token_metadata::ID )]
     pub metadata_program: UncheckedAccount<'info>,
 
     /// Create Liquidity position

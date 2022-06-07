@@ -3,6 +3,7 @@ import {
 	ASSOCIATED_TOKEN_PROGRAM_ID,
 	createAssociatedTokenAccount,
 	getAccount,
+	getMint,
 	getOrCreateAssociatedTokenAccount,
 	TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
@@ -14,7 +15,6 @@ const { SystemProgram } = anchor.web3;
 import {
 	SURE_MP_METADATA_SEED,
 	SURE_NFT_MINT_SEED,
-	SURE_VAULT_POOL_SEED,
 	SURE_TOKEN_ACCOUNT_SEED,
 	SURE_LIQUIDITY_POSITION,
 } from './seeds';
@@ -23,6 +23,7 @@ import { Program } from '@project-serum/anchor';
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
+import { Bitmap, Money } from 'src/utils';
 
 export class Liquidity extends Common {
 	constructor(
@@ -90,7 +91,95 @@ export class Liquidity extends Common {
 	}
 
 	/**
-	 * Deposit liquidity into a Sure pool
+	 * Deposit liquidity into a Sure pool in percentage range
+	 *
+	 * @param pool The pool to deposit liquidity into
+	 * @param tokenMint The mint of the tokens deposited
+	 * @param amount Amount in usual denominations
+	 * @param rangeStart The start of the range in percentage
+	 * @param rangeEnd The Public Key of the sureProgram to insure
+	 * @return Nothing
+	 */
+	depositLiquidityInPercentage = async (
+		pool: PublicKey,
+		tokenMint: PublicKey,
+		amount: number,
+		rangeStart: number,
+		rangeEnd: number
+	) => {
+		const rangeStartBP = Math.round(rangeStart * 100);
+		const rangeEndBP = Math.round(rangeEnd * 100);
+
+		await this.depositLiquidity(
+			pool,
+			tokenMint,
+			amount,
+			rangeStartBP,
+			rangeEndBP
+		);
+	};
+
+	/**
+	 * Deposit liquidity into a Sure pool in basis points range
+	 *
+	 * @param pool The pool to deposit liquidity into
+	 * @param tokenMint The mint of the tokens deposited
+	 * @param amount Amount in usual denominations
+	 * @param rangeStartBP The start of the liquidity range in basis points
+	 * @param rangeEndBP The end of the liquidity range in basis points
+	 * @return Nothing
+	 */
+	depositLiquidity = async (
+		pool: PublicKey,
+		tokenMint: PublicKey,
+		amount: number,
+		rangeStartBP: number,
+		rangeEndBP: number
+	) => {
+		try {
+			// Convert amount to amountDecimals
+			const tokenDecimals = (await getMint(this.connection, tokenMint))
+				.decimals;
+			const amountInDecimals = new Money(
+				tokenDecimals,
+				amount
+			).convertToDecimals();
+
+			// Convert ranges to basis points
+
+			// Get bitmap
+			let bitmapPDA = await this.getPoolLiquidityTickBitmapPDA(pool, tokenMint);
+			let liquidityPositions;
+			try {
+				liquidityPositions = await this.program.account.bitMap.fetch(bitmapPDA);
+			} catch (err) {
+				throw new Error('could not get liquidity position bitmap. ' + err);
+			}
+			const bitmap = Bitmap.new(liquidityPositions);
+
+			const rangeStart = rangeStartBP - (rangeStartBP % bitmap.spacing);
+			const rangeEnd = rangeEndBP - (rangeEndBP % bitmap.spacing);
+
+			const amountPerTick =
+				(amountInDecimals * (rangeEnd - rangeStart)) / bitmap.spacing;
+
+			let liquidityLeft = amountInDecimals;
+			let tick = rangeStart;
+			while (liquidityLeft > 0) {
+				console.log('tick: ', tick);
+				await this.depositLiquidityAtTick(pool, tokenMint, amountPerTick, tick);
+				liquidityLeft = liquidityLeft - amountPerTick;
+				tick = tick + bitmap.spacing;
+			}
+		} catch (err) {
+			throw new Error(
+				'sure-sdk.liquidity.depositLiquidity.error. Cause: ' + err
+			);
+		}
+	};
+
+	/**
+	 * Deposit liquidity at Tick into a Sure pool
 	 *
 	 * @param liquidityAmount Amount of liquidity to be transferred
 	 * @param tick Tick in basis points to supply liquidity to
@@ -100,19 +189,13 @@ export class Liquidity extends Common {
 	 * @param tokenMint The mint of the token to be supplied to the pool. This could be USDC
 	 * @return Nothing
 	 */
-	depositLiquidity = async (
-		protocolToInsure: PublicKey,
+	depositLiquidityAtTick = async (
+		poolPDA: PublicKey,
 		tokenMint: PublicKey,
 		liquidityAmount: number,
 		tick: number
 	) => {
 		// Liquidity Pool PDA
-		const poolPDA = await this.getPoolPDA(protocolToInsure);
-		try {
-			await this.program.account.poolAccount.fetch(poolPDA);
-		} catch (err) {
-			throw new Error('Pool does not exist. Cause: ' + err);
-		}
 
 		const liquidityProviderAtaAccount = await getOrCreateAssociatedTokenAccount(
 			this.connection,

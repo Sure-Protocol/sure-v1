@@ -19,7 +19,6 @@ export const SurePoolsProvider: React.FunctionComponent<Props> = ({
 		undefined
 	);
 	const sureSdk = useSureSdk();
-	console.log('SurePoolsProvider');
 
 	useEffect(() => {
 		(async () => {

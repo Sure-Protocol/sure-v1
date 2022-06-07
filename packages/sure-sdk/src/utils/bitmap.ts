@@ -10,7 +10,7 @@ export type BitmapType = {
 export class Bitmap {
 	protected bump: number;
 	protected wordPos: number;
-	protected spacing: number;
+	spacing: number;
 	protected word: anchor.BN[];
 
 	constructor(

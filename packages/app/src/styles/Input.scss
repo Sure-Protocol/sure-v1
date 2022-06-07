@@ -1,0 +1,20 @@
+.input-number-field{
+	background-color: $sure-blue-4;
+    color: $sure-white;
+    cursor: pointer;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: transparent;
+    padding: 5px;
+
+    flex-grow: 2;
+    text-align: right;
+    background-color: transparent;
+    font-family: 'arvo-bold';
+
+    &:focus {
+        outline: none;
+    }
+
+    
+}

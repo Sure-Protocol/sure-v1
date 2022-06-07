@@ -40,3 +40,20 @@ export interface PoolAccount {
 	/// Whether the insurance pool is locked
 	locked: boolean; // 1 byte
 }
+
+export interface PoolInsuranceContract {
+	/// The bump
+	bump: number; //1 byte
+
+	/// Contract expiry
+	expiryTs: anchor.BN; // 8 byte
+
+	/// Contract Amount
+	insuredAmount: anchor.BN; // 8 byte
+
+	/// token mint
+	tokenMint: PublicKey;
+
+	/// Owner of contract
+	owner: PublicKey; // 32 byte
+}

@@ -4,6 +4,9 @@ import BuyInsurance from './BuyInsurance';
 import ActionBar from './ActionBar';
 import { ManageMarkets } from './ManageMarkets';
 import { InsuranceContractProvider } from './context/insuranceContract';
+import { PoolProvider } from './context/surePool';
+import { SearchProvider } from './context/searchToggle';
+import ProvideLiquidity from './ProvideLiquidity';
 
 const Navigation = () => {
 	return (
@@ -18,9 +21,23 @@ const Navigation = () => {
 						<Route
 							path="/"
 							element={
-								<InsuranceContractProvider>
-									<BuyInsurance />
-								</InsuranceContractProvider>
+								<PoolProvider>
+									<InsuranceContractProvider>
+										<SearchProvider>
+											<BuyInsurance />
+										</SearchProvider>
+									</InsuranceContractProvider>
+								</PoolProvider>
+							}
+						/>
+						<Route
+							path="/liquidity"
+							element={
+								<PoolProvider>
+									<SearchProvider>
+										<ProvideLiquidity />
+									</SearchProvider>
+								</PoolProvider>
 							}
 						/>
 						<Route path="/markets" element={<ManageMarkets />} />

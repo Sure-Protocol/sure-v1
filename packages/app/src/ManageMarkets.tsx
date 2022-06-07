@@ -17,8 +17,6 @@ interface CreateMarkets {
 
 export const ManageMarkets = () => {
 	const sureProgram = useSureSdk();
-	const wallet = useWallet();
-	console.log('sureProgram ', sureProgram);
 	const {
 		register,
 		handleSubmit,
@@ -34,8 +32,6 @@ export const ManageMarkets = () => {
 			10,
 			data.protocolnName
 		);
-		console.log('poolPDA: ', poolPDA);
-
 		await sureProgram?.pool.createPoolVault(tokenMint, programIdPK);
 	});
 

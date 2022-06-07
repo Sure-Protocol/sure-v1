@@ -1,9 +1,12 @@
 import { css, cx } from '@emotion/css';
 import { PoolAccount } from '@sure/sdk';
+import { useInsuranceContract } from '../context/insuranceContract';
 import { useSurePools } from '../context/surePools';
 import { explorerLink } from '../utils/links';
 import { prettyPublicKey } from '../utils/publickey';
 import { theme } from './Themes';
+import { useToggle } from '../context/searchToggle';
+import { usePool } from '../context/surePool';
 
 interface MarketListProps {
 	surePools: PoolAccount[];
@@ -12,6 +15,9 @@ interface MarketListProps {
 const MarketListItem: React.FunctionComponent<{ surePool: PoolAccount }> = ({
 	surePool,
 }) => {
+	const [contract, setContract] = useInsuranceContract();
+	const [pool, setPool] = usePool();
+	const [isOpen, toggle] = useToggle();
 	return (
 		<button
 			className={css`
@@ -28,6 +34,11 @@ const MarketListItem: React.FunctionComponent<{ surePool: PoolAccount }> = ({
 					background-color: ${theme.colors.sureBlue3};
 				}
 			`}
+			onClick={() => {
+				setContract(surePool);
+				setPool(surePool);
+				toggle(false);
+			}}
 		>
 			<p className="p--medium p--white">{surePool.name}</p>
 			<a
@@ -71,10 +82,9 @@ const MarketList: React.FunctionComponent<MarketListProps> = ({
 	);
 };
 
-const SearchMarket: React.FunctionComponent<{ toggle: () => void }> = ({
-	toggle,
-}) => {
+const SearchMarket: React.FunctionComponent = () => {
 	const surePools = useSurePools();
+	const [isOpen, toggle] = useToggle();
 	return (
 		<div
 			className={css`
@@ -95,7 +105,9 @@ const SearchMarket: React.FunctionComponent<{ toggle: () => void }> = ({
 						top: 5px;
 					`
 				)}
-				onClick={() => toggle()}
+				onClick={() => {
+					toggle(false);
+				}}
 			>
 				X
 			</button>

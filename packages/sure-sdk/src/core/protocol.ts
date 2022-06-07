@@ -43,8 +43,6 @@ export class Protocol extends Common {
 			if (err.logs) {
 				console.log('logs: ', err.logs);
 			}
-			console.log('protocolOwnerPDA: ', protocolOwnerPDA.toBase58());
-			console.log('poolsPDA: ', poolsPDA.toBase58());
 			throw new Error(
 				'sure.sdk.protocol.initializeProtocol. programId: ' +
 					this.program.programId +

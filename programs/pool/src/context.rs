@@ -131,9 +131,6 @@ pub struct CreatePool<'info> {
     // Assume the contract being hacked is a token account
     /// CHECK: This accounts represents the executable contract
     /// that is to be insured.
-    #[account(
-        constraint = smart_contract.executable == false
-    )]
     pub smart_contract: UncheckedAccount<'info>,
 
     /// Sysvar for Associated Token Account
@@ -145,8 +142,7 @@ pub struct CreatePool<'info> {
 
 impl<'info> Validate<'info> for CreatePool<'info> {
     fn validate(&self) -> Result<()> {
-        assert_keys_eq!(self.pool.smart_contract, self.smart_contract);
-
+        assert_eq!(self.smart_contract.executable,true,"smart contract have to be executable");
         Ok(())
     }
 }

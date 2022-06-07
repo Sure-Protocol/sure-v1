@@ -54,7 +54,7 @@ async function run() {
 	console.log('New token: ', tokenMintAccount.address);
 	fs.writeFile(
 		'./log/token_mint.json',
-		tokenMintAccount.address.toBuffer(),
+		tokenMintAccount.address.toBase58(),
 		{ flag: 'w+' },
 		(err) => console.log('err: ', err)
 	);

@@ -12,3 +12,4 @@ lerna-debug.log
 .editorconfig
 test-ledger
 */**/bin
+*/**/log
