@@ -34,10 +34,20 @@ export class Liquidity extends Common {
 		super(program, connection, wallet);
 	}
 
-	async getMetaplexMetadataPDA(nftMintPDA: PublicKey): Promise<PublicKey> {
+	async getMetaplexMetadataPDA(
+		nftMintPDA: PublicKey,
+		test?: boolean
+	): Promise<PublicKey> {
+		const metadataProgramId = test
+			? new PublicKey('5F4dJcMHuNp5qYe3JjPY9CK8G3ePR9dZCJ98aZD9Mxgi')
+			: mp.PROGRAM_ID;
 		const [mpMetadataPDA, mpMetadataBump] = await PublicKey.findProgramAddress(
-			[SURE_MP_METADATA_SEED, mp.PROGRAM_ID.toBuffer(), nftMintPDA.toBytes()],
-			mp.PROGRAM_ID
+			[
+				SURE_MP_METADATA_SEED,
+				metadataProgramId.toBuffer(),
+				nftMintPDA.toBytes(),
+			],
+			metadataProgramId
 		);
 		return mpMetadataPDA;
 	}
@@ -134,7 +144,8 @@ export class Liquidity extends Common {
 		tokenMint: PublicKey,
 		amount: number,
 		rangeStartBP: number,
-		rangeEndBP: number
+		rangeEndBP: number,
+		test?: boolean
 	) => {
 		try {
 			// Convert amount to amountDecimals
@@ -167,7 +178,13 @@ export class Liquidity extends Common {
 			let tick = rangeStart;
 			while (liquidityLeft > 0) {
 				console.log('tick: ', tick);
-				await this.depositLiquidityAtTick(pool, tokenMint, amountPerTick, tick);
+				await this.depositLiquidityAtTick(
+					pool,
+					tokenMint,
+					amountPerTick,
+					tick,
+					test
+				);
 				liquidityLeft = liquidityLeft - amountPerTick;
 				tick = tick + bitmap.spacing;
 			}
@@ -193,10 +210,10 @@ export class Liquidity extends Common {
 		poolPDA: PublicKey,
 		tokenMint: PublicKey,
 		liquidityAmount: number,
-		tick: number
+		tick: number,
+		test?: boolean
 	) => {
 		// Liquidity Pool PDA
-
 		const liquidityProviderAtaAccount = await getOrCreateAssociatedTokenAccount(
 			this.connection,
 			(this.wallet as NodeWallet).payer,
@@ -267,8 +284,13 @@ export class Liquidity extends Common {
 			throw new Error('Bitmap does not exist. Cause: ' + err);
 		}
 
-		const mpMetadataAccountPDA = await this.getMetaplexMetadataPDA(nftMint);
-
+		const mpMetadataAccountPDA = await this.getMetaplexMetadataPDA(
+			nftMint,
+			test
+		);
+		const metadataProgramId = test
+			? new PublicKey('5F4dJcMHuNp5qYe3JjPY9CK8G3ePR9dZCJ98aZD9Mxgi')
+			: mp.PROGRAM_ID;
 		/// Deposit liquidity Instruction
 		try {
 			const amountBN = new anchor.BN(liquidityAmount);
@@ -283,7 +305,7 @@ export class Liquidity extends Common {
 					liquidityPosition: liquidityPositionPDA,
 					liquidityPositionNftMint: nftMint,
 					metadataAccount: mpMetadataAccountPDA,
-					metadataProgram: mp.PROGRAM_ID,
+					metadataProgram: metadataProgramId,
 					liquidityPositionNftAccount: nftAccountPDA,
 					poolLiquidityTickBitmap: poolLiquidityTickBitmapPDA,
 					liquidityTickInfo: liquidityTickInfoPDA,

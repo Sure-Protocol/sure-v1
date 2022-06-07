@@ -4,9 +4,10 @@ import replace from '@rollup/plugin-replace';
 import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import { terser } from 'rollup-plugin-terser';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const env = process.env.NODE_ENV;
-
 export default {
 	input: 'src/index.ts',
 	plugins: [

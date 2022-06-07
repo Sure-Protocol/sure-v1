@@ -54,7 +54,8 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 				tokenMint,
 				data.amount,
 				data.rangeStart,
-				data.rangeEnd
+				data.rangeEnd,
+				true
 			);
 		}
 	};

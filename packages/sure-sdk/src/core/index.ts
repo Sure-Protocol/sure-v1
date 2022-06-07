@@ -29,6 +29,7 @@ export class SureSdk {
 	public readonly pool: Pool;
 	public readonly protocol: Protocol;
 	public readonly tickAccount: TickAccount;
+	public readonly test: boolean;
 
 	constructor(
 		readonly program: anchor.Program<SurePool>,
