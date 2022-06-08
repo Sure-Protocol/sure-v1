@@ -798,28 +798,8 @@ export type SurePool = {
             "type": "string"
           },
           {
-            "name": "tokenMint",
-            "type": "publicKey"
-          },
-          {
             "name": "insuranceFee",
             "type": "u16"
-          },
-          {
-            "name": "liquidity",
-            "type": "u64"
-          },
-          {
-            "name": "usedLiquidity",
-            "type": "u64"
-          },
-          {
-            "name": "premiumRate",
-            "type": "u64"
-          },
-          {
-            "name": "poolLiquidityTickBitmap",
-            "type": "publicKey"
           },
           {
             "name": "smartContract",
@@ -1874,28 +1854,8 @@ export const IDL: SurePool = {
             "type": "string"
           },
           {
-            "name": "tokenMint",
-            "type": "publicKey"
-          },
-          {
             "name": "insuranceFee",
             "type": "u16"
-          },
-          {
-            "name": "liquidity",
-            "type": "u64"
-          },
-          {
-            "name": "usedLiquidity",
-            "type": "u64"
-          },
-          {
-            "name": "premiumRate",
-            "type": "u64"
-          },
-          {
-            "name": "poolLiquidityTickBitmap",
-            "type": "publicKey"
           },
           {
             "name": "smartContract",

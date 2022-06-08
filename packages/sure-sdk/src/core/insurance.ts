@@ -9,7 +9,6 @@ import {
 	SURE_INSURANCE_CONTRACTS,
 } from './seeds';
 
-import { Bitmap, BitmapType } from '../utils/bitmap';
 import {
 	getAccount,
 	getMint,
@@ -21,9 +20,8 @@ import { BN, min } from 'bn.js';
 
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
-import { liquidity, pool } from '.';
 import { InsuranceContractsInfo, PoolInsuranceContract } from 'src/types';
-import { Money } from 'src/utils';
+import { Money, Bitmap } from './../utils';
 
 export class Insurance extends Common {
 	constructor(

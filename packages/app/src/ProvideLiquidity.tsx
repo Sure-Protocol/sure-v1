@@ -11,22 +11,17 @@ import { useSureSdk } from './context/sureSdk';
 import { useEffect } from 'react';
 import SearchMarket from './components/SearchMarket';
 import { PublicKey } from '@solana/web3.js';
+import { useTokens } from './context/tokens';
+import { getMint } from '@solana/spl-token';
 
 const ProvideLiquidity: React.FunctionComponent = () => {
 	const { register, watch, setValue, getValues, setError, handleSubmit } =
-		useForm({
-			defaultValues: {
-				smartContract: '',
-				amount: 0,
-				tokenMint: '',
-				rangeStart: 0,
-				rangeEnd: 0,
-			},
-		});
+		useForm({});
 	const [isOpen, toggle] = useToggle();
 	const sureSdk = useSureSdk();
 	const [pool] = usePool();
 	const wallet = useWallet();
+	const tokens = useTokens();
 
 	useEffect(() => {
 		register('smartContract');
@@ -42,20 +37,18 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 	}, [watch()]);
 
 	const onSubmit = async (data) => {
-		console.log('on sub,it');
+		console.log('on sub,it ');
 		if (pool && sureSdk) {
-			const smartContractPk = new PublicKey(data.smartContract);
-			const tokenMint = new PublicKey(
-				'GtRBUokeS2cZGTExX2LtEkpqQrU3P9vQ1pVJ7sSmf5N5'
-			);
+			console.log('pool: ', pool);
+			const tokenMint = pool.tokenMint;
+			console.log('tokenMint: ', pool.tokenMint.toBase58());
 			const poolPDA = await sureSdk.pool.getPoolPDA(pool?.smartContract);
 			await sureSdk.liquidity.depositLiquidity(
 				poolPDA,
 				tokenMint,
 				data.amount,
 				data.rangeStart,
-				data.rangeEnd,
-				true
+				data.rangeEnd
 			);
 		}
 	};
@@ -95,7 +88,6 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 							`}
 							onClick={() => toggle(true)}
 						>
-							<div className="sure-token">{pool?.name}</div>
 							<div className="sure-token--name">
 								<p className="p--margin-0 p--white p--bold">{pool?.name}</p>
 							</div>
@@ -122,7 +114,9 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 								padding: 5px;
 							`}
 						>
-							<p className="p--margin-0">{'USDC'}</p>
+							<p className="p--margin-0">
+								{tokens?.get(pool?.tokenMint.toBase58())?.symbol}
+							</p>
 						</button>
 					</div>
 					<div
@@ -155,6 +149,9 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 										max: 10000,
 										valueAsNumber: true,
 										onBlur: (e) => {
+											if (e.target.value === '') {
+												setValue('rangeStart', '10');
+											}
 											const newValueInt = parseInt(e.target.value);
 											const newValue = newValueInt - (newValueInt % 10);
 
@@ -208,7 +205,7 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 											setValue('rangeEnd', newValue);
 										},
 									})}
-									placeholder="0bp"
+									placeholder="0"
 									className={cx(
 										'input-number-field',
 										css`
@@ -219,8 +216,8 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 								<p className="p--margin-0 p-margin-center">bp</p>
 							</div>
 						</div>
+						{isOpen && <SearchMarket />}
 					</div>
-					{isOpen && <SearchMarket />}
 
 					<div className="sure-buy-insurance-container--centered">
 						<h3 className="h3--white h3--center h3--margin-s">

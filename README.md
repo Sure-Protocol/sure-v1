@@ -22,6 +22,12 @@ Test Project
     anchor test
 ```
 
+## Devnet testing
+
+**Faucets**
+
+- https://test.lp.finance/
+
 ## Naming conventions
 
 - Insurance Buyer - policy holder, coverage holder

@@ -23,8 +23,8 @@ export const SureSdkProvider: React.FunctionComponent<Props> = ({
 	);
 
 	useEffect(() => {
-		if (wallet.publicKey) {
-			setSurePoolProgram(SureSdk.init(connection, wallet));
+		if (wallet.wallet !== null) {
+			setSurePoolProgram(SureSdk.init(connection, wallet as Wallet));
 		}
 	}, [wallet]);
 

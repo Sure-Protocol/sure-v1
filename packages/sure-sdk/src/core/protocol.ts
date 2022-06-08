@@ -5,8 +5,7 @@ import {
 	getOrCreateAssociatedTokenAccount,
 } from '@solana/spl-token';
 
-import { Account, Connection, SystemProgram } from '@solana/web3.js';
-import { SureDate } from 'src/utils';
+import { Connection, SystemProgram } from '@solana/web3.js';
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
 
@@ -26,7 +25,7 @@ export class Protocol extends Common {
 		);
 
 		const [protocolOwnerPDA, protocolOwnerBump] = await this.getProtocolOwner();
-		const poolsPDA = await this.getSurePoolsPDA();
+		const poolsPDA = await this.getPoolsPDA();
 		try {
 			await this.program.methods
 				.initializeProtocol()
@@ -34,8 +33,6 @@ export class Protocol extends Common {
 					owner: this.wallet.publicKey,
 					protocolOwner: protocolOwnerPDA,
 					pools: poolsPDA,
-					// program: this.program.programId,
-					// programData: programData,
 					systemProgram: SystemProgram.programId,
 				})
 				.rpc();

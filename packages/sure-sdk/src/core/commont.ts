@@ -11,6 +11,8 @@ import {
 	SURE_PROTOCOL_OWNER,
 } from './seeds';
 import { PROGRAM_ID } from './constants';
+import { LiquidityTickInfo } from 'src/types';
+import { Account, getMint } from '@solana/spl-token';
 
 export class Common {
 	constructor(
@@ -29,6 +31,22 @@ export class Common {
 		return new this(sureProgram, connection, wallet);
 	}
 
+	async convertBNFromDecimals(
+		amount: anchor.BN,
+		tokenAccount: Account
+	): Promise<anchor.BN> {
+		const mint = await getMint(this.connection, tokenAccount.mint);
+		return amount.div(new anchor.BN(10 ** mint.decimals));
+	}
+
+	async convertBNToDecimals(
+		amount: anchor.BN,
+		tokenAccount: Account
+	): Promise<anchor.BN> {
+		const mint = await getMint(this.connection, tokenAccount.mint);
+		return amount.mul(new anchor.BN(10 ** mint.decimals));
+	}
+
 	async getProtocolOwner(): Promise<[PublicKey, number]> {
 		return await PublicKey.findProgramAddress(
 			[SURE_PROTOCOL_OWNER],
@@ -36,7 +54,7 @@ export class Common {
 		);
 	}
 
-	async getSurePoolsPDA(): Promise<PublicKey> {
+	async getPoolsPDA(): Promise<PublicKey> {
 		try {
 			const [surePoolsPDA, surePoolsBump] = await PublicKey.findProgramAddress(
 				[SURE_POOLS_SEED],
@@ -49,13 +67,13 @@ export class Common {
 		}
 	}
 
-	async getSurePools() {
+	async getPools() {
 		try {
-			const surePoolsPDA = await this.getSurePoolsPDA();
+			const surePoolsPDA = await this.getPoolsPDA();
 			const surePools = await this.program.account.surePools.fetch(
 				surePoolsPDA
 			);
-			const pool = surePools.pools;
+			return surePools;
 		} catch (err) {
 			throw new Error('sure.common.getSurePools. Cause: ' + err);
 		}
@@ -83,11 +101,11 @@ export class Common {
 	}
 
 	/// ============ TICK =================
-	getLiquidityTickInfoPDA = async (
+	async getLiquidityTickInfoPDA(
 		pool: PublicKey,
 		tokenMint: PublicKey,
 		tick: number
-	): Promise<PublicKey> => {
+	): Promise<PublicKey> {
 		let tickBN = new anchor.BN(tick);
 		const [tickAccountPDA, tickAccountBump] =
 			await PublicKey.findProgramAddress(
@@ -100,7 +118,29 @@ export class Common {
 				this.program.programId
 			);
 		return tickAccountPDA;
-	};
+	}
+
+	async getLiquidityTickInfo(
+		pool: PublicKey,
+		tokenMint: PublicKey,
+		tick: number
+	): Promise<LiquidityTickInfo> {
+		const liqudityTickInfoPDA = await this.getLiquidityTickInfoPDA(
+			pool,
+			tokenMint,
+			tick
+		);
+		try {
+			const liquidityTickInfo = await this.program.account.tick.fetch(
+				liqudityTickInfoPDA
+			);
+			return liquidityTickInfo;
+		} catch (err) {
+			throw new Error(
+				'sure-sdk.common.getLiquidityTickInfo.error. Cause: ' + err
+			);
+		}
+	}
 
 	/// Check if tick account exists for the pool,
 	/// if not, create the account.

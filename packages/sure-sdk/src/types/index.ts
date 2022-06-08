@@ -31,7 +31,7 @@ export interface PoolAccount {
 	usedLiquidity: anchor.BN; // 8 bytes
 
 	/// Current premium rate in basis points (0.01%).
-	premiumRate: anchor.BN; // 8 bytes
+	premiumRate: number; // 8 bytes
 
 	/// The public key of the smart contract that is
 	/// insured
@@ -56,4 +56,58 @@ export interface PoolInsuranceContract {
 
 	/// Owner of contract
 	owner: PublicKey; // 32 byte
+}
+
+export interface LiquidityTickInfo {
+	/// The bump identity of the PDA
+	bump: number; // 1 byte
+
+	/// The active liquidity at the tick
+	liquidity: anchor.BN; // 8bytes
+
+	/// Amount of liquidity used from the pool
+	usedLiquidity: anchor.BN; // 8 bytes
+
+	/// token mint used as liqudiity
+	tokenMint: PublicKey;
+
+	/// last slot the tick was updated on
+	lastUpdated: anchor.BN; // 8 bytes
+
+	/// The tick in basis points
+	tick: number; // 8 bytes
+
+	/// Boolean representing whether the liquidity is active
+	active: boolean; // 1 byte
+
+	/// Ids of liquidity positions
+	liquidityPositionId: number[]; // 1*255 =255
+
+	/// Accumulation of Liquidity Provided
+	liquidityPositionAccumulated: anchor.BN[]; // 8*255 =
+
+	/// rewards
+	liquidityPositionRewards: anchor.BN[]; // 8*255
+
+	lastLiquidityPositionIdx: number; // 1
+}
+
+export interface TokenPoolStatistics {
+	// pool
+	pool: PublicKey;
+
+	// token mint
+	tokenMint: PublicKey;
+
+	// amount insured in pool
+	amountInsured: anchor.BN;
+
+	// Provided liquidity
+	liquidity: anchor.BN;
+
+	// Lowest premium
+	premiumLow: number;
+
+	// Highest premium
+	premiumHigh: number;
 }

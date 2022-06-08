@@ -23,7 +23,8 @@ export const SurePoolsProvider: React.FunctionComponent<Props> = ({
 	useEffect(() => {
 		(async () => {
 			if (sureSdk !== undefined) {
-				const pools = await sureSdk.pool.getPools();
+				const pools = await sureSdk.pool.getPoolAccounts();
+				console.log('pools: ', pools);
 				setSurePools(pools);
 			}
 		})();

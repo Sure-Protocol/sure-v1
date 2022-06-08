@@ -135,10 +135,7 @@ pub mod sure_pool {
         // Set up pool account
         pool.bump = *ctx.bumps.get("pool").unwrap();
         pool.insurance_fee = insurance_fee;
-        pool.liquidity = 0;
-        pool.used_liquidity = 0;
         pool.name = name.clone();
-        pool.premium_rate = 0;
         pool.smart_contract = insured_smart_contract.clone();
         pool.locked = false;
 
@@ -296,7 +293,7 @@ pub mod sure_pool {
         )?;
 
         // Update pool
-        pool.liquidity += amount;
+        //pool.liquidity += amount;
 
         // Load tick account state
         let liquidity_tick_info_state =
@@ -370,14 +367,12 @@ pub mod sure_pool {
         // Available liquidity
         let free_liquidity = liquidity_tick_info.available_liquidity(liquidity_position.tick_id);
         require!(free_liquidity > 0, SureError::LiquidityFilled);
-        pool.liquidity -= free_liquidity;
 
         // _______________ Functionality _______________
 
         let pool_seeds = [
             &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
             &pool.smart_contract.to_bytes() as &[u8],
-            &pool.token_mint.to_bytes() as &[u8],
             &[pool.bump],
         ];
 
@@ -569,8 +564,6 @@ pub mod sure_pool {
             .buy_insurance(amount_diff)
             .map_err(|e| e.to_anchor_error())?;
 
-            // Increase total liquidity in pool
-            pool_account.used_liquidity += amount_diff;
             
             // Increase total insured amount for insurance pool contract
             pool_insurance_contract_info.insured_amount += amount_diff;
@@ -580,8 +573,6 @@ pub mod sure_pool {
             .exit_insurance(amount_diff)
             .map_err(|e| e.to_anchor_error())?;
             
-            // Reduce the total liquidity in the pool
-            pool_account.used_liquidity -= amount_diff;
 
             // Reduce total insured amount for pool
             pool_insurance_contract_info.insured_amount -= amount_diff;
@@ -604,7 +595,6 @@ pub mod sure_pool {
             let pool_seed = [
                 &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
                 &pool_account.smart_contract.to_bytes() as &[u8],
-                &pool_account.token_mint.to_bytes() as &[u8],
                 &[pool_account.bump],
             ];
     

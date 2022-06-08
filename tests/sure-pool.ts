@@ -20,7 +20,6 @@ import {
 	TokenAccountsFilter,
 } from '@solana/web3.js';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
-import { u64 } from '@solana/buffer-layout-utils';
 const { SystemProgram } = anchor.web3;
 
 import { Money } from '@sure/sdk/src';
@@ -197,7 +196,7 @@ describe('Initialize Sure Pool', () => {
 		const newPool = await program.account.poolAccount.fetch(poolPDA);
 		assert.isAbove(newPool.bump, 0);
 
-		const surePoolsPDA = await sureSdk.pool.getSurePoolsPDA();
+		const surePoolsPDA = await sureSdk.pool.getPoolsPDA();
 		const surePoolsAccount = await program.account.surePools.fetch(
 			surePoolsPDA
 		);
@@ -218,8 +217,6 @@ describe('Initialize Sure Pool', () => {
 		assert.isTrue(isInPool);
 	});
 	it('create pool vaults -> For a given mint the isolated ', async () => {
-		// Smart contract that sure should insure.
-
 		// Generate PDA for Sure Pool
 		const pool = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
 
@@ -235,7 +232,7 @@ describe('Initialize Sure Pool', () => {
 	});
 	it('get list of existing pools', async () => {
 		/// the full list of pools should be returned
-		const surePoolsPDA = await sureSdk.pool.getSurePoolsPDA();
+		const surePoolsPDA = await sureSdk.pool.getPoolsPDA();
 
 		try {
 			const surePools = await program.account.surePools.fetch(surePoolsPDA);
@@ -276,10 +273,10 @@ describe('Initialize Sure Pool', () => {
 		let tick = 210; // 300bp tick
 
 		// TODO: Deposit some more liquidity from other LPs
-
+		const poolPDA = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
 		try {
-			await sureSdk.liquidity.depositLiquidity(
-				protcolToInsure0.publicKey,
+			await sureSdk.liquidity.depositLiquidityAtTick(
+				poolPDA,
 				tokenMint,
 				amount.convertToDecimals(),
 				tick
@@ -289,7 +286,6 @@ describe('Initialize Sure Pool', () => {
 			throw new Error('Deposit liquidity error. Cause:' + err);
 		}
 
-		const poolPDA = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
 		const vaultPDA = await sureSdk.liquidity.getPoolVaultPDA(
 			poolPDA,
 			tokenMint
@@ -370,9 +366,10 @@ describe('Initialize Sure Pool', () => {
 		let contractExpiryInSeconds = contractExpiry.getTimeInSeconds();
 
 		// deposit liquidity
+		const poolPDA = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
 		try {
-			await sureSdk.liquidity.depositLiquidity(
-				protcolToInsure0.publicKey,
+			await sureSdk.liquidity.depositLiquidityAtTick(
+				poolPDA,
 				tokenMint,
 				liquidity.convertToDecimals(),
 				tick
@@ -382,8 +379,8 @@ describe('Initialize Sure Pool', () => {
 		}
 
 		try {
-			await sureSdk.liquidity.depositLiquidity(
-				protcolToInsure0.publicKey,
+			await sureSdk.liquidity.depositLiquidityAtTick(
+				poolPDA,
 				tokenMint,
 				liquidity.setAmount(1000).convertToDecimals(),
 				150
@@ -391,9 +388,6 @@ describe('Initialize Sure Pool', () => {
 		} catch (err) {
 			throw new Error('deposit liquidity error. Cause:' + err);
 		}
-
-		// Find pool to target
-		const poolPDA = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
 
 		// Calculate cost of insurance
 		await sureSdk.insurance.buyInsurance(
@@ -410,94 +404,33 @@ describe('Initialize Sure Pool', () => {
 		const userInsuranceContracts = await program.account.bitMap.fetch(
 			userInsuranceContractsPDA
 		);
-		console.log('userInsuranceContracts: ', userInsuranceContracts);
 		// Check the user positions
-		console.log('Buy insurance > getInsured amount');
 		let insuredAmount = await sureSdk.insurance.getInsuredAmount(
 			poolPDA,
 			tokenMint
 		);
-		console.log('insuredAmount:: ', insuredAmount);
-		console.log('positionSize: ', positionSize);
 		assert.isTrue(
 			insuredAmount.eq(new anchor.BN(positionSize.convertToDecimals()))
 		);
 		console.log('insurance: ', insuredAmount.toString());
-
-		// // Buy more insurance
-		// const insurancePosition = Money.new(tokenMintAccount.decimals, 17000);
-		// await sureSdk.insurance.buyInsurance(
-		// 	poolPDA,
-		// 	tokenMint,
-		// 	insurancePosition.convertToDecimals(),
-		// 	contractExpiryInSeconds
-		// );
-		// insuredAmount = await sureSdk.insurance.getInsuredAmount(
-		// 	poolPDA,
-		// 	tokenMint
-		// );
-		// assert.isTrue(
-		// 	insuredAmount.eq(new anchor.BN(positionSize.convertToDecimals()))
-		// );
-		// console.log('insurance: ', insuredAmount.toString());
-
-		// // reduce position
-		// await sureSdk.insurance.buyInsurance(
-		// 	poolPDA,
-		// 	tokenMint,
-		// 	positionSize.setAmount(15000).convertToDecimals(),
-		// 	contractExpiryInSeconds
-		// );
-		// insuredAmount = await sureSdk.insurance.getInsuredAmount(
-		// 	poolPDA,
-		// 	tokenMint
-		// );
-		// assert.isTrue(
-		// 	insuredAmount.eq(new anchor.BN(positionSize.convertToDecimals()))
-		// );
-		// console.log('insurance: ', insuredAmount.toString());
-
-		// // Change contract expiry
-		// hours = 20;
-		// const contractExpiryD = dateNow.addHours(hours);
-		// await sureSdk.insurance.changeContractExpiry(
-		// 	poolPDA,
-		// 	tokenMint,
-		// 	contractExpiryD.getTimeInSeconds()
-		// );
-
-		// // fetch a contract
-		// const insuranceContractsPDA =
-		// 	await sureSdk.insurance.getInsuranceContractsBitmapPDA(
-		// 		poolPDA,
-		// 		tokenMint
-		// 	);
-		// const insuranceContracts = await program.account.bitMap.fetch(
-		// 	insuranceContractsPDA
-		// );
-		// const insuranceContractsBitmap = Bitmap.new(insuranceContracts);
-		// const firstTick = insuranceContractsBitmap.getLowestTick();
-		// const tickAccountPDA = await sureSdk.tickAccount.getTickAccountPDA(
-		// 	poolPDA,
-		// 	tokenMint,
-		// 	firstTick
-		// );
-		// const insuranceContractPDA =
-		// 	await sureSdk.insurance.getInsuranceContractPDA(tickAccountPDA);
-		// const insuranceContract = await program.account.insuranceContract.fetch(
-		// 	insuranceContractPDA
-		// );
-		// const insuranceContractExpiry = insuranceContract.endTs.toString();
-		// assert.isTrue(
-		// 	new anchor.BN(contractExpiryD.getTimeInSeconds()).eq(
-		// 		insuranceContract.endTs
-		// 	)
-		// );
-
-		// /// Test for different hours
-
-		// /// TODO: check premium calculations
-		// const insuranceContractPremium = insuranceContract.premium.toString();
-		// console.log('insuranceContractPremium: ', insuranceContractPremium);
+	});
+	it('get pools', async () => {
+		// deposit liquidity
+		const poolPDA = await sureSdk.pool.getPoolPDA(protcolToInsure0.publicKey);
+		const pool = await program.account.poolAccount.fetch(poolPDA);
+		// get pool token accounts
+		const tokenAccounts = await sureSdk.pool.getAllPoolTokenAccounts(poolPDA);
+		console.log('tokenMints: ', tokenAccounts);
+		const tokenAccountPK = tokenAccounts[0];
+		const tokenAccount = await getAccount(connection, tokenAccountPK);
+		console.log('tokenAccount mint: ', tokenAccount.mint);
+		console.log('tokenMint: ', tokenMint);
+		const poolStatistics = await sureSdk.pool.getTokenPoolStatistics(
+			poolPDA,
+			tokenAccount.mint
+		);
+		console.log('poolStatistics: ', poolStatistics);
+		const pools = await sureSdk.pool.getPoolAccounts();
+		console.log('sure pools: ', pools[0].smartContract.toBase58());
 	});
 });

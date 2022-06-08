@@ -59,7 +59,7 @@ const App: FC = () => {
 
 	return (
 		<BrowserRouter>
-			<ConnectionProvider endpoint={'http://127.0.0.1:8899'}>
+			<ConnectionProvider endpoint={endpoint}>
 				<WalletProvider wallets={wallets} autoConnect>
 					<WalletModalProvider>
 						<SureSdkProvider>

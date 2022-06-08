@@ -40,23 +40,28 @@ const BuyInsurance = () => {
 	}, [pool]);
 
 	useEffect(() => {
+		console.log('estimate yearly premium');
+		console.log('pool: ', pool);
+		console.log('sureSdk: ', sureSdk);
 		if (pool && sureSdk) {
 			const estimateYearlyPremium = async () => {
+				console.log('poo: ', pool.smartContract.toBase58());
 				const poolPDA = await sureSdk.insurance.getPoolPDA(pool.smartContract);
 				const amount = getValues('amount');
-				const tokenMint = new PublicKey(
-					'GtRBUokeS2cZGTExX2LtEkpqQrU3P9vQ1pVJ7sSmf5N5'
-				);
+				const tokenMint = pool.tokenMint;
 				try {
+					console.log('tryryr');
 					const estimate = await sureSdk?.insurance.estimateYearlyPremium(
 						amount,
 						tokenMint,
 						poolPDA
 					);
+					console.log('estimate: ', estimate);
 					if (estimate) {
 						setEstimate([estimate[0], estimate[1]]);
 					}
 				} catch (err) {
+					console.log('err: ', err);
 					setEstimateError('Could not estimate premium');
 				}
 			};

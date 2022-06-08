@@ -1,5 +1,5 @@
 import { css, cx } from '@emotion/css';
-import { PoolAccount } from '@sure/sdk';
+import { PoolAccount, SureSdk } from '@sure/sdk';
 import { useInsuranceContract } from '../context/insuranceContract';
 import { useSurePools } from '../context/surePools';
 import { explorerLink } from '../utils/links';
@@ -7,6 +7,8 @@ import { prettyPublicKey } from '../utils/publickey';
 import { theme } from './Themes';
 import { useToggle } from '../context/searchToggle';
 import { usePool } from '../context/surePool';
+import { useTokens } from '../context/tokens';
+import TokenIcon from './TokenIcon';
 
 interface MarketListProps {
 	surePools: PoolAccount[];
@@ -18,6 +20,7 @@ const MarketListItem: React.FunctionComponent<{ surePool: PoolAccount }> = ({
 	const [contract, setContract] = useInsuranceContract();
 	const [pool, setPool] = usePool();
 	const [isOpen, toggle] = useToggle();
+	const tokens = useTokens();
 	return (
 		<button
 			className={css`
@@ -40,6 +43,7 @@ const MarketListItem: React.FunctionComponent<{ surePool: PoolAccount }> = ({
 				toggle(false);
 			}}
 		>
+			<TokenIcon tokenAddress={surePool.tokenMint} />
 			<p className="p--medium p--white">{surePool.name}</p>
 			<a
 				className="p--small a--no-highlight"
@@ -58,7 +62,7 @@ const MarketListItem: React.FunctionComponent<{ surePool: PoolAccount }> = ({
 				`}
 			>
 				<p className="p--small p--margin-0">{`Liquidity: ${surePool.liquidity.toString()}`}</p>
-				<p className="p--small p--margin-0">{`Premium: ${surePool.premiumRate}%`}</p>
+				<p className="p--small p--margin-0">{`Premium: ${surePool.premiumRate}bp`}</p>
 			</div>
 		</button>
 	);

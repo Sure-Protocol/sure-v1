@@ -193,7 +193,7 @@ impl<'info> Validate<'info> for DepositLiquidity<'info> {
         assert_is_zero_token_account!(self.liquidity_position_nft_account);
 
         // check the same bitmap
-        assert_keys_eq!(self.pool.pool_liquidity_tick_bitmap, self.pool_liquidity_tick_bitmap);
+        //assert_keys_eq!(self.pool.pool_liquidity_tick_bitmap, self.pool_liquidity_tick_bitmap);
         Ok(())
     }
 }

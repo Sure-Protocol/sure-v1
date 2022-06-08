@@ -5,6 +5,9 @@
       "module": "commonjs",
       "target": "es2020",
       "outDir": "dist/cjs/",
-      "rootDir": "./src"
+      "rootDir": "./src",
+      "paths": {
+        "src/*":["src/*"]
+      }
     }
   }
