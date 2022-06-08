@@ -1,6 +1,6 @@
+import * as anchor from '@project-serum/anchor';
 export class Money {
 	protected amount: number;
-
 	protected decimals: number;
 
 	constructor(decimals: number, amount: number) {
@@ -17,11 +17,14 @@ export class Money {
 		return this;
 	}
 
-	convertToDecimals(): number {
-		return this.amount * 10 ** this.decimals;
+	convertToDecimals(): anchor.BN {
+		const amountBN = new anchor.BN(this.amount);
+		const decimalsBN = new anchor.BN(10).pow(new anchor.BN(this.decimals));
+		return amountBN.mul(decimalsBN);
 	}
 
-	convertToAmount(amountDecimals: number): void {
-		this.amount = amountDecimals / 10 ** this.decimals;
+	convertToAmount(amountDecimals: anchor.BN): void {
+		const decimalsBN = new anchor.BN(10).pow(new anchor.BN(this.decimals));
+		this.amount = amountDecimals.div(decimalsBN).toNumber();
 	}
 }

@@ -148,7 +148,7 @@ export class Common {
 		pool: PublicKey,
 		tokenMint: PublicKey,
 		tick: number
-	): Promise<PublicKey> {
+	): Promise<anchor.web3.TransactionInstruction> {
 		const liquidityTickInfoPDA = await this.getLiquidityTickInfoPDA(
 			pool,
 			tokenMint,
@@ -156,51 +156,49 @@ export class Common {
 		);
 
 		try {
-			await this.program.methods
+			return this.program.methods
 				.initializePoolLiquidityTick(pool, tokenMint, tick)
 				.accounts({
 					creator: this.wallet.publicKey,
 					liquidityTickInfo: liquidityTickInfoPDA,
 					systemProgram: SystemProgram.programId,
 				})
-				.rpc();
+				.instruction();
 		} catch (e) {
 			console.log('logs?: ', e.logs);
 			throw new Error('Could not create tick account: ' + e);
 		}
-
-		return liquidityTickInfoPDA;
 	}
 
-	async getOrCreateLiquidityTickInfo(
-		pool: PublicKey,
-		tokenMint: PublicKey,
-		tick: number
-	): Promise<anchor.web3.PublicKey> {
-		const liquidityTickInfo = await this.getLiquidityTickInfoPDA(
-			pool,
-			tokenMint,
-			tick
-		);
+	// async getOrCreateLiquidityTickInfo(
+	// 	pool: PublicKey,
+	// 	tokenMint: PublicKey,
+	// 	tick: number
+	// ): Promise<anchor.web3.PublicKey> {
+	// 	const liquidityTickInfo = await this.getLiquidityTickInfoPDA(
+	// 		pool,
+	// 		tokenMint,
+	// 		tick
+	// 	);
 
-		try {
-			await this.program.account.tick.fetch(liquidityTickInfo);
-		} catch (e) {
-			console.log(
-				'sure.getTickAccount.error Could not fetch tick account. Cause: ' + e
-			);
-			// create account
-			try {
-				await this.createLiquidityTickInfo(pool, tokenMint, tick);
-			} catch (e) {
-				throw new Error(
-					'sure.createTickAccount.error. could not create tick account. cause: ' +
-						e
-				);
-			}
-		}
-		return liquidityTickInfo;
-	}
+	// 	try {
+	// 		await this.program.account.tick.fetch(liquidityTickInfo);
+	// 	} catch (e) {
+	// 		console.log(
+	// 			'sure.getTickAccount.error Could not fetch tick account. Cause: ' + e
+	// 		);
+	// 		// create account
+	// 		try {
+	// 			await this.createLiquidityTickInfo(pool, tokenMint, tick);
+	// 		} catch (e) {
+	// 			throw new Error(
+	// 				'sure.createTickAccount.error. could not create tick account. cause: ' +
+	// 					e
+	// 			);
+	// 		}
+	// 	}
+	// 	return liquidityTickInfo;
+	// }
 
 	/**
 	 * Current tick position in tick pool
@@ -226,7 +224,7 @@ export class Common {
 			);
 			return liquidityTickInfo.lastLiquidityPositionIdx;
 		} catch (e) {
-			throw new Error('Tick account does not exist. Cause: ' + e);
+			return 0;
 		}
 	}
 

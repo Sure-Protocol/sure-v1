@@ -863,6 +863,7 @@ export class Insurance extends Common {
 
 		try {
 			const provider = await anchor.getProvider();
+			console.log('provider.send: ', provider.send);
 			await provider.send?.(txs);
 		} catch (err) {
 			console.log('logs?: ', err?.logs);

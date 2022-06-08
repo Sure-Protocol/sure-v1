@@ -292,9 +292,6 @@ pub mod sure_pool {
             amount,
         )?;
 
-        // Update pool
-        //pool.liquidity += amount;
-
         // Load tick account state
         let liquidity_tick_info_state =
             AccountLoader::<tick::Tick>::try_from(&ctx.accounts.liquidity_tick_info.to_account_info())?;

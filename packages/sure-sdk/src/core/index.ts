@@ -48,6 +48,7 @@ export class SureSdk {
 		const provider = new anchor.AnchorProvider(connection, wallet, {
 			skipPreflight: false,
 		});
+		anchor.setProvider(provider);
 
 		const sureProgram = new anchor.Program<SurePool>(IDL, PROGRAM_ID, provider);
 

@@ -9,7 +9,7 @@ import {
 	TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, PublicKey, TransactionInstruction } from '@solana/web3.js';
 
 import * as mp from '@metaplex-foundation/mpl-token-metadata';
 const { SystemProgram } = anchor.web3;
@@ -215,25 +215,56 @@ export class Liquidity extends Common {
 			const rangeStart = rangeStartBP - (rangeStartBP % bitmap.spacing);
 			const rangeEnd = rangeEndBP - (rangeEndBP % bitmap.spacing);
 
-			const amountPerTick =
-				(amountInDecimals * (rangeEnd - rangeStart)) / bitmap.spacing;
+			const amountPerTick = amountInDecimals
+				.muln(bitmap.spacing)
+				.divn(rangeEndBP - rangeStartBP + bitmap.spacing);
 
 			let liquidityLeft = amountInDecimals;
 			let tick = rangeStart;
-			console.log('amountPerTick: ', amountPerTick);
-			while (liquidityLeft > 0) {
-				console.log('liquidityLeft: ', liquidityLeft);
-				await this.depositLiquidityAtTick(
+			const tx = new anchor.web3.Transaction();
+
+			while (liquidityLeft.gtn(0)) {
+				// Get tick account
+				const liquidityTickInfoPDA = await this.getLiquidityTickInfoPDA(
 					pool,
 					tokenMint,
-					amountPerTick,
-					tick,
-					test
+					tick
 				);
-				liquidityLeft = liquidityLeft - amountPerTick;
+
+				try {
+					await this.program.account.tick.fetch(liquidityTickInfoPDA);
+				} catch (e) {
+					// Create tick info account if it doesnt exists
+					tx.add(await this.createLiquidityTickInfo(pool, tokenMint, tick));
+				}
+
+				tx.add(
+					await this.depositLiquidityAtTick(
+						pool,
+						tokenMint,
+						liquidityTickInfoPDA,
+						amountPerTick,
+						tick,
+						test
+					)
+				);
+				liquidityLeft = liquidityLeft.sub(amountPerTick);
 				tick = tick + bitmap.spacing;
 			}
+
+			tx.recentBlockhash = (
+				await this.connection.getLatestBlockhash()
+			).blockhash;
+			tx.feePayer = this.wallet.publicKey;
+
+			const provider = await anchor.getProvider();
+			console.log('provider.send: ', provider.sendAndConfirm);
+			const txRes = await provider.sendAndConfirm?.(tx);
+			console.log('txRes_ ', txRes);
 		} catch (err) {
+			if (err.logs) {
+				console.log(err.logs);
+			}
 			throw new Error(
 				'sure-sdk.liquidity.depositLiquidity.error. Cause: ' + err
 			);
@@ -254,11 +285,13 @@ export class Liquidity extends Common {
 	depositLiquidityAtTick = async (
 		poolPDA: PublicKey,
 		tokenMint: PublicKey,
-		liquidityAmount: number,
+		liquidityTickInfoPDA: PublicKey,
+		liquidityAmount: anchor.BN,
 		tick: number,
 		test?: boolean
-	) => {
+	): Promise<anchor.web3.TransactionInstruction> => {
 		try {
+			console.log('liquidityAmount: ', liquidityAmount.toString());
 			// Liquidity Pool PDA
 			let liquidityProviderAtaAccount: PublicKey;
 			try {
@@ -269,7 +302,6 @@ export class Liquidity extends Common {
 			} catch (err) {
 				throw new Error('User does not have ata for the given token. ' + err);
 			}
-
 			// Protocol Owner
 			let [protocolOwnerPDA, _] = await this.getProtocolOwner();
 			try {
@@ -277,7 +309,6 @@ export class Liquidity extends Common {
 			} catch (err) {
 				throw new Error('Protocol owner does not exist. Cause: ' + err);
 			}
-
 			// Liquidity Pool Vault
 			const poolVaultPDA = await this.getPoolVaultPDA(poolPDA, tokenMint);
 			try {
@@ -286,21 +317,7 @@ export class Liquidity extends Common {
 				throw new Error('Vault does not exist. Cause: ' + err);
 			}
 
-			// Get tick account
-			const liquidityTickInfoPDA = await this.getOrCreateLiquidityTickInfo(
-				poolPDA,
-				tokenMint,
-				tick
-			);
-			try {
-				await this.program.account.tick.getAccountInfo(liquidityTickInfoPDA);
-			} catch (err) {
-				throw new Error(
-					'Liquidity Tick Info account does not exist. Cause: ' + err
-				);
-			}
 			//  Generate tick
-
 			const tickBN = new anchor.BN(tick);
 			const tickPosition = await this.getCurrentTickPosition(
 				poolPDA,
@@ -308,7 +325,6 @@ export class Liquidity extends Common {
 				tick
 			);
 			const nextTickPositionBN = new anchor.BN(tickPosition + 1);
-
 			// Generate nft accounts
 			const nftAccountPDA = await this.getLiquidityPositionTokenAccountPDA(
 				poolPDA,
@@ -317,11 +333,9 @@ export class Liquidity extends Common {
 				nextTickPositionBN
 			);
 			const nftMint = await this.getLiquidityPositionMintPDA(nftAccountPDA);
-
 			let liquidityPositionPDA = await this.getLiquidityPositionPDA(
 				nftAccountPDA
 			);
-
 			// Get bitmap
 			const poolLiquidityTickBitmapPDA =
 				await this.getPoolLiquidityTickBitmapPDA(poolPDA, tokenMint);
@@ -330,7 +344,6 @@ export class Liquidity extends Common {
 			} catch (err) {
 				throw new Error('Bitmap does not exist. Cause: ' + err);
 			}
-
 			const mpMetadataAccountPDA = await this.getMetaplexMetadataPDA(
 				nftMint,
 				test
@@ -340,9 +353,8 @@ export class Liquidity extends Common {
 				: mp.PROGRAM_ID;
 			/// Deposit liquidity Instruction
 
-			const amountBN = new anchor.BN(liquidityAmount);
-			await this.program.methods
-				.depositLiquidity(tick, nextTickPositionBN, amountBN)
+			return await this.program.methods
+				.depositLiquidity(tick, nextTickPositionBN, liquidityAmount)
 				.accounts({
 					liquidityProvider: this.wallet.publicKey,
 					protocolOwner: protocolOwnerPDA,
@@ -361,11 +373,11 @@ export class Liquidity extends Common {
 					systemProgram: SystemProgram.programId,
 					associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
 				})
-				.rpc();
+				.instruction();
 		} catch (e) {
 			console.log(e?.logs);
 			throw new Error(
-				'sure.liquidity.depositLiquidityAtTick.error. Could not deposit liqudity. Cause: ' +
+				'sure.liquidity.depositLiquidityAtTick.error. Could not deposit liquidity. Cause: ' +
 					e
 			);
 		}
