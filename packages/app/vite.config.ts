@@ -12,6 +12,7 @@ export default defineConfig({
 	],
 	build: {
 		target: ['es6'],
+		outDir: './public',
 	},
 	define: {
 		'process.env': {},
