@@ -1,6 +1,6 @@
 import * as anchor from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { insurance, pool, PoolAccount, PoolInformation } from '@sure/sdk';
+import { insurance, pool, PoolAccount, PoolInformation } from '@surec/sdk';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSureSdk } from './sureSdk';
 

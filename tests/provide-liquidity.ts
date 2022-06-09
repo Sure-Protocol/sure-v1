@@ -1,7 +1,7 @@
 import { assert } from 'chai';
 import * as anchor from '@project-serum/anchor';
 import { Program } from '@project-serum/anchor';
-import { Money, SureDate, SurePool, SureSdk } from '@sure/sdk';
+import { Money, SureDate, SurePool, SureSdk } from '@surec/sdk';
 import {
 	PublicKey,
 	LAMPORTS_PER_SOL,

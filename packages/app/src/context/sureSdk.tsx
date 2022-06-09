@@ -1,5 +1,5 @@
 import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
-import { SurePool, IDL, SureSdk } from '@sure/sdk';
+import { SurePool, IDL, SureSdk } from '@surec/sdk';
 import * as anchor from '@project-serum/anchor';
 import { PROGRAM_ID, PROGRAM_ID_STR } from '../utils/constants';
 import React, { useContext, useEffect, useState } from 'react';

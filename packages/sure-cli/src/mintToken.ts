@@ -7,7 +7,7 @@ import {
 	mintTo,
 } from '@solana/spl-token';
 import { Connection, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { Money, SureSdk } from '@sure/sdk';
+import { Money, SureSdk } from '@surec/sdk';
 import fs from 'fs';
 async function run() {
 	const keypair = Keypair.fromSecretKey(

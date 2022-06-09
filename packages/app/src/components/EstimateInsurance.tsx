@@ -1,6 +1,6 @@
 import * as anchor from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { Money } from '@sure/sdk';
+import { Money } from '@surec/sdk';
 import { useEffect, useState } from 'react';
 import { useSureSdk } from '../context/sureSdk';
 

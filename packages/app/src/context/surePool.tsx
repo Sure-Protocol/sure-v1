@@ -1,4 +1,4 @@
-import { PoolAccount, PoolInformation } from '@sure/sdk';
+import { PoolAccount, PoolInformation } from '@surec/sdk';
 import { createContext, useContext, useState } from 'react';
 
 type PoolSelectorType = [

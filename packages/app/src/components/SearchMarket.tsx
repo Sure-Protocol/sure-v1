@@ -1,5 +1,5 @@
 import { css, cx } from '@emotion/css';
-import { PoolAccount, PoolInformation, SureSdk } from '@sure/sdk';
+import { PoolAccount, PoolInformation, SureSdk } from '@surec/sdk';
 import { useInsuranceContract } from '../context/insuranceContract';
 import { useSurePools } from '../context/surePools';
 import { explorerLink } from '../utils/links';

@@ -16,7 +16,7 @@ import { useForm } from 'react-hook-form';
 import { useSureSdk } from './context/sureSdk';
 import { PublicKey } from '@solana/web3.js';
 import WarningBox from './components/WarningBox';
-import { SureDate } from '@sure/sdk';
+import { SureDate } from '@surec/sdk';
 
 const BuyInsurance = () => {
 	const { register, watch, setValue, getValues, handleSubmit } = useForm();

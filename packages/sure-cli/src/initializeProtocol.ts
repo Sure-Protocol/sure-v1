@@ -1,7 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { Connection, Keypair } from '@solana/web3.js';
-import { SureSdk } from '@sure/sdk';
+import { SureSdk } from '@surec/sdk';
 
 async function run() {
 	const keypair = Keypair.fromSecretKey(

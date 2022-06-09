@@ -1,6 +1,10 @@
 import * as anchor from '@project-serum/anchor';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { PoolAccount, PoolInformation, PoolInsuranceContract } from '@sure/sdk';
+import {
+	PoolAccount,
+	PoolInformation,
+	PoolInsuranceContract,
+} from '@surec/sdk';
 import { useSureSdk } from './sureSdk';
 import { useSurePools } from './surePools';
 
