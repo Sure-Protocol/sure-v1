@@ -3,7 +3,7 @@ use crate::states::{
     contract::{InsuranceTickContract,PoolInsuranceContract},
     liquidity::{self, LiquidityPosition},
     owner::ProtocolOwner,
-    pool::{PoolAccount, PoolManager, SurePools},
+    pool::{PoolAccount, PoolManager, SurePools, TokenPool},
     tick::{Tick, TickTrait},
 };
 use anchor_lang::prelude::*;
@@ -17,6 +17,7 @@ use std::mem::size_of;
 use vipers::{assert_is_ata, prelude::*};
 
 pub const SURE_PRIMARY_POOL_SEED: &str = "sure-insurance-pool";
+pub const SURE_TOKEN_POOL_SEED: &str = "sure-token-pool";
 pub const SURE_ASSOCIATED_TOKEN_ACCOUNT_SEED: &str = "sure-ata";
 pub const SURE_PREMIUM_POOL_SEED: &str = "sure-premium-vault";
 pub const SURE_VAULT_POOL_SEED: &str = "sure-liquidity-vault";
@@ -151,12 +152,13 @@ impl<'info> Validate<'info> for CreatePool<'info> {
 /// creates the associated pool vault
 /// based on token mint
 #[derive(Accounts)]
-pub struct CreatePoolVaults<'info> {
+pub struct InitializeTokenPool<'info> {
     // Signer of the creation
     #[account(mut)]
     pub creator: Signer<'info>,
 
     /// Pool account that the vaults are associated to
+    #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
 
     /// Token mint used for the Vaults
@@ -208,6 +210,22 @@ pub struct CreatePoolVaults<'info> {
     )]
     pub pool_liquidity_tick_bitmap: Box<Account<'info, BitMap>>,
 
+    /// Token Pool
+    /// holds statistics about the given token pool
+    /// 
+    #[account(
+        init,
+        space = 8 + TokenPool::SPACE,
+        payer = creator,
+        seeds = [
+            SURE_TOKEN_POOL_SEED.as_bytes(),
+            pool.key().as_ref(),
+            pool_vault_token_mint.key().as_ref()
+        ],
+        bump,
+    )]
+    pub token_pool: Box<Account<'info,TokenPool>>,
+
     /// Sysvar for Associated Token Account
     pub rent: Sysvar<'info, Rent>,
 
@@ -218,7 +236,7 @@ pub struct CreatePoolVaults<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> Validate<'info> for CreatePoolVaults<'info> {
+impl<'info> Validate<'info> for InitializeTokenPool<'info> {
     fn validate(&self) -> Result<()> {
         // Make sure that token is USDC
         assert_eq!(

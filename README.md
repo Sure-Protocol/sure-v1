@@ -27,6 +27,7 @@ Test Project
 **Faucets**
 
 - https://test.lp.finance/
+- https://usdcfaucet.com/?blockchainAddress=https%3A%2F%2Fapi.devnet.solana.com
 
 ## Naming conventions
 

@@ -9,6 +9,7 @@ import {
 	SURE_PREMIUM_POOL_SEED,
 	SURE_VAULT_POOL_SEED,
 	SURE_PROTOCOL_OWNER,
+	SURE_TOKEN_POOL_SEED,
 } from './seeds';
 import { PROGRAM_ID } from './constants';
 import { LiquidityTickInfo } from 'src/types';
@@ -33,18 +34,24 @@ export class Common {
 
 	async convertBNFromDecimals(
 		amount: anchor.BN,
-		tokenAccount: Account
-	): Promise<anchor.BN> {
-		const mint = await getMint(this.connection, tokenAccount.mint);
-		return amount.div(new anchor.BN(10 ** mint.decimals));
+		mint: PublicKey
+	): Promise<string> {
+		const mintInfo = await getMint(this.connection, mint);
+		const base = new anchor.BN(10 ** mintInfo.decimals);
+		let fraction = amount.mod(base).toString(10);
+		while (fraction.length < mintInfo.decimals) {
+			fraction = `0${fraction}`;
+		}
+		const whole = amount.div(base).toString(10);
+		return `${whole}${fraction == '0' ? '' : `.${fraction}`}`;
 	}
 
 	async convertBNToDecimals(
 		amount: anchor.BN,
-		tokenAccount: Account
+		mint: PublicKey
 	): Promise<anchor.BN> {
-		const mint = await getMint(this.connection, tokenAccount.mint);
-		return amount.mul(new anchor.BN(10 ** mint.decimals));
+		const mintInfo = await getMint(this.connection, mint);
+		return amount.mul(new anchor.BN(10 ** mintInfo.decimals));
 	}
 
 	async getProtocolOwner(): Promise<[PublicKey, number]> {
@@ -87,6 +94,27 @@ export class Common {
 			this.program.programId
 		);
 		return poolPDA;
+	}
+
+	/**
+	 * Get the public key of the token pool
+	 *
+	 * The token pool holds information about the pool
+	 * for the given token
+	 *
+	 * @param pool: Publickey of the parent pool
+	 * @param tokenMint: Publickey of the mint used in the pool
+	 * @returns PDA
+	 */
+	async getTokenPoolPDA(
+		pool: PublicKey,
+		tokenMint: PublicKey
+	): Promise<anchor.web3.PublicKey> {
+		const [tokenPoolPDA, _] = await PublicKey.findProgramAddress(
+			[SURE_TOKEN_POOL_SEED, pool.toBytes(), tokenMint.toBytes()],
+			this.program.programId
+		);
+		return tokenPoolPDA;
 	}
 
 	async getPoolLiquidityTickBitmapPDA(

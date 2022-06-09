@@ -22,7 +22,8 @@
 		"lerna:bootstrap": "lerna bootstrap",
 		"build": "lerna run build",
 		"init:sure": "lerna run initialize",
-		"watch": "lerna run --parallel watch"
+		"watch": "lerna run --parallel watch",
+		"release": "lerna publish from-package --no-verify-access"
 	},
 	"workspaces": [
 		"packages/*"

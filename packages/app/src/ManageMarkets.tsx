@@ -38,7 +38,7 @@ export const ManageMarkets = () => {
 			10,
 			data.programName
 		);
-		await sureProgram?.pool.createPoolVault(tokenMint, programIdPK);
+		await sureProgram?.pool.initializeTokenPool(tokenMint, programIdPK);
 	});
 
 	useEffect(() => {

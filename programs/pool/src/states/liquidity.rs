@@ -17,6 +17,8 @@ use anchor_spl::{
 
 use vipers::{assert_is_ata, prelude::*};
 
+use super::pool::TokenPool;
+
 /// -- Liquidity Position --
 /// 
 /// Holds information about liquidity at a given tick
@@ -100,9 +102,13 @@ pub struct DepositLiquidity<'info> {
     #[account(mut)]
     pub liquidity_provider_ata: Box<Account<'info, TokenAccount>>,
 
-    /// Pool to provide liquidity to
+    /// Pool which owns token account
     #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
+
+    /// Token pool account which holds overview
+    #[account(mut)]
+    pub token_pool: Box<Account<'info,TokenPool>>,
 
     /// Pool Vault account to deposit liquidity to
     #[account(mut)]
@@ -209,6 +215,10 @@ pub struct RedeemLiquidity<'info> {
     #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
 
+    /// Token pool account which holds overview
+    #[account(mut)]
+    pub token_pool: Box<Account<'info,TokenPool>>,
+
     /// NFT that proves ownership of position
     #[account(
         constraint = liquidity_position_nft_account.mint ==liquidity_position.nft_mint
@@ -230,6 +240,13 @@ pub struct RedeemLiquidity<'info> {
     #[account(mut)]
     pub pool_vault: Box<Account<'info, TokenAccount>>,
 
+     /// Pool Liquidity Tick Bitmap
+    /// 
+    /// Holds information on which ticks that contains 
+    /// available liquidity
+    #[account(mut)]
+    pub pool_liquidity_tick_bitmap: Box<Account<'info, BitMap>>,
+    
     #[account(mut)]
     pub liquidity_tick_info: AccountLoader<'info, Tick>,
 

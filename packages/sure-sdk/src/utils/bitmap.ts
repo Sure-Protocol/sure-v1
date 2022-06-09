@@ -1,5 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 
+//TODO Write unit tests
+
 export type BitmapType = {
 	bump: number;
 	wordPos: number;
@@ -94,7 +96,7 @@ export class Bitmap {
 		const u256 = this.word.flatMap((word) => {
 			return word.toString(2, 64).split('').reverse().join('');
 		})[0];
-		const priorBitmap = u256.slice(0, bit - 1);
+		const priorBitmap = u256.slice(0, bit);
 		const lastBit = priorBitmap.lastIndexOf('1');
 		if (lastBit === -1) {
 			return lastBit;

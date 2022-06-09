@@ -1,12 +1,12 @@
 import * as anchor from '@project-serum/anchor';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { PoolAccount, PoolInsuranceContract } from '@sure/sdk';
+import { PoolAccount, PoolInformation, PoolInsuranceContract } from '@sure/sdk';
 import { useSureSdk } from './sureSdk';
 import { useSurePools } from './surePools';
 
 type InsuranceContract = [
 	PoolInsuranceContract | undefined,
-	(data: PoolAccount) => void
+	(data: PoolInformation) => void
 ];
 
 const InsuranceContractContext = createContext<InsuranceContract>([
@@ -23,7 +23,7 @@ export const InsuranceContractProvider: React.FunctionComponent<{
 		PoolInsuranceContract | undefined
 	>(undefined);
 
-	const updateInsuranceContract = async (pool: PoolAccount) => {
+	const updateInsuranceContract = async (pool: PoolInformation) => {
 		if (sureSdk) {
 			const poolPDA = await sureSdk?.pool.getPoolPDA(pool.smartContract);
 			const insuranceContract =

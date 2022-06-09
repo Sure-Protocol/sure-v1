@@ -223,7 +223,7 @@
 // 		const poolLiquidityTickBitmap =
 // 			await sureSdk.pool.getPoolLiquidityTickBitmapPDA(pool, tokenMint);
 
-// 		await sureSdk.pool.createPoolVault(tokenMint, protcolToInsure0.publicKey);
+// 		await sureSdk.pool.initializeTokenPool(tokenMint, protcolToInsure0.publicKey);
 
 // 		const bitmapAccount = await program.account.bitMap.fetch(
 // 			poolLiquidityTickBitmap
@@ -431,7 +431,7 @@
 // 			tokenAccount.mint
 // 		);
 // 		console.log('poolStatistics: ', poolStatistics);
-// 		const pools = await sureSdk.pool.getPoolAccounts();
+// 		const pools = await sureSdk.pool.getPoolsInformation();
 // 		console.log('sure pools: ', pools[0].smartContract.toBase58());
 // 	});
 // });

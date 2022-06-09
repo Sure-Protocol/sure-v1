@@ -16,6 +16,8 @@ use anchor_spl::{
 
 use vipers::{assert_is_ata, prelude::*};
 
+use super::pool::TokenPool;
+
 
 const SURE_TIME_LOCK_IN_SECONDS: u64 = solana_program::clock::SECONDS_PER_DAY;
 
@@ -77,24 +79,14 @@ pub struct InsuranceTickContract {
     /// Amount insured
     pub insured_amount: u64, // 8 bytes
 
-    /// Amount to be converted to insured amount
-    /// over time
-    pub time_locked_insured_amount: u64,
-
     /// Premium
     pub premium: u64, // 8 bytes
-
-    /// The length of the contract
-    pub period_ts: i64, // 8 bytes
-
+    
     /// The end time of the contract
     pub end_ts: i64, // 8 bytes
 
     /// Start time of contract
     pub start_ts: i64, // 8 bytes
-
-    /// End of timelocked insured amount
-    pub time_lock_end: i64, // 8 bytes
 
     /// Insured pool
     pub pool: Pubkey, // 32 bytes
@@ -104,9 +96,6 @@ pub struct InsuranceTickContract {
 
     // Token Mint
     pub token_mint: Pubkey, // 32 bytes
-
-    /// Owner of insurance contract
-    pub owner: Pubkey, // 32 bytes
 
     /// Is the insurance contract active
     pub active: bool, // 1 byte
@@ -189,8 +178,6 @@ impl InsuranceTickContract {
         if new_insured_amount > self.insured_amount && time_lock {
             // Time-locked insurance amount
             let amount_change = new_insured_amount - self.insured_amount;
-            self.time_locked_insured_amount = amount_change;
-            self.time_lock_end = current_time + (SURE_TIME_LOCK_IN_SECONDS as i64);
             
         }else {
             // Reduction happens immidiately
@@ -204,7 +191,6 @@ impl InsuranceTickContract {
        
         self.end_ts = new_end_ts;
         self.updated_ts =current_time;
-        self.period_ts = new_end_ts - current_time;
         self.insured_amount = new_insured_amount;
         
        
@@ -399,13 +385,25 @@ pub struct UpdateInsuranceTickContract<'info> {
     #[account(mut)]
     pub token_account: Box<Account<'info, TokenAccount>>,
 
-    /// Pool to buy from
+    /// Pool owning the token pool to buy from
     #[account(mut)]
     pub pool: Box<Account<'info, PoolAccount>>,
 
-    /// Tick account to buy
+    /// Pool Token Account
+    /// Keeps an overview over used liquidity
+    #[account(mut)]
+    pub token_pool: Box<Account<'info,TokenPool>>,
+
+    /// Tick account to buy from
     #[account(mut)]
     pub liquidity_tick_info: AccountLoader<'info, Tick>,
+
+    /// Liquidity Tick Bitmap
+    /// 
+    /// Holds information on which ticks that contains 
+    /// available liquidity
+    #[account(mut)]
+    pub liquidity_tick_bitmap: Box<Account<'info, BitMap>>,
 
     /// Premium Vault
     #[account(
@@ -418,7 +416,6 @@ pub struct UpdateInsuranceTickContract<'info> {
     /// Insurance Contract
     #[account(mut,
     constraint = insurance_tick_contract.pool == pool.key(),
-    constraint = insurance_tick_contract.owner == buyer.key(),
     )]
     pub insurance_tick_contract: Box<Account<'info, InsuranceTickContract>>,
 

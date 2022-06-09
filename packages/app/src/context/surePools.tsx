@@ -1,10 +1,10 @@
 import * as anchor from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { insurance, pool, PoolAccount } from '@sure/sdk';
+import { insurance, pool, PoolAccount, PoolInformation } from '@sure/sdk';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useSureSdk } from './sureSdk';
 
-export const SurePoolsContext = createContext<undefined | PoolAccount[]>(
+export const SurePoolsContext = createContext<undefined | PoolInformation[]>(
 	undefined
 );
 
@@ -15,7 +15,7 @@ interface Props {
 export const SurePoolsProvider: React.FunctionComponent<Props> = ({
 	children,
 }) => {
-	const [surePools, setSurePools] = useState<undefined | PoolAccount[]>(
+	const [surePools, setSurePools] = useState<undefined | PoolInformation[]>(
 		undefined
 	);
 	const sureSdk = useSureSdk();
@@ -23,7 +23,7 @@ export const SurePoolsProvider: React.FunctionComponent<Props> = ({
 	useEffect(() => {
 		(async () => {
 			if (sureSdk !== undefined) {
-				const pools = await sureSdk.pool.getPoolAccounts();
+				const pools = await sureSdk.pool.getPoolsInformation();
 				console.log('pools: ', pools);
 				setSurePools(pools);
 			}
@@ -37,6 +37,6 @@ export const SurePoolsProvider: React.FunctionComponent<Props> = ({
 	);
 };
 
-export const useSurePools = (): PoolAccount[] | undefined => {
+export const useSurePools = (): PoolInformation[] | undefined => {
 	return useContext(SurePoolsContext);
 };

@@ -121,7 +121,7 @@
       ]
     },
     {
-      "name": "createPoolVaults",
+      "name": "initializeTokenPool",
       "accounts": [
         {
           "name": "creator",
@@ -130,7 +130,7 @@
         },
         {
           "name": "pool",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -150,6 +150,11 @@
         },
         {
           "name": "poolLiquidityTickBitmap",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenPool",
           "isMut": true,
           "isSigner": false
         },
@@ -191,6 +196,11 @@
         },
         {
           "name": "pool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenPool",
           "isMut": true,
           "isSigner": false
         },
@@ -284,6 +294,11 @@
           "isSigner": false
         },
         {
+          "name": "tokenPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "liquidityPositionNftAccount",
           "isMut": false,
           "isSigner": false
@@ -305,6 +320,11 @@
         },
         {
           "name": "poolVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "poolLiquidityTickBitmap",
           "isMut": true,
           "isSigner": false
         },
@@ -424,7 +444,7 @@
       "args": []
     },
     {
-      "name": "updateInsuranceForTick",
+      "name": "updateInsuranceTickContract",
       "accounts": [
         {
           "name": "buyer",
@@ -442,7 +462,17 @@
           "isSigner": false
         },
         {
+          "name": "tokenPool",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "liquidityTickInfo",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "liquidityTickBitmap",
           "isMut": true,
           "isSigner": false
         },
@@ -628,16 +658,8 @@
             "type": "u64"
           },
           {
-            "name": "timeLockedInsuredAmount",
-            "type": "u64"
-          },
-          {
             "name": "premium",
             "type": "u64"
-          },
-          {
-            "name": "periodTs",
-            "type": "i64"
           },
           {
             "name": "endTs",
@@ -645,10 +667,6 @@
           },
           {
             "name": "startTs",
-            "type": "i64"
-          },
-          {
-            "name": "timeLockEnd",
             "type": "i64"
           },
           {
@@ -661,10 +679,6 @@
           },
           {
             "name": "tokenMint",
-            "type": "publicKey"
-          },
-          {
-            "name": "owner",
             "type": "publicKey"
           },
           {
@@ -806,8 +820,38 @@
             "type": "publicKey"
           },
           {
+            "name": "tokenPools",
+            "type": {
+              "vec": "publicKey"
+            }
+          },
+          {
             "name": "locked",
             "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenPool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "tokenMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "liquidity",
+            "type": "u64"
+          },
+          {
+            "name": "usedLiquidity",
+            "type": "u64"
           }
         ]
       }
@@ -1031,7 +1075,7 @@
       ]
     },
     {
-      "name": "CreatePoolVaults",
+      "name": "InitializeTokenPool",
       "fields": []
     },
     {
@@ -1051,8 +1095,5 @@
       "name": "CouldNotUpdateTimestamp",
       "msg": "could not update timestamp"
     }
-  ],
-  "metadata": {
-    "address": "sureLJ8UXoy3WF3Dk6Hy1ak8DscZkmHvv1hprvhVCxB"
-  }
+  ]
 }

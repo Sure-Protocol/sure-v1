@@ -48,12 +48,42 @@ pub struct PoolAccount {
     /// insured
     pub smart_contract: Pubkey, // 32 bytes
 
+    /// Vec of token Pools
+    pub token_pools: Vec<Pubkey>, // 4 + 32*64, 64 tokens for each pool
+
     /// Whether the insurance pool is locked
     pub locked: bool, // 1 byte
 }
 
 impl PoolAccount {
-    pub const SPACE: usize = 1 + 4 + 200 + 4  + 32 + 1;
+    pub const SPACE: usize = 1 + 4 + 200 + 4  + 32 + 4 + 32*64 + 1;
+}
+
+/// Pool Token Account
+/// The account is used to keep an overview over the specific 
+/// pool for a given token
+/// 
+/// This makes it easier to load data
+/// 
+/// Needs to 
+#[account]
+pub struct TokenPool {
+    /// bump 
+    pub bump: u8, // 1 byte 
+
+    /// Token mint of pool
+    pub token_mint: Pubkey, // 32 bytes
+
+    /// Liquidity in Token Pool
+    pub liquidity: u64, // 8 bytes
+
+    /// Used liquidity
+    pub used_liquidity: u64, // 8 bytes
+
+}
+
+impl TokenPool {
+    pub const SPACE: usize = 1 + 32 + 8 + 8;
 }
 
 #[event]
@@ -65,4 +95,4 @@ pub struct CreatePool {
 }
 
 #[event]
-pub struct CreatePoolVaults {}
+pub struct InitializeTokenPool {}

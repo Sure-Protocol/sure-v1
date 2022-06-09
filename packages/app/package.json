@@ -17,7 +17,7 @@
 		"@solana/wallet-adapter-react-ui": "^0.9.7",
 		"@solana/wallet-adapter-wallets": "^0.16.1",
 		"@solana/web3.js": "^1.43.1",
-		"@sure/sdk": "workspace:^",
+		"@sure/sdk": "^0.0.1",
 		"react": "^18.1.0",
 		"react-dom": "^18.0.0",
 		"react-hook-form": "^7.31.2",

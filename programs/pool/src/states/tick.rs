@@ -83,6 +83,7 @@ pub trait TickTrait {
     fn get_new_id(&self) -> u8;
     fn update_callback(&mut self) -> Result<(), TickAnchorError>;
     fn is_pool_empty(&self) -> bool;
+    fn is_pool_full(&self) -> bool;
 
     // Liquidity Management
     fn add_liquidity(&mut self, id: u8, size: u64, token_mint: Pubkey) -> Result<(), TickError>;
@@ -365,6 +366,10 @@ impl TickTrait for Tick {
 
     fn is_pool_empty(&self) -> bool {
         self.used_liquidity == 0 && self.liquidity == 0 && !self.active
+    }
+
+    fn is_pool_full(&self) -> bool {
+        self.used_liquidity == self.liquidity && self.active
     }
 }
 

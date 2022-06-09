@@ -1,5 +1,5 @@
 import { css, cx } from '@emotion/css';
-import { PoolAccount, SureSdk } from '@sure/sdk';
+import { PoolAccount, PoolInformation, SureSdk } from '@sure/sdk';
 import { useInsuranceContract } from '../context/insuranceContract';
 import { useSurePools } from '../context/surePools';
 import { explorerLink } from '../utils/links';
@@ -11,12 +11,12 @@ import { useTokens } from '../context/tokens';
 import TokenIcon from './TokenIcon';
 
 interface MarketListProps {
-	surePools: PoolAccount[];
+	surePools: PoolInformation[];
 }
 
-const MarketListItem: React.FunctionComponent<{ surePool: PoolAccount }> = ({
-	surePool,
-}) => {
+const MarketListItem: React.FunctionComponent<{
+	surePool: PoolInformation;
+}> = ({ surePool }) => {
 	const [contract, setContract] = useInsuranceContract();
 	const [pool, setPool] = usePool();
 	const [isOpen, toggle] = useToggle();
@@ -62,7 +62,7 @@ const MarketListItem: React.FunctionComponent<{ surePool: PoolAccount }> = ({
 				`}
 			>
 				<p className="p--small p--margin-0">{`Liquidity: ${surePool.liquidity.toString()}`}</p>
-				<p className="p--small p--margin-0">{`Premium: ${surePool.premiumRate}bp`}</p>
+				<p className="p--small p--margin-0">{`Premium: ${surePool.lowestPremium}bp`}</p>
 			</div>
 		</button>
 	);

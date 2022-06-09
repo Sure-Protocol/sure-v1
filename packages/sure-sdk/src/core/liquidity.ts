@@ -258,7 +258,6 @@ export class Liquidity extends Common {
 			tx.feePayer = this.wallet.publicKey;
 
 			const provider = await anchor.getProvider();
-			console.log('provider.send: ', provider.sendAndConfirm);
 			const txRes = await provider.sendAndConfirm?.(tx);
 			console.log('txRes_ ', txRes);
 		} catch (err) {
@@ -302,6 +301,7 @@ export class Liquidity extends Common {
 			} catch (err) {
 				throw new Error('User does not have ata for the given token. ' + err);
 			}
+
 			// Protocol Owner
 			let [protocolOwnerPDA, _] = await this.getProtocolOwner();
 			try {
@@ -360,6 +360,7 @@ export class Liquidity extends Common {
 					protocolOwner: protocolOwnerPDA,
 					liquidityProviderAta: liquidityProviderAtaAccount,
 					pool: poolPDA,
+					tokenPool: await this.getTokenPoolPDA(poolPDA, tokenMint),
 					poolVault: poolVaultPDA,
 					liquidityPosition: liquidityPositionPDA,
 					liquidityPositionNftMint: nftMint,
@@ -408,8 +409,8 @@ export class Liquidity extends Common {
 		}
 
 		const poolPDA = liquidityPosition.pool;
-		const pool = await this.program.account.poolAccount.fetch(poolPDA);
 		const tokenMint = liquidityPosition.tokenMint;
+		const tokenPool = await this.getTokenPoolPDA(poolPDA, tokenMint);
 		const tick = liquidityPosition.tick;
 		const nftMint = liquidityPosition.nftMint;
 
@@ -424,20 +425,24 @@ export class Liquidity extends Common {
 		);
 		let metadataAccountPDA = await this.getMetaplexMetadataPDA(nftMint);
 		try {
-			await this.program.methods.redeemLiquidity().accounts({
-				nftHolder: wallet,
-				liquidityPositionNftAccount: nftAccount,
-				protocolOwner: protocolOwnerPDA,
-				liquidityPosition: liquidityPositionPDA,
-				liquidityProviderAta: walletATA,
-				poolVault: poolVaultPDA,
-				liquidityTickInfo: liqudityTickInfoPDA,
-				metadataAccount: metadataAccountPDA,
-				metadataProgram: mp.PROGRAM_ID,
-				pool: poolPDA,
-				tokenProgram: TOKEN_PROGRAM_ID,
-				systemProgram: SystemProgram.programId,
-			});
+			await this.program.methods
+				.redeemLiquidity()
+				.accounts({
+					nftHolder: wallet,
+					liquidityPositionNftAccount: nftAccount,
+					protocolOwner: protocolOwnerPDA,
+					liquidityPosition: liquidityPositionPDA,
+					liquidityProviderAta: walletATA,
+					poolVault: poolVaultPDA,
+					liquidityTickInfo: liqudityTickInfoPDA,
+					metadataAccount: metadataAccountPDA,
+					metadataProgram: mp.PROGRAM_ID,
+					pool: poolPDA,
+					tokenPool: tokenPool,
+					tokenProgram: TOKEN_PROGRAM_ID,
+					systemProgram: SystemProgram.programId,
+				})
+				.rpc();
 		} catch (err) {
 			throw new Error('sure.reedemLiquidity.error. cause: ' + err);
 		}

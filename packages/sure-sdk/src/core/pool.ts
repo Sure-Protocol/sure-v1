@@ -1,7 +1,13 @@
 import * as anchor from '@project-serum/anchor';
 import { getAccount, getMint, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
-import { LiquidityTickInfo, PoolAccount, TokenPoolStatistics } from 'src/types';
+import {
+	LiquidityTickInfo,
+	PoolAccount,
+	PoolInformation,
+	TokenPool,
+	TokenPoolStatistics,
+} from 'src/types';
 import { Bitmap, Money } from './../utils';
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
@@ -104,56 +110,52 @@ export class Pool extends Common {
 	 * Get All Sure Pools
 	 *
 	 * Find all available pools based on vaults
+	 * DEPRECATE: too slow
 	 *
 	 * @returns Pool accounts
 	 */
-	async getPoolAccounts(): Promise<PoolAccount[]> {
+	async getPoolsInformation(): Promise<PoolInformation[]> {
 		const surePools = await this.getPoolsPDA();
 		const pools = await this.program.account.surePools.fetch(surePools);
-		const poolAccounts: PoolAccount[] = [];
-		let pool;
-		let tokenAccountsPk: PublicKey[];
-		let poolStatistics: TokenPoolStatistics;
+		const poolsInformation: PoolInformation[] = [];
+		let pool: PoolAccount;
+		let tokenPool: TokenPool;
+		let liquidityBitmapPDA: PublicKey;
+		let liquidityBitmap: Bitmap;
 		for (const poolPDA of pools.pools) {
 			pool = await this.program.account.poolAccount.fetch(poolPDA);
-			tokenAccountsPk = await this.getAllPoolTokenAccounts(poolPDA);
-			for (const tokenAccountPk of tokenAccountsPk) {
-				const tokenAccount = await getAccount(this.connection, tokenAccountPk);
+			for (const tokenPoolPDA of pool.tokenPools) {
+				tokenPool = await this.program.account.tokenPool.fetch(tokenPoolPDA);
 
-				// Get the premium vault pda
-				const premiumVaultPDA = await this.getPremiumVaultPDA(
+				// Get liquidity bitmap
+				liquidityBitmapPDA = await this.getPoolLiquidityTickBitmapPDA(
 					poolPDA,
-					tokenAccount.mint
+					tokenPool.tokenMint
 				);
 
-				// We are only interested in the pool vaults
-				if (premiumVaultPDA.toBase58() === tokenAccountPk.toBase58()) {
-					poolStatistics = await this.getTokenPoolStatistics(
-						poolPDA,
-						tokenAccount.mint
-					);
-
-					poolAccounts.push({
-						name: pool.name,
-						tokenMint: poolStatistics.tokenMint,
-						insuranceFee: pool.insuranceFee,
-						liquidity: await this.convertBNFromDecimals(
-							poolStatistics.liquidity,
-							tokenAccount
-						),
-						usedLiquidity: await this.convertBNFromDecimals(
-							poolStatistics.amountInsured,
-							tokenAccount
-						),
-						premiumRate: poolStatistics.premiumLow,
-						smartContract: pool.smartContract,
-						locked: pool.locked,
-					});
-				}
+				liquidityBitmap = Bitmap.new(
+					await this.program.account.bitMap.fetch(liquidityBitmapPDA)
+				);
+				poolsInformation.push({
+					name: pool.name,
+					tokenMint: tokenPool.tokenMint,
+					insuranceFee: pool.insuranceFee,
+					smartContract: pool.smartContract,
+					liquidity: await this.convertBNFromDecimals(
+						tokenPool.liquidity,
+						tokenPool.tokenMint
+					),
+					usedLiquidity: await this.convertBNFromDecimals(
+						tokenPool.usedLiquidity,
+						tokenPool.tokenMint
+					),
+					lowestPremium: liquidityBitmap.getLowestTick(),
+					locked: pool.locked,
+				});
 			}
 		}
 
-		return poolAccounts;
+		return poolsInformation;
 	}
 
 	async getOrCreatePool(
@@ -202,26 +204,27 @@ export class Pool extends Common {
 		}
 	}
 
-	async createPoolVault(tokenMint: PublicKey, smartContractAddress: PublicKey) {
-		const poolPDA = await this.getPoolPDA(smartContractAddress);
-		const liquidityVaultPDA = await this.getPoolVaultPDA(poolPDA, tokenMint);
-		const premiumVaultPDA = await this.getPremiumVaultPDA(poolPDA, tokenMint);
+	async initializeTokenPool(pool: PublicKey, tokenMint: PublicKey) {
+		const liquidityVaultPDA = await this.getPoolVaultPDA(pool, tokenMint);
+		const premiumVaultPDA = await this.getPremiumVaultPDA(pool, tokenMint);
 		const poolLiquidityTickBitmapPDA = await this.getPoolLiquidityTickBitmapPDA(
-			poolPDA,
+			pool,
 			tokenMint
 		);
+		const tokenPoolPDA = await this.getTokenPoolPDA(pool, tokenMint);
 
 		try {
 			await this.program.methods
-				.createPoolVaults()
+				.initializeTokenPool()
 				.accounts({
 					creator: this.wallet.publicKey,
-					pool: poolPDA,
+					pool: pool,
 					poolVaultTokenMint: tokenMint,
 					poolVault: liquidityVaultPDA,
 					premiumVault: premiumVaultPDA,
 					poolLiquidityTickBitmap: poolLiquidityTickBitmapPDA,
 					rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+					tokenPool: tokenPoolPDA,
 					tokenProgram: TOKEN_PROGRAM_ID,
 					systemProgram: SystemProgram.programId,
 				})
@@ -231,7 +234,7 @@ export class Pool extends Common {
 				console.log(err.logs);
 			}
 
-			throw new Error('sure.pool.createPoolVaults.error. Cause: ' + err);
+			throw new Error('sure.pool.initializeTokenPool.error. Cause: ' + err);
 		}
 	}
 

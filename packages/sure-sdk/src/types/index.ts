@@ -17,28 +17,41 @@ export interface PoolAccount {
 	/// Name of pool visible to the user
 	name: string; // 4 + 200 bytes
 
-	/// Token Mint
-	tokenMint: PublicKey; // 32 bytes
-
 	/// Fee paid when buying insurance.
 	/// in basis points
 	insuranceFee: number; // 4 bytes
-
-	/// The total liquidity in the pool
-	liquidity: anchor.BN; // 8 bytes
-
-	/// Used Liquidity in the pool
-	usedLiquidity: anchor.BN; // 8 bytes
-
-	/// Current premium rate in basis points (0.01%).
-	premiumRate: number; // 8 bytes
 
 	/// The public key of the smart contract that is
 	/// insured
 	smartContract: PublicKey; // 32 bytes
 
+	/// Token pools
+	tokenPools: PublicKey[];
+
 	/// Whether the insurance pool is locked
 	locked: boolean; // 1 byte
+}
+
+export interface TokenPool {
+	/// Token mint of pool
+	tokenMint: PublicKey; // 32 bytes
+
+	/// Liquidity in Token Pool
+	liquidity: anchor.BN; // 8 bytes
+
+	/// Used liquidity
+	usedLiquidity: anchor.BN; // 8 bytes
+}
+
+export interface PoolInformation {
+	name: string;
+	tokenMint: PublicKey;
+	insuranceFee: number;
+	smartContract: PublicKey;
+	liquidity: string;
+	usedLiquidity: string;
+	lowestPremium: number;
+	locked: boolean;
 }
 
 export interface PoolInsuranceContract {

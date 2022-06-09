@@ -1,6 +1,8 @@
 import * as anchor from '@project-serum/anchor';
 
 export const POOL_SEED = anchor.utils.bytes.utf8.encode('sure-insurance-pool');
+export const SURE_TOKEN_POOL_SEED =
+	anchor.utils.bytes.utf8.encode('sure-token-pool');
 export const TOKEN_VAULT_SEED = anchor.utils.bytes.utf8.encode('sure-ata');
 export const SURE_BITMAP = anchor.utils.bytes.utf8.encode('sure-bitmap');
 export const SURE_LIQUIDITY_POSITION =
