@@ -1,5 +1,5 @@
 {
-	"name": "@sure/sdk",
+	"name": "@surec/sdk",
 	"version": "0.0.1",
 	"publishConfig": {
 		"access": "public",
@@ -46,5 +46,6 @@
 		"build:node": "tsc -p tsconfig.cjs.json",
 		"copy:anchor": "rimraf ./src/anchor && mkdir -p ./src/anchor/idl ./src/anchor/types && cp -r ./../../target/idl/* ./src/anchor/idl && cp -r ./../../target/types/* ./src/anchor/types",
 		"clean": "rm -rf lib"
-	}
+	},
+	"gitHead": "76bf4520af6d587f456e8c606f0e4e2bd742928b"
 }
