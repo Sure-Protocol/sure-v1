@@ -24,7 +24,8 @@ export const SureSdkProvider: React.FunctionComponent<Props> = ({
 
 	useEffect(() => {
 		if (wallet.wallet !== null) {
-			setSurePoolProgram(SureSdk.init(connection, wallet as Wallet));
+			/// @ts-ignore
+			setSurePoolProgram(SureSdk.init(connection, wallet as anchor.Wallet));
 		}
 	}, [wallet]);
 

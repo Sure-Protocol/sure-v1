@@ -16,10 +16,7 @@ const EstimateInsurance: React.FunctionComponent<EstimateInsuranceProps> = ({
 	pool,
 }) => {
 	const sureSdk = useSureSdk();
-	const [estimate, setEstimate] = useState([
-		new anchor.BN(0),
-		new anchor.BN(0),
-	]);
+	const [estimate, setEstimate] = useState(['', '']);
 	useEffect(() => {
 		const estimateYearlyPremium = async () => {
 			const estimate = await sureSdk?.insurance.estimateYearlyPremium(

@@ -11,7 +11,7 @@ const TokenIcon: React.FunctionComponent<Props> = ({ tokenAddress }) => {
 	const tokens = useTokens();
 	return (
 		<>
-			{tokens !== undefined && (
+			{tokens && (
 				<a
 					href={explorerLink(tokenAddress)}
 					className={css`
@@ -21,7 +21,7 @@ const TokenIcon: React.FunctionComponent<Props> = ({ tokenAddress }) => {
 				>
 					<img
 						height={'32px'}
-						src={tokens?.get(tokenAddress.toBase58()).logoURI}
+						src={tokens.get(tokenAddress?.toBase58())?.logoURI}
 					/>
 				</a>
 			)}

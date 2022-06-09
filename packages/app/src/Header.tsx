@@ -5,7 +5,7 @@ function Header() {
 		<div className="header">
 			<div className="header-navbar">
 				<div className="header-navbar-item">
-					<WalletMultiButton>Connect</WalletMultiButton>
+					<WalletMultiButton />
 				</div>
 			</div>
 		</div>

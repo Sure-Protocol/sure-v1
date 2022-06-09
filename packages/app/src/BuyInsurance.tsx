@@ -12,7 +12,7 @@ import { theme } from './components/Themes';
 import SearchMarket from './components/SearchMarket';
 import down from './assets/icons/down.svg';
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { FieldValues, useForm } from 'react-hook-form';
 import { useSureSdk } from './context/sureSdk';
 import { PublicKey } from '@solana/web3.js';
 import WarningBox from './components/WarningBox';
@@ -67,7 +67,7 @@ const BuyInsurance = () => {
 		}
 	}, [watch('amount')]);
 
-	const onSubmit = async (data) => {
+	const onSubmit = async (data: FieldValues) => {
 		console.log('buy insurance data: ', data);
 		if (sureSdk && pool) {
 			const expiryDateInMs = Date.parse(data.expiry);
@@ -223,9 +223,7 @@ const BuyInsurance = () => {
 									<h3 className="p--white p--margin-0">Buy</h3>
 								</MainButton>
 							) : (
-								<WalletMultiButton>
-									<h3 className="p--white p--margin-0">Connect to buy</h3>
-								</WalletMultiButton>
+								<WalletMultiButton />
 							)}
 						</div>
 					</form>

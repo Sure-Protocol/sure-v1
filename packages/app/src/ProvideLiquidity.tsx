@@ -3,7 +3,7 @@ import { theme } from './components/Themes';
 import { useToggle } from './context/searchToggle';
 import { usePool } from './context/surePool';
 import down from './assets/icons/down.svg';
-import { useForm } from 'react-hook-form';
+import { FieldValues, useForm } from 'react-hook-form';
 import MainButton from './components/MainButton';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useWallet } from '@solana/wallet-adapter-react';
@@ -36,7 +36,7 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 		}
 	}, [watch()]);
 
-	const onSubmit = async (data) => {
+	const onSubmit = async (data: FieldValues) => {
 		console.log('on sub,it ');
 		if (pool && sureSdk) {
 			console.log('pool: ', pool);
@@ -114,9 +114,11 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 								padding: 5px;
 							`}
 						>
-							<p className="p--margin-0">
-								{tokens?.get(pool?.tokenMint.toBase58())?.symbol}
-							</p>
+							{pool && (
+								<p className="p--margin-0">
+									{tokens?.get(pool?.tokenMint.toBase58())?.symbol}
+								</p>
+							)}
 						</button>
 					</div>
 					<div
@@ -233,11 +235,7 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 								<h3 className="p--white p--margin-0">Provide Liquidity</h3>
 							</MainButton>
 						) : (
-							<WalletMultiButton>
-								<h3 className="p--white p--margin-0">
-									Connect to Provide Liquidity
-								</h3>
-							</WalletMultiButton>
+							<WalletMultiButton />
 						)}
 					</div>
 				</form>
