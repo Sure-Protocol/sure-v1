@@ -1,6 +1,10 @@
 {
-	"name": "sure-cli",
+	"name": "@sure/cli",
 	"version": "0.0.1",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
 	"packageManager": "yarn@3.2.0",
 	"bin": {
 		"initialize-protocol": "bin/initializeProtocol.js"
