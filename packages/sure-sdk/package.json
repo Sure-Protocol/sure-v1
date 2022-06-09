@@ -1,6 +1,6 @@
 {
 	"name": "@surec/sdk",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
@@ -47,5 +47,5 @@
 		"copy:anchor": "rimraf ./src/anchor && mkdir -p ./src/anchor/idl ./src/anchor/types && cp -r ./../../target/idl/* ./src/anchor/idl && cp -r ./../../target/types/* ./src/anchor/types",
 		"clean": "rm -rf lib"
 	},
-	"gitHead": "9d00268018ab2144d29b769638ae7e09102dae02"
+	"gitHead": "a84c608cec8f48eb5078e36a96aae4cc894b36de"
 }
