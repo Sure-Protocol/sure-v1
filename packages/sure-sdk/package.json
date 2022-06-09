@@ -47,5 +47,5 @@
 		"copy:anchor": "rimraf ./src/anchor && mkdir -p ./src/anchor/idl ./src/anchor/types && cp -r ./../../target/idl/* ./src/anchor/idl && cp -r ./../../target/types/* ./src/anchor/types",
 		"clean": "rm -rf lib"
 	},
-	"gitHead": "60adfadb1d5095ebf309ad0df2f557483dbe7d84"
+	"gitHead": "9d00268018ab2144d29b769638ae7e09102dae02"
 }

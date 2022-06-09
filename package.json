@@ -26,6 +26,7 @@
 		"release": "lerna publish from-package --no-verify-access"
 	},
 	"workspaces": [
-		"packages/*"
+		"packages/sure-sdk",
+		"packages/sure-cli"
 	]
 }
