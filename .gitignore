@@ -6,10 +6,14 @@ target
 node_modules
 .vscode
 .yarn
-*/**/dist
+
 */**/.rollup.cache
 lerna-debug.log
 .editorconfig
 test-ledger
 */**/bin
 */**/log
+
+# build folders
+*/**/public
+*/**/dist
