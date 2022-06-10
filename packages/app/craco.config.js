@@ -1,11 +1,18 @@
+const path = require('path');
 module.exports = {
 	plugins: [],
 	webpack: {
 		configure: {
 			resolve: {
-				fallback: {
-					stream: require.resolve('stream-browserify'),
-					crypto: require.resolve('crypto-browserify'),
+				alias: {
+					stream: path.resolve(
+						__dirname,
+						'./../../node_modules/stream-browserify/index.js'
+					),
+					crypto: path.resolve(
+						__dirname,
+						'./../../node_modules/crypto-browserify/index.js'
+					),
 				},
 			},
 		},
