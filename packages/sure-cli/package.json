@@ -1,6 +1,6 @@
 {
 	"name": "@surec/cli",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
@@ -17,7 +17,7 @@
 	"dependencies": {
 		"@project-serum/anchor": "^0.25.0-beta.1",
 		"@solana/web3.js": "^1.43.4",
-		"@surec/sdk": "^0.0.2"
+		"@surec/sdk": "^0.0.3"
 	},
 	"devDependencies": {
 		"rimraf": "^3.0.2",
