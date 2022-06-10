@@ -8,6 +8,7 @@ import typescript from '@rollup/plugin-typescript';
 import scss from 'rollup-plugin-scss';
 import svgr from '@svgr/rollup';
 import json from '@rollup/plugin-json';
+import nodePolyfills from 'rollup-plugin-polyfill-node';
 
 export default {
 	input: 'src/index.tsx',
@@ -17,6 +18,7 @@ export default {
 		sourcemap: true,
 	},
 	plugins: [
+		nodePolyfills(),
 		svgr(),
 		scss(),
 		typescript(),
