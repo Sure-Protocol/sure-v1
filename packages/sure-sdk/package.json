@@ -5,11 +5,22 @@
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
 	},
+	"repository": "https://github.com/Sure-Protocol/sure-v1",
 	"description": "Sure Protocol SDK",
 	"packageManager": "yarn@3.2.0",
 	"main": "./dist/cjs/index.js",
 	"browser": "./dist/browser/index.js",
 	"types": "./dist/cjs/index.d.ts",
+	"type": "module",
+	"exports": {
+		"import": "./dist/browser/index.js",
+		"require": "./dist/cjs/index.js"
+	},
+	"files": [
+		"dist",
+		"src",
+		"LICENSE"
+	],
 	"dependencies": {
 		"@metaplex-foundation/mpl-token-metadata": "^2.1.2",
 		"@project-serum/anchor": "^0.24.2",
