@@ -54,7 +54,7 @@
 		"esbuild-plugin-svg": "^0.1.0",
 		"esbuild-plugin-svgr": "^1.0.1",
 		"esbuild-sass-plugin": "^2.2.6",
-		"react-scripts": "^5.0.1",
+		"react-scripts": "^4.0.0",
 		"rollup": "^2.75.6",
 		"rollup-plugin-livereload": "^2.0.5",
 		"rollup-plugin-node-polyfills": "^0.2.1",
