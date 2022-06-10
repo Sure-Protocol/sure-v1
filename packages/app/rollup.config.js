@@ -15,7 +15,7 @@ export default {
 	input: 'src/index.tsx',
 	output: {
 		file: 'dist_up/index.js',
-		format: 'es',
+		format: 'iife',
 		sourcemap: true,
 	},
 	plugins: [
