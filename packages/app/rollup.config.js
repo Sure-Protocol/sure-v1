@@ -9,12 +9,13 @@ import scss from 'rollup-plugin-scss';
 import svgr from '@svgr/rollup';
 import json from '@rollup/plugin-json';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
+import copy from 'rollup-plugin-copy';
 
 export default {
 	input: 'src/index.tsx',
 	output: {
-		file: 'dist_up/bundle.js',
-		format: 'iife',
+		file: 'dist_up/index.js',
+		format: 'es',
 		sourcemap: true,
 	},
 	plugins: [
@@ -23,6 +24,9 @@ export default {
 		scss(),
 		typescript(),
 		json(),
+		copy({
+			targets: [{ src: 'src/assets/*.ttf', dest: 'dist_up/' }],
+		}),
 		nodeResolve({
 			extensions: ['.js', '.ts'],
 		}),
