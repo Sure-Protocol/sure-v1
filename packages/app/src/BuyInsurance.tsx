@@ -93,6 +93,7 @@ const BuyInsurance = () => {
 								className={css`
 									border-radius: 5px;
 									margin-right: 1rem;
+									margin-bottom: 10px;
 									flex-grow: 2;
 									background-color: ${theme.colors.sureBlue4};
 									padding: 4px;

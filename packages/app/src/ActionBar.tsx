@@ -22,7 +22,9 @@ const ActionBar = () => {
 			</NavLink>
 			<NavLink
 				className={({ isActive }) =>
-					`sure-navbar-link${isActive ? '--active' : ''}`
+					`sure-navbar-link${
+						isActive ? '--active' : ''
+					} sure-navbar-link--disabled`
 				}
 				to="/dashboard"
 			>
@@ -32,9 +34,9 @@ const ActionBar = () => {
 				className={({ isActive }) =>
 					`sure-navbar-link${isActive ? '--active' : ''}`
 				}
-				to="/markets"
+				to="/pools"
 			>
-				Markets
+				Pools
 			</NavLink>
 		</div>
 	);

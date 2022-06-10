@@ -123,10 +123,13 @@ export class Pool extends Common {
 		let liquidityBitmapPDA: PublicKey;
 		let liquidityBitmap: Bitmap;
 		for (const poolPDA of pools.pools) {
+			console.log('> poolPDA: ', poolPDA);
 			pool = await this.program.account.poolAccount.fetch(poolPDA);
+			console.log('pool: ', pool);
 			for (const tokenPoolPDA of pool.tokenPools) {
+				console.log('> tokenPoolPDA: ', tokenPoolPDA);
 				tokenPool = await this.program.account.tokenPool.fetch(tokenPoolPDA);
-
+				console.log('> tokenPool: ', tokenPool);
 				// Get liquidity bitmap
 				liquidityBitmapPDA = await this.getPoolLiquidityTickBitmapPDA(
 					poolPDA,
@@ -136,22 +139,28 @@ export class Pool extends Common {
 				liquidityBitmap = Bitmap.new(
 					await this.program.account.bitMap.fetch(liquidityBitmapPDA)
 				);
-				poolsInformation.push({
-					name: pool.name,
-					tokenMint: tokenPool.tokenMint,
-					insuranceFee: pool.insuranceFee,
-					smartContract: pool.smartContract,
-					liquidity: await this.convertBNFromDecimals(
-						tokenPool.liquidity,
-						tokenPool.tokenMint
-					),
-					usedLiquidity: await this.convertBNFromDecimals(
-						tokenPool.usedLiquidity,
-						tokenPool.tokenMint
-					),
-					lowestPremium: liquidityBitmap.getLowestTick(),
-					locked: pool.locked,
-				});
+				console.log('liquidityBitmap: ', liquidityBitmap.getLowestTick());
+				console.log('> tokenMint: ', tokenPool.tokenMint.toBase58());
+				try {
+					poolsInformation.push({
+						name: pool.name,
+						tokenMint: tokenPool.tokenMint,
+						insuranceFee: pool.insuranceFee,
+						smartContract: pool.smartContract,
+						liquidity: await this.convertBNFromDecimals(
+							tokenPool.liquidity,
+							tokenPool.tokenMint
+						),
+						usedLiquidity: await this.convertBNFromDecimals(
+							tokenPool.usedLiquidity,
+							tokenPool.tokenMint
+						),
+						lowestPremium: liquidityBitmap.getLowestTick(),
+						locked: pool.locked,
+					});
+				} catch {
+					console.log('could not fetch pool');
+				}
 			}
 		}
 
@@ -205,6 +214,7 @@ export class Pool extends Common {
 	}
 
 	async initializeTokenPool(pool: PublicKey, tokenMint: PublicKey) {
+		console.log('Initialize token pool: ');
 		const liquidityVaultPDA = await this.getPoolVaultPDA(pool, tokenMint);
 		const premiumVaultPDA = await this.getPremiumVaultPDA(pool, tokenMint);
 		const poolLiquidityTickBitmapPDA = await this.getPoolLiquidityTickBitmapPDA(
@@ -213,6 +223,13 @@ export class Pool extends Common {
 		);
 		const tokenPoolPDA = await this.getTokenPoolPDA(pool, tokenMint);
 
+		console.log('> liquidityVaultPDA: ', liquidityVaultPDA.toBase58());
+		console.log('> premiumVaultPDA: ', premiumVaultPDA.toBase58());
+		console.log(
+			'> poolLiquidityTickBitmapPDA: ',
+			poolLiquidityTickBitmapPDA.toBase58()
+		);
+		console.log('tokenPoolPDA: ', tokenPoolPDA.toBase58());
 		try {
 			await this.program.methods
 				.initializeTokenPool()
@@ -229,6 +246,7 @@ export class Pool extends Common {
 					systemProgram: SystemProgram.programId,
 				})
 				.rpc();
+			console.log('> success');
 		} catch (err) {
 			if (err.logs) {
 				console.log(err.logs);

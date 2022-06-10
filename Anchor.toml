@@ -2,10 +2,13 @@
 seeds = false
 
 [programs.localnet]
-sure_pool = "sureLJ8UXoy3WF3Dk6Hy1ak8DscZkmHvv1hprvhVCxB"
+sure_pool = "6JqrqLaHQu9YPpp5z9KzF2nUeR4tnm3y3z9UMzkhVAwG"
 
 [programs.devnet]
-sure_pool = "sureLJ8UXoy3WF3Dk6Hy1ak8DscZkmHvv1hprvhVCxB"
+sure_pool = "6JqrqLaHQu9YPpp5z9KzF2nUeR4tnm3y3z9UMzkhVAwG"
+
+[programs.testnet]
+sure_pool = "6JqrqLaHQu9YPpp5z9KzF2nUeR4tnm3y3z9UMzkhVAwG"
 
 [registry]
 url = "https://github.com/Sure-Protocol/sure-v1"

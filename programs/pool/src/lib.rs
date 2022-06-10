@@ -19,7 +19,7 @@ use mpl_token_metadata::state::Creator;
 use std::cmp;
 use vipers::prelude::*;
 
-declare_id!("sureLJ8UXoy3WF3Dk6Hy1ak8DscZkmHvv1hprvhVCxB");
+declare_id!("6JqrqLaHQu9YPpp5z9KzF2nUeR4tnm3y3z9UMzkhVAwG");
 
 #[program]
 pub mod sure_pool {

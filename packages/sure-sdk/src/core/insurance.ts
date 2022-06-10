@@ -16,7 +16,7 @@ import {
 	TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
-import { BN, min } from 'bn.js';
+import { min } from 'bn.js';
 
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
@@ -519,7 +519,7 @@ export class Insurance extends Common {
 			return amount;
 		} catch (err) {
 			console.log('sure.insurance.getInsuredAmount.warning. Cause: ' + err);
-			return new BN(0);
+			return new anchor.BN(0);
 		}
 	}
 

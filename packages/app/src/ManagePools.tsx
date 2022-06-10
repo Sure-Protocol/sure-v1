@@ -9,6 +9,7 @@ import { PublicKey } from '@solana/web3.js';
 import { AnchorProvider } from '@project-serum/anchor';
 import { useTokens } from './context/tokens';
 import { getAccount } from '@solana/spl-token';
+import { theme } from './components/Themes';
 
 interface CreateMarkets {
 	protocolName: string;
@@ -17,7 +18,7 @@ interface CreateMarkets {
 	token: string;
 }
 
-export const ManageMarkets = () => {
+const ManagePools = () => {
 	const sureProgram = useSureSdk();
 	const { connection } = useConnection();
 	const tokens = useTokens();
@@ -28,7 +29,6 @@ export const ManageMarkets = () => {
 		setError,
 		clearErrors,
 	} = useForm();
-	console.log('errors: ', errors);
 
 	const onSubmit = handleSubmit(async (data) => {
 		const programIdPK = new PublicKey(data.programId);
@@ -38,7 +38,7 @@ export const ManageMarkets = () => {
 			10,
 			data.programName
 		);
-		await sureProgram?.pool.initializeTokenPool(tokenMint, programIdPK);
+		await sureProgram?.pool.initializeTokenPool(poolPDA, tokenMint);
 	});
 
 	useEffect(() => {
@@ -67,51 +67,80 @@ export const ManageMarkets = () => {
 					`}
 					onSubmit={onSubmit}
 				>
-					<p>Create new Sure market</p>
-					<input {...register('programName')} placeholder="Program Name " />
+					<p>Permissionless Pool</p>
+
 					<input
-						{...register('programId')}
-						onBlur={async (e) => {
-							console.log('e: ', e.target.value);
-							clearErrors('programId');
-							try {
-								const programIdPk = new PublicKey(e.target.value);
-								const account = await connection.getParsedAccountInfo(
-									programIdPk
-								);
-								console.log('account: ', account);
-								if (!account.value?.executable) {
+						{...register('programName')}
+						className={'input-text-field'}
+						placeholder="Program Name "
+						type={'text'}
+					/>
+					<div
+						className={css`
+							border-radius: 5px;
+							margin-right: 1rem;
+							flex-grow: 2;
+							background-color: ${theme.colors.sureBlue4};
+							padding: 4px;
+							display: flex;
+							flex-direction: row;
+						`}
+					>
+						<input
+							{...register('programId')}
+							className={'input-text-field'}
+							onBlur={async (e) => {
+								console.log('e: ', e.target.value);
+								clearErrors('programId');
+								try {
+									const programIdPk = new PublicKey(e.target.value);
+									const account = await connection.getParsedAccountInfo(
+										programIdPk
+									);
+									console.log('account: ', account);
+									if (!account.value?.executable) {
+										setError('programId', {
+											type: 'custom',
+											message: 'This is not a valid program',
+										});
+									}
+								} catch (err) {
 									setError('programId', {
 										type: 'custom',
-										message: 'This is not a valid program',
+										message: 'Not a valid program',
 									});
 								}
-							} catch (err) {
-								setError('programId', {
-									type: 'custom',
-									message: 'Not a valid program',
-								});
-							}
-						}}
-						placeholder="Program Id "
-					/>
+							}}
+							placeholder="Program Id "
+						/>
+
+						<select
+							{...register('tokenId')}
+							onBlur={(e) => {
+								const tokenId = e.target.value;
+								console.log('tokenId: ', tokenId);
+							}}
+							className={css`
+								background-color: ${theme.colors.sureBlue4};
+								color: ${theme.colors.sureWhite};
+								cursor: pointer;
+								border-radius: 5px;
+								border-width: 1px;
+								border-color: transparent;
+								padding: 5px;
+							`}
+						>
+							{Array.from(tokens?.keys() ?? []).map((token) => (
+								<option value={tokens?.get(token)?.address}>
+									{tokens?.get(token)?.name}
+								</option>
+							))}
+						</select>
+					</div>
 					{errors.programId && (
 						<span role="alert">{errors.programId.message}</span>
 					)}
-					<select
-						{...register('tokenId')}
-						onBlur={(e) => {
-							const tokenId = e.target.value;
-							console.log('tokenId: ', tokenId);
-						}}
-						placeholder="Token program Id "
-					>
-						{Array.from(tokens?.keys() ?? []).map((token) => (
-							<option value={tokens?.get(token)?.address}>
-								{tokens?.get(token)?.name}
-							</option>
-						))}
-					</select>
+
 					<MainButton>
 						<p className="p--white p--margin-0">Submit</p>
 					</MainButton>
@@ -120,3 +149,5 @@ export const ManageMarkets = () => {
 		</div>
 	);
 };
+
+export default ManagePools;

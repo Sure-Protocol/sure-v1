@@ -2,7 +2,7 @@ import Header from './Header';
 import { Routes, Route, Link, NavLink } from 'react-router-dom';
 import BuyInsurance from './BuyInsurance';
 import ActionBar from './ActionBar';
-import { ManageMarkets } from './ManageMarkets';
+import ManagePools from './ManagePools';
 import { InsuranceContractProvider } from './context/insuranceContract';
 import { PoolProvider } from './context/surePool';
 import { SearchProvider } from './context/searchToggle';
@@ -40,7 +40,7 @@ const Navigation = () => {
 								</PoolProvider>
 							}
 						/>
-						<Route path="/markets" element={<ManageMarkets />} />
+						<Route path="/pools" element={<ManagePools />} />
 					</Routes>
 				</div>
 			</div>

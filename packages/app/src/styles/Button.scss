@@ -1,0 +1,19 @@
+
+.sure-wallet{
+    background-color: $sure-pink;
+    border-radius: 10px;
+    .sure-wallet-button{
+        font-family: 'arvo';
+        display: flex;
+        justify-content: center;
+        @media (max-width: $small) {
+            padding: 0;
+            width:100px;
+            font-family: 'arvo';
+            font-size: small;
+            font-weight: 300;
+        }
+    }
+   
+   
+}

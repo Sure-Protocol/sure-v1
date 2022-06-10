@@ -17,6 +17,10 @@ $sure-dark-purple:rgb(89, 36, 139);
 
 // Fonts
 
+// Screen sizes 
+$small: 450px;
+$medium: 900px;
+
 @font-face {
     font-family: 'arvo-bold';
     src: url("./../assets/Arvo-Bold.ttf") format("truetype");
@@ -41,8 +45,8 @@ $sure-dark-purple:rgb(89, 36, 139);
 p {
     color: $sure-text-grey;   
     font-family: 'arvo';
-  
 }
+
 
 h1,h2,h3,h4,h5{
     color: $sure-text-grey;   

@@ -16,6 +16,7 @@
 .sure-buy-insurance-selectors {
     display: flex;
     flex-grow: 2;
+    margin-bottom: 2rem;
     
     &--horisontal{
         @extend .sure-buy-insurance-selectors;
@@ -30,6 +31,7 @@
     border-radius: 5px;
     &--date{
         @extend .sure-buy-insurance-selector;
+        margin-bottom: 10px;
         background-color: $sure-blue-4;
         display: flex;
         justify-content: center;

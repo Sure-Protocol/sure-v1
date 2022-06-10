@@ -19,7 +19,13 @@
     border-radius: 20px;
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
     padding: 2px;
+
+    @media (max-width: $small) {
+        flex-direction: row;  
+        height: 2rem;
+    }
 }
 
 .sure-navbar-link{
@@ -33,6 +39,13 @@
     padding-right: 40px;
     border-radius: 20px;
 
+    @media (max-width: $small) {
+        flex-direction: row; 
+        padding-left: 10px;
+        padding-right: 10px;
+        font-size: small;
+
+    }
     &--active{
         @extend .sure-navbar-link;
         background-color:$sure-pink;

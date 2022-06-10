@@ -79,11 +79,10 @@ pub struct TokenPool {
 
     /// Used liquidity
     pub used_liquidity: u64, // 8 bytes
-
 }
 
 impl TokenPool {
-    pub const SPACE: usize = 1 + 32 + 8 + 8;
+    pub const SPACE: usize = 1 + 32 + 8 + 8 + 4 + 200;
 }
 
 #[event]
