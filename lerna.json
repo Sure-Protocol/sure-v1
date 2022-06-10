@@ -1,6 +1,6 @@
 {
 	"npmClient": "yarn",
-	"packages": ["sure-sdk", "sure-cli"],
+	"packages": ["packages/*"],
 	"useWorkspaces": true,
-	"version": "0.0.3"
+	"version": "0.0.2"
 }
