@@ -29,6 +29,9 @@
 		"lerna:bootstrap": "lerna bootstrap",
 		"build": "lerna run build",
 		"init:sure": "lerna run initialize",
+		"build:rollup": "lerna run build:rollup",
+		"build:craco": "lerna run build:craco",
+		"build:esbuild": "lerna run build:esbuild",
 		"watch": "lerna run --parallel watch",
 		"release": "lerna publish from-package --no-verify-access"
 	},
