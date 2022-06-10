@@ -33,12 +33,16 @@ const ManagePools = () => {
 	const onSubmit = handleSubmit(async (data) => {
 		const programIdPK = new PublicKey(data.programId);
 		const tokenMint = new PublicKey(data.tokenId);
-		const poolPDA = await sureProgram?.pool.getOrCreatePool(
-			programIdPK,
-			10,
-			data.programName
-		);
-		await sureProgram?.pool.initializeTokenPool(poolPDA, tokenMint);
+		try {
+			const poolPDA = await sureProgram?.pool.getOrCreatePool(
+				programIdPK,
+				10,
+				data.programName
+			);
+			await sureProgram?.pool.initializeTokenPool(poolPDA, tokenMint);
+		} catch {
+			console.log('pool creation failed');
+		}
 	});
 
 	useEffect(() => {
