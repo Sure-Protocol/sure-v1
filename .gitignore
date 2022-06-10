@@ -17,5 +17,6 @@ test-ledger
 # build folders
 */**/public
 */**/dist
+*/**/build*
 
 *.txt

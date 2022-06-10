@@ -1,5 +1,4 @@
 import * as anchor from '@project-serum/anchor';
-import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { Connection, Keypair } from '@solana/web3.js';
 import { SureSdk } from '@surec/sdk';
 
@@ -13,7 +12,7 @@ async function run() {
 			)
 		)
 	);
-	const wallet = new NodeWallet(keypair);
+	const wallet = new anchor.Wallet(keypair);
 	const network = process.env.NETWORK!;
 	const connection = new Connection(network, {});
 

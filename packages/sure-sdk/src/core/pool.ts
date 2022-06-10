@@ -191,6 +191,7 @@ export class Pool extends Common {
 		const poolsPDA = await this.getPoolsPDA();
 
 		try {
+			console.log('this.program.methods: ', this.program.methods);
 			await this.program.methods
 				.createPool(insuranceFee, name)
 				.accounts({

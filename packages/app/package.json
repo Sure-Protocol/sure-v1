@@ -4,7 +4,11 @@
 	"private": true,
 	"scripts": {
 		"dev": "vite",
-		"build": "tsc && vite build",
+		"build:vite": "tsc && vite build",
+		"build:esbuild": "tsc && node esbuild.config.js",
+		"build:rollup": "tsc && rollup -c rollup.config.js",
+		"build:craco": "tsc && craco build",
+		"start:craco": "craco start",
 		"preview": "vite preview"
 	},
 	"dependencies": {
@@ -17,22 +21,59 @@
 		"@solana/wallet-adapter-phantom": "^0.9.3",
 		"@solana/wallet-adapter-react": "^0.15.5",
 		"@solana/wallet-adapter-react-ui": "^0.9.7",
+		"@solana/wallet-adapter-wallets": "^0.16.1",
 		"@solana/web3.js": "^1.43.1",
-		"@surec/sdk": "^0.0.6",
+		"@surec/sdk": "workspace:^",
+		"crypto-browserify": "^3.12.0",
 		"react": "^18.1.0",
 		"react-dom": "^18.0.0",
 		"react-hook-form": "^7.31.2",
 		"react-router-dom": "^6.3.0",
-		"sass": "^1.52.1"
+		"sass": "^1.52.1",
+		"stream-browserify": "^3.0.0"
 	},
 	"devDependencies": {
 		"@babel/preset-react": "^7.17.12",
 		"@babel/preset-typescript": "^7.17.12",
+		"@craco/craco": "^6.4.3",
+		"@esbuild-plugins/node-globals-polyfill": "^0.1.1",
+		"@esbuild-plugins/node-modules-polyfill": "^0.1.4",
+		"@esbuild-plugins/node-resolve": "^0.1.4",
+		"@rollup/plugin-babel": "^5.3.1",
+		"@rollup/plugin-commonjs": "^22.0.0",
+		"@rollup/plugin-inject": "^4.0.4",
+		"@rollup/plugin-node-resolve": "^13.3.0",
+		"@rollup/plugin-replace": "^4.0.0",
 		"@types/react": "^18.0.0",
 		"@types/react-dom": "^18.0.0",
 		"@vitejs/plugin-react": "^1.3.0",
+		"craco-webpack-resolve": "^1.2.1",
+		"esbuild": "^0.14.43",
+		"esbuild-plugin-alias": "^0.2.1",
+		"esbuild-plugin-babel": "^0.2.3",
+		"esbuild-plugin-svg": "^0.1.0",
+		"esbuild-plugin-svgr": "^1.0.1",
+		"esbuild-sass-plugin": "^2.2.6",
+		"react-scripts": "^5.0.1",
+		"rollup": "^2.75.6",
+		"rollup-plugin-livereload": "^2.0.5",
+		"rollup-plugin-node-polyfills": "^0.2.1",
+		"rollup-plugin-serve": "^1.1.0",
 		"typescript": "^4.6.3",
-		"vite": "^2.9.9"
+		"vite": "^2.9.9",
+		"webpack": "^5.73.0"
 	},
-	"gitHead": "9d00268018ab2144d29b769638ae7e09102dae02"
+	"gitHead": "9d00268018ab2144d29b769638ae7e09102dae02",
+	"browserslist": {
+		"production": [
+			">0.2%",
+			"not dead",
+			"not op_mini all"
+		],
+		"development": [
+			"last 1 chrome version",
+			"last 1 firefox version",
+			"last 1 safari version"
+		]
+	}
 }

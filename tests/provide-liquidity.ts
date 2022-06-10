@@ -56,7 +56,7 @@ describe('Provide Liquidity', () => {
 			tokenMint,
 			tokenAccountAta,
 			(wallet as NodeWallet).payer,
-			mintAmount.convertToDecimals()
+			mintAmount.convertToDecimals().toNumber()
 		);
 
 		// Assert the correct amount
