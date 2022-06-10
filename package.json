@@ -29,7 +29,7 @@
 		"lerna:bootstrap": "lerna bootstrap",
 		"build": "lerna run build",
 		"init:sure": "lerna run initialize",
-		"build:rollup": "cd packages/app && npm run build:rollup",
+		"build:rollup": "cd packages/app && npm install && npm run build:rollup",
 		"build:craco": "lerna run build:craco",
 		"build:esbuild": "lerna run build:esbuild",
 		"build:vite": "lerna run build:vite",
