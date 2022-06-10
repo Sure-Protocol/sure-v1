@@ -171,7 +171,7 @@ export class Pool extends Common {
 		smartContractAddress: PublicKey,
 		insuranceFee: number,
 		name: string
-	) {
+	): Promise<PublicKey> {
 		const poolPDA = await this.getPoolPDA(smartContractAddress);
 		try {
 			await this.program.account.poolAccount.fetch(poolPDA);
