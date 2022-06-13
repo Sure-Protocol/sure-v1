@@ -9,6 +9,7 @@
 		"yarn": "^1.22.19"
 	},
 	"devDependencies": {
+		"@craco/craco": "^6.4.3",
 		"@types/mocha": "^9.0.0",
 		"chai": "^4.3.4",
 		"lerna": "^5.0.0",
