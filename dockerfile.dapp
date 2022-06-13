@@ -1,0 +1,22 @@
+FROM node:alpine AS build
+
+
+COPY ?.* /dapp/
+COPY .* /dapp/
+COPY .yarn /dapp/.yarn
+COPY yarn.lock /dapp/yarn.lock
+COPY node_modules /dapp/node_modules
+COPY package.json /dapp/package.json
+COPY lerna.json /dapp/lerna.json
+COPY packages/app/ /dapp/packages/app/
+WORKDIR /dapp/
+
+
+RUN yarn set version stable \
+    && ls -la \
+    && yarn \
+    && yarn build:craco
+
+
+FROM nginx
+COPY --from=build /dapp/packages/app/build/ /usr/share/nginx/html/

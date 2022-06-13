@@ -2,8 +2,8 @@ import { PoolAccount, PoolInformation } from '@surec/sdk';
 import { createContext, useContext, useState } from 'react';
 
 type PoolSelectorType = [
-	pool: PoolInformation | undefined,
-	setPool: (data: PoolInformation) => void
+	PoolInformation | undefined,
+	(data: PoolInformation) => void
 ];
 const PoolContext = createContext<PoolSelectorType>([undefined, () => {}]);
 
