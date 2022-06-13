@@ -32,10 +32,10 @@ on:
       - 'main'
 
 env:
-  AWS_REGION: AWS_REGION # set this to your preferred AWS region, e.g. us-west-1
-  ECR_REPOSITORY: ECR_REPOSITORY # set this to your Amazon ECR repository name
-  ECS_SERVICE: ECS_SERVICE # set this to your Amazon ECS service name
-  ECS_CLUSTER: ECS_CLUSTER # set this to your Amazon ECS cluster name
+  AWS_REGION: 'us-west-1'
+  ECR_REPOSITORY: 'arn:aws:ecs:us-east-1:362993508148:cluster/default' # set this to your Amazon ECR repository name
+  ECS_SERVICE: 'sure-dapp' # set this to your Amazon ECS service name
+  ECS_CLUSTER: 'default' # set this to your Amazon ECS cluster name
   ECS_TASK_DEFINITION: .aws/task-definition.json
   CONTAINER_NAME: 'sure-dapp'
 
@@ -57,7 +57,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.dapp.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.dapp.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.dapp.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -88,6 +88,6 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ secrets.dapp.ECS_SERVICE }}
-          cluster: ${{ secrets.dapp.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
