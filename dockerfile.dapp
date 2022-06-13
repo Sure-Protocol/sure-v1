@@ -1,13 +1,13 @@
 FROM node:alpine AS build
 
 
-COPY ?.* /dapp/
-COPY .* /dapp/
 COPY .yarn /dapp/.yarn
+COPY .yarnrc.yml /dapp/.yarnrc.yml
 COPY yarn.lock /dapp/yarn.lock
+COPY lerna.json /dapp/lerna.json
 COPY node_modules /dapp/node_modules
 COPY package.json /dapp/package.json
-COPY lerna.json /dapp/lerna.json
+COPY tsconfig.json /dapp/tsconfig.json
 COPY packages/app/ /dapp/packages/app/
 WORKDIR /dapp/
 
