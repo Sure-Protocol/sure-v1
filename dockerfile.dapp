@@ -12,6 +12,7 @@ COPY packages/app/ packages/app/
 
 RUN apk add git \
     && yarn set version stable \
+    && yarn \
     && yarn build:craco
 
 
