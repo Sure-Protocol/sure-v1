@@ -8,7 +8,7 @@
 		"build:esbuild": "rimraf dist_es/ && tsc && node esbuild.config.js && cp public/index.html dist_es/index.html",
 		"build:rollup": "rimraf dist_up/ && tsc && rollup -c rollup.config.js",
 		"start:rollup": "rollup -c rollup.config.js -w",
-		"build:craco": "NODE_OPTIONS=--openssl-legacy-provider craco build",
+		"build:craco": "rimraf build && NODE_OPTIONS=--openssl-legacy-provider craco build",
 		"start:craco": "craco start",
 		"preview": "vite preview"
 	},

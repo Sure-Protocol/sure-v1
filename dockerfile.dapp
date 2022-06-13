@@ -1,17 +1,18 @@
 FROM node:alpine AS build
 
-
-COPY lerna.json /dapp/lerna.json
-COPY package.json /dapp/package.json
-COPY tsconfig.json /dapp/tsconfig.json
-COPY packages/app/ /dapp/packages/app/
 WORKDIR /dapp/
+COPY lerna.json lerna.json
+COPY package.json package.json
+COPY tsconfig.json tsconfig.json
+COPY packages/app/ packages/app/
+
 
 RUN apk add git \
     && yarn set version stable \
+    && yarn install &> /dev/null  \
     && ls -la \
-    && yarn --version \
-    && yarn \
+    && cat package.json \
+    && yarn add @craco/craco \
     && yarn build:craco
 
 
