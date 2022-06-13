@@ -5,7 +5,7 @@ target
 **/*.rs.bk
 node_modules
 .vscode
-
+.yarn
 
 */**/.rollup.cache
 lerna-debug.log

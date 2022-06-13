@@ -1,16 +1,12 @@
 FROM node:alpine AS build
 
 
-COPY .yarn /dapp/.yarn
-COPY .yarnrc.yml /dapp/.yarnrc.yml
-COPY yarn.lock /dapp/yarn.lock
 COPY lerna.json /dapp/lerna.json
 COPY node_modules /dapp/node_modules
 COPY package.json /dapp/package.json
 COPY tsconfig.json /dapp/tsconfig.json
 COPY packages/app/ /dapp/packages/app/
 WORKDIR /dapp/
-
 
 RUN yarn set version stable \
     && ls -la \
