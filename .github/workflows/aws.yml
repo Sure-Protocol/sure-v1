@@ -32,7 +32,7 @@ on:
       - 'main'
 
 env:
-  AWS_REGION: 'us-west-1'
+  AWS_REGION: 'us-east-1'
   ECR_REPOSITORY: 'sureprotocol' # set this to your Amazon ECR repository name
   ECS_SERVICE: 'sure-dapp' # set this to your Amazon ECS service name
   ECS_CLUSTER: 'default' # set this to your Amazon ECS cluster name
