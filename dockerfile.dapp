@@ -18,3 +18,4 @@ RUN apk add git \
 
 FROM nginx
 COPY --from=build /dapp/packages/app/build/ /usr/share/nginx/html/
+EXPOSE 80
