@@ -8,6 +8,7 @@ import svgr from '@svgr/rollup';
 import json from '@rollup/plugin-json';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 import copy from 'rollup-plugin-copy';
+import url from '@rollup/plugin-url';
 import inject from '@rollup/plugin-inject';
 
 export default {
@@ -15,32 +16,33 @@ export default {
 	output: {
 		file: 'dist_up/index.js',
 		format: 'esm',
-		sourcemap: true,
-		strict: false,
 	},
 	external: ['websocket'],
 	plugins: [
+		json(),
+		commonjs(),
 		nodePolyfills({
-			include: ['buffer', 'stream', 'crypto'],
+			include: ['buffer', 'stream', 'crypto', 'serialize'],
+		}),
+		nodeResolve({
+			browser: true,
+			extensions: ['.js', '.ts'],
+			dedupe: ['bn.js', 'buffer'],
+			preferBuiltins: false,
 		}),
 		inject({ Buffer: ['buffer', 'Buffer'] }),
+		url(),
 		svgr(),
 		scss(),
 		typescript(),
-		json(),
 		copy({
-			targets: [{ src: 'src/assets/*.ttf', dest: 'dist_up/' }],
-			targets: [{ src: 'public/index.html', dest: 'dist_up/' }],
-		}),
-		nodeResolve({
-			extensions: ['.js', '.ts'],
+			targets: [
+				{ src: 'src/assets/*.ttf', dest: 'dist_up/assets/' },
+				{ src: 'public/index.html', dest: 'dist_up/' },
+			],
 		}),
 		replace({
 			'process.env.NODE_ENV': JSON.stringify('development'),
 		}),
-		babel({
-			presets: ['@babel/preset-react'],
-		}),
-		commonjs(),
 	],
 };

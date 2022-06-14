@@ -5396,6 +5396,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rollup/plugin-url@npm:^7.0.0":
+  version: 7.0.0
+  resolution: "@rollup/plugin-url@npm:7.0.0"
+  dependencies:
+    "@rollup/pluginutils": ^4.2.1
+    make-dir: ^3.1.0
+    mime: ^2.4.6
+  peerDependencies:
+    rollup: ^1.20.0||^2.0.0
+  checksum: f85d90dbeb45d2c759d22245df188f663d42e26c7cdd652b1e1c50897a7a221e126550c04005883da7c13a7c97a42f43a9746f762fed9fb8d5c4058907d20f90
+  languageName: node
+  linkType: hard
+
 "@rollup/pluginutils@npm:^3.0.8, @rollup/pluginutils@npm:^3.1.0":
   version: 3.1.0
   resolution: "@rollup/pluginutils@npm:3.1.0"
@@ -5649,7 +5662,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solana/wallet-adapter-phantom@npm:^0.9.2":
+"@solana/wallet-adapter-phantom@npm:^0.9.2, @solana/wallet-adapter-phantom@npm:^0.9.3":
   version: 0.9.3
   resolution: "@solana/wallet-adapter-phantom@npm:0.9.3"
   dependencies:
@@ -5791,7 +5804,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@solana/web3.js@npm:^1.20.0, @solana/web3.js@npm:^1.21.0, @solana/web3.js@npm:^1.30.2, @solana/web3.js@npm:^1.31.0, @solana/web3.js@npm:^1.32.0, @solana/web3.js@npm:^1.35.0, @solana/web3.js@npm:^1.35.1, @solana/web3.js@npm:^1.36.0, @solana/web3.js@npm:^1.37.0, @solana/web3.js@npm:^1.43.1, @solana/web3.js@npm:^1.43.2, @solana/web3.js@npm:^1.43.4":
+"@solana/web3.js@npm:^1.20.0, @solana/web3.js@npm:^1.21.0, @solana/web3.js@npm:^1.30.2, @solana/web3.js@npm:^1.31.0, @solana/web3.js@npm:^1.32.0, @solana/web3.js@npm:^1.35.0, @solana/web3.js@npm:^1.35.1, @solana/web3.js@npm:^1.36.0, @solana/web3.js@npm:^1.37.0, @solana/web3.js@npm:^1.43.2, @solana/web3.js@npm:^1.43.4, @solana/web3.js@npm:^1.44.0":
   version: 1.44.0
   resolution: "@solana/web3.js@npm:1.44.0"
   dependencies:
@@ -5857,13 +5870,14 @@ __metadata:
     "@rollup/plugin-node-resolve": ^13.3.0
     "@rollup/plugin-replace": ^4.0.0
     "@rollup/plugin-typescript": ^8.3.3
+    "@rollup/plugin-url": ^7.0.0
     "@solana/spl-token": ^0.2.0
     "@solana/spl-token-registry": ^0.2.4274
     "@solana/wallet-adapter-base": ^0.9.5
     "@solana/wallet-adapter-react": ^0.15.5
     "@solana/wallet-adapter-react-ui": ^0.9.7
     "@solana/wallet-adapter-wallets": ^0.16.1
-    "@solana/web3.js": ^1.43.1
+    "@solana/web3.js": ^1.44.0
     "@surec/sdk": ^0.0.7
     "@svgr/rollup": ^6.2.1
     "@types/react": ^18.0.0
@@ -16532,7 +16546,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"make-dir@npm:^3.0.0, make-dir@npm:^3.0.2":
+"make-dir@npm:^3.0.0, make-dir@npm:^3.0.2, make-dir@npm:^3.1.0":
   version: 3.1.0
   resolution: "make-dir@npm:3.1.0"
   dependencies:
@@ -21001,6 +21015,7 @@ __metadata:
     "@metaplex-foundation/js-next": ^0.9.0
     "@project-serum/anchor": ^0.24.2
     "@solana/spl-token": ^0.2.0
+    "@solana/wallet-adapter-phantom": ^0.9.3
     "@surec/sdk": ^0.0.6
     "@types/chai": ^4.3.1
     "@types/mocha": ^9.0.0

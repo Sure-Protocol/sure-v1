@@ -9,7 +9,7 @@
 		"build:rollup": "rimraf dist_up/ && tsc && rollup -c rollup.config.js",
 		"start:rollup": "rollup -c rollup.config.js -w",
 		"build:craco": "rimraf build && NODE_OPTIONS=--openssl-legacy-provider craco build",
-		"start:craco": "craco start",
+		"start:craco": "PORT=3006 NODE_OPTIONS=--openssl-legacy-provider craco start",
 		"preview": "vite preview"
 	},
 	"dependencies": {
@@ -22,7 +22,7 @@
 		"@solana/wallet-adapter-react": "^0.15.5",
 		"@solana/wallet-adapter-react-ui": "^0.9.7",
 		"@solana/wallet-adapter-wallets": "^0.16.1",
-		"@solana/web3.js": "^1.43.1",
+		"@solana/web3.js": "^1.44.0",
 		"@surec/sdk": "^0.0.7",
 		"crypto-browserify": "^3.12.0",
 		"react": "^18.1.0",
@@ -47,6 +47,7 @@
 		"@rollup/plugin-node-resolve": "^13.3.0",
 		"@rollup/plugin-replace": "^4.0.0",
 		"@rollup/plugin-typescript": "^8.3.3",
+		"@rollup/plugin-url": "^7.0.0",
 		"@svgr/rollup": "^6.2.1",
 		"@types/react": "^18.0.0",
 		"@types/react-dom": "^18.0.0",
