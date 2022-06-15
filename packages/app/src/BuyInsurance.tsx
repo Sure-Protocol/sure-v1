@@ -93,6 +93,11 @@ const BuyInsurance = () => {
 									pool={pool}
 									register={register}
 								/>
+								{pool && (
+									<p className="p--small p--margin-s">
+										{`Available liquidity in pool ${pool.liquidity} USDC`}
+									</p>
+								)}
 							</div>
 							<div className="action-container-inner-content--item">
 								<p className="p--margin-xs p--small">Expiry</p>
@@ -107,11 +112,6 @@ const BuyInsurance = () => {
 						{isOpen && <SearchMarket parentRef={marketSelectorRef} />}
 					</form>
 
-					{pool && (
-						<p className="p--small p--margin-s">
-							{`Available liquidity in pool ${pool.liquidity} USDC`}
-						</p>
-					)}
 					{contract?.insuredAmount.gten(0) && (
 						<div className="sure-buy-insurance-container">
 							<p className="p--margin-s p--small">Already covered</p>

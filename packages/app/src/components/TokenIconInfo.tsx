@@ -28,11 +28,9 @@ const TokenIconInfo: React.FunctionComponent<{
 }> = ({ token, isVisible = true }) => {
 	return (
 		<div className={styles({ isVisible })}>
-			{token?.address && (
-				<TokenIcon tokenAddress={new PublicKey(token?.address)} />
-			)}
+			<TokenIcon tokenAddress={new PublicKey(token?.address)} />
 			<p className="p--margin-0 p--small">
-				{token?.name ? cutString(token?.symbol, 5) : 'USDC'}
+				{token?.name !== '' ? cutString(token?.symbol, 5) : 'USDC'}
 			</p>
 		</div>
 	);

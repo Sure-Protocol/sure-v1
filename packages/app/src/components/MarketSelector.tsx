@@ -86,7 +86,7 @@ const MarketSelector: React.FunctionComponent<MarketSelectorProps> = ({
 				typeof="decimals"
 			/>
 			{includeTokenMint && token && (
-				<TokenIconInfo token={token} isVisible={false} />
+				<TokenIconInfo token={token} isVisible={pool != undefined} />
 			)}
 		</div>
 	);
