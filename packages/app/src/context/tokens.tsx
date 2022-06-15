@@ -10,6 +10,8 @@ interface Props {
 	children: JSX.Element;
 }
 
+export type TokensMap = Map<string, TokenInfo>;
+
 const convertRPCTOCluster: Record<string, string> = {
 	'https://api.devnet.solana.com': 'devnet',
 	'https://api.testnet.solana.com': 'testnet',
@@ -20,7 +22,7 @@ export const TokensProvider: React.FunctionComponent<Props> = ({
 	children,
 }) => {
 	const { connection } = useConnection();
-	const [tokens, setTokens] = useState<Map<string, TokenInfo>>(new Map());
+	const [tokens, setTokens] = useState<TokensMap>(new Map());
 
 	useEffect(() => {
 		new TokenListProvider().resolve().then((tokens) => {
@@ -42,6 +44,6 @@ export const TokensProvider: React.FunctionComponent<Props> = ({
 	);
 };
 
-export const useTokens = (): Map<string, TokenInfo> | undefined => {
+export const useTokens = (): TokensMap | undefined => {
 	return useContext(TokensContext);
 };

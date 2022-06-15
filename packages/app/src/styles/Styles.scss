@@ -80,7 +80,7 @@ h1,h2,h3,h4,h5{
     &--margin-0{
         margin: 0;
     }
-    &--margin-s{
+    &--margin-xs{
         margin-bottom: 4px;
         margin-top: 4px;
     }
@@ -101,6 +101,10 @@ h1,h2,h3,h4,h5{
 
     &--medium{
         font-size: medium;
+    }
+
+    &--large{
+        font-size: large;
     }
 
     &--center{

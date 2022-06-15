@@ -7,6 +7,7 @@ import { InsuranceContractProvider } from './context/insuranceContract';
 import { PoolProvider } from './context/surePool';
 import { SearchProvider } from './context/searchToggle';
 import ProvideLiquidity from './ProvideLiquidity';
+import { SearchTokenToggleProvider } from './context/searchTokenToggle';
 
 const Navigation = () => {
 	return (
@@ -40,7 +41,16 @@ const Navigation = () => {
 								</PoolProvider>
 							}
 						/>
-						<Route path="/pools" element={<ManagePools />} />
+						<Route
+							path="/pools"
+							element={
+								<PoolProvider>
+									<SearchTokenToggleProvider>
+										<ManagePools />
+									</SearchTokenToggleProvider>
+								</PoolProvider>
+							}
+						/>
 					</Routes>
 				</div>
 			</div>

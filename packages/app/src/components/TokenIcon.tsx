@@ -17,10 +17,15 @@ const TokenIcon: React.FunctionComponent<Props> = ({ tokenAddress }) => {
 					className={css`
 						width: 32px;
 						height: 32px;
+						margin-right: 4px;
+						margin-left: 4px;
 					`}
 				>
 					<img
 						height={'32px'}
+						className={css`
+							border-radius: 100%;
+						`}
 						src={tokens.get(tokenAddress?.toBase58())?.logoURI}
 					/>
 				</a>

@@ -3,7 +3,7 @@
 	"version": "0.0.7",
 	"private": true,
 	"scripts": {
-		"dev": "vite",
+		"dev": "vite --host",
 		"build:vite": "tsc && vite build",
 		"build:esbuild": "rimraf dist_es/ && tsc && node esbuild.config.js && cp public/index.html dist_es/index.html",
 		"build:rollup": "rimraf dist_up/ && tsc && rollup -c rollup.config.js",
@@ -40,6 +40,7 @@
 		"@esbuild-plugins/node-globals-polyfill": "^0.1.1",
 		"@esbuild-plugins/node-modules-polyfill": "^0.1.4",
 		"@esbuild-plugins/node-resolve": "^0.1.4",
+		"@hookform/error-message": "^2.0.0",
 		"@rollup/plugin-babel": "^5.3.1",
 		"@rollup/plugin-commonjs": "^22.0.0",
 		"@rollup/plugin-inject": "^4.0.4",

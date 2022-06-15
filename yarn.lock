@@ -3360,6 +3360,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hookform/error-message@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "@hookform/error-message@npm:2.0.0"
+  peerDependencies:
+    react: ">=16.8.0"
+    react-dom: ">=16.8.0"
+    react-hook-form: ^7.0.0
+  checksum: 84aa3a6cb5cc729581850dcbe2bb5dfa43431c148782b4e8676757f808cd81e220fbc4e709c4eee381b0168a991c3a3f5306acae2a09a9760859c9a188d591ec
+  languageName: node
+  linkType: hard
+
 "@humanwhocodes/config-array@npm:^0.5.0":
   version: 0.5.0
   resolution: "@humanwhocodes/config-array@npm:0.5.0"
@@ -5861,6 +5872,7 @@ __metadata:
     "@esbuild-plugins/node-globals-polyfill": ^0.1.1
     "@esbuild-plugins/node-modules-polyfill": ^0.1.4
     "@esbuild-plugins/node-resolve": ^0.1.4
+    "@hookform/error-message": ^2.0.0
     "@metaplex/js": ^4.12.0
     "@project-serum/anchor": ^0.24.2
     "@rollup/plugin-babel": ^5.3.1
