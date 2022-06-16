@@ -83,7 +83,7 @@ const MarketListItem: React.FunctionComponent<{
 			>
 				<p className="p--small p--margin-0 ">
 					{`Liquidity: ${surePool.liquidity.toString()} ${
-						tokens.get(surePool.tokenMint?.toBase58())?.symbol
+						tokens?.get(surePool.tokenMint?.toBase58())?.symbol ?? '?'
 					}`}
 				</p>
 				<p className="p--small p--margin-0">{`Premium: ${prettyPrintPremium(
