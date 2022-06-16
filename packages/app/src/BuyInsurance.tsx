@@ -10,7 +10,7 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { css } from '@emotion/css';
 import { theme } from './components/Themes';
 import SearchMarket from './components/SearchMarket';
-import down from './assets/icons/down.svg';
+import GodArrow from './assets/icons/godArrow.svg';
 import { useEffect, useRef, useState } from 'react';
 import { FieldValues, useForm } from 'react-hook-form';
 import { useSureSdk } from './context/sureSdk';
@@ -162,6 +162,22 @@ const BuyInsurance = () => {
 					</div>
 				</div>
 			</div>
+			<img
+				className={css`
+					position: absolute;
+					right: 0;
+					bottom: 0;
+					opacity: 30%;
+					width: 150px;
+					height: 150px;
+					z-index: 0;
+					:hover {
+						opacity: 50%;
+					}
+				`}
+				src={GodArrow}
+				alt={'god arrow'}
+			/>
 		</div>
 	);
 };

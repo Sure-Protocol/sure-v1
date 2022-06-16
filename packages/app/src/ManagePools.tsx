@@ -1,14 +1,11 @@
-import * as anchor from '@project-serum/anchor';
-import { useContext, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import MainButton from './components/MainButton';
 import { css, cx } from '@emotion/css';
-import { FieldValue, FieldValues, useForm } from 'react-hook-form';
+import { FieldValues, useForm } from 'react-hook-form';
 import { useSureSdk } from './context/sureSdk';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { AnchorProvider } from '@project-serum/anchor';
-import { useTokens } from './context/tokens';
-import { getAccount } from '@solana/spl-token';
 import { theme } from './components/Themes';
 import { prettyPublicKey } from './utils/publickey';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
@@ -17,7 +14,7 @@ import { useSearchTokenToggle } from './context/searchTokenToggle';
 import down from './assets/icons/down.svg';
 import SearchTokens from './components/SearchTokens';
 import TokenIconInfo from './components/TokenIconInfo';
-
+import GodLife from './assets/icons/godLife.svg';
 interface CreateMarkets {
 	protocolName: string;
 	ticker: string;
@@ -194,6 +191,22 @@ const ManagePools = () => {
 					</div>
 				</div>
 			</div>
+			<img
+				className={css`
+					position: absolute;
+					right: 0;
+					bottom: 0;
+					opacity: 30%;
+					width: 150px;
+					height: 150px;
+					z-index: 0;
+					:hover {
+						opacity: 50%;
+					}
+				`}
+				src={GodLife}
+				alt={'god arrow'}
+			/>
 		</div>
 	);
 };

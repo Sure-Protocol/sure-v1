@@ -74,7 +74,8 @@
 		"rollup-plugin-url": "^3.0.1",
 		"ts-loader": "^9.3.0",
 		"typescript": "^4.7.3",
-		"vite": "^2.9.9"
+		"vite": "^2.9.9",
+		"vite-plugin-svgr": "^2.1.0"
 	},
 	"gitHead": "9d00268018ab2144d29b769638ae7e09102dae02",
 	"browserslist": {

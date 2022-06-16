@@ -113,6 +113,7 @@ const SearchTokens: React.FunctionComponent<{
 		<div
 			ref={ref}
 			className={css`
+				z-index: 1;
 				transform: translateX(-50%);
 				left: 50%;
 				position: absolute;

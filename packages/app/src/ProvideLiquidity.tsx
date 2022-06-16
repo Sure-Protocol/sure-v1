@@ -1,5 +1,4 @@
-import { css, cx } from '@emotion/css';
-import { theme } from './components/Themes';
+import { css } from '@emotion/css';
 import { useToggle } from './context/searchToggle';
 import { usePool } from './context/surePool';
 import { FieldValues, useForm } from 'react-hook-form';
@@ -9,11 +8,9 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { useSureSdk } from './context/sureSdk';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import SearchMarket from './components/SearchMarket';
-import { PublicKey } from '@solana/web3.js';
-import { useTokens } from './context/tokens';
-import { getMint } from '@solana/spl-token';
 import MarketSelector from './components/MarketSelector';
 import NumberUnitInputSelector from './components/NumberUnitInputSelector';
+import GodFire from './assets/icons/godFire.svg';
 
 interface LiquidityAPYEstimate {
 	estimate: number;
@@ -146,6 +143,23 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 					</div>
 				</div>
 			</div>
+
+			<img
+				className={css`
+					position: absolute;
+					right: 0;
+					bottom: 0;
+					opacity: 30%;
+					width: 150px;
+					height: 150px;
+					z-index: 0;
+					:hover {
+						opacity: 50%;
+					}
+				`}
+				src={GodFire}
+				alt={'god arrow'}
+			/>
 		</div>
 	);
 };

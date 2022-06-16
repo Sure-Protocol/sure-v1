@@ -30,6 +30,7 @@
 		"postversionup:major": "npm run commit-version",
 		"commit-version": "git add . && git commit -m \"chore(release): publish `node -p 'require(\"./lerna.json\").version'`\"",
 		"lerna:bootstrap": "lerna bootstrap",
+		"dev": "lerna run dev",
 		"build": "lerna run build",
 		"init:sure": "lerna run initialize",
 		"build:rollup": "lerna run build:rollup",

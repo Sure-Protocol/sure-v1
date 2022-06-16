@@ -8,5 +8,6 @@ export const theme = {
 		sureBlue2: '#05152F',
 		sureBlue3: 'rgba(12, 30, 127,0.4)',
 		sureBlue4: '#324F7E',
+		surePink: '#ff008e',
 	},
 };

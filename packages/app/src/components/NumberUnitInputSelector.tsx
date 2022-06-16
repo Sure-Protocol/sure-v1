@@ -23,7 +23,6 @@ const NumberUnitInputSelector: React.FunctionComponent<
 	return (
 		<div
 			className={css`
-				//
 				border-radius: 5px;
 				flex-grow: 2;
 				background-color: ${theme.colors.sureBlue4};
@@ -31,6 +30,7 @@ const NumberUnitInputSelector: React.FunctionComponent<
 				display: flex;
 				flex-direction: row;
 				align-items: center;
+				z-index: 1;
 			`}
 		>
 			<input

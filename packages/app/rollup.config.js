@@ -38,7 +38,7 @@ export default {
 		copy({
 			targets: [
 				{ src: 'src/assets/*.ttf', dest: 'dist_up/assets/' },
-				{ src: 'public/index.html', dest: 'dist_up/' },
+				{ src: 'src/index.html', dest: 'dist_up/' },
 			],
 		}),
 		replace({

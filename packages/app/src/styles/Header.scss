@@ -10,7 +10,20 @@
 .header-navbar{
     display: flex;
     width:80%;
-    justify-content: right;
+    justify-content: space-between;
+    align-items: center;
+    &--item{
+        width: 180px;
+        height: 90px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        @media (max-width:$small) {
+            width: 135px;
+            height: 67px;
+        }
+    }
 }
 
 .wallet-button {
