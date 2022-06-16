@@ -170,7 +170,7 @@ const SearchTokens: React.FunctionComponent<{
 								outline: none;
 							}
 						`}
-						onChange={(e) => setSearchTerm(e.target.value)}
+						onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
 						placeholder="Search token name"
 					/>
 				</div>
