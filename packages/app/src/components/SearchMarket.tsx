@@ -10,6 +10,7 @@ import { usePool } from '../context/surePool';
 import { useTokens } from '../context/tokens';
 import TokenIcon from './TokenIcon';
 import React, { useEffect, useRef } from 'react';
+import { prettyPrintPremium } from '../utils/premium';
 
 interface MarketListProps {
 	surePools: PoolInformation[];
@@ -21,13 +22,14 @@ const MarketListItem: React.FunctionComponent<{
 	const [contract, setContract] = useInsuranceContract();
 	const [pool, setPool] = usePool();
 	const [isOpen, toggle] = useToggle();
+	const tokens = useTokens();
 	return (
 		<button
 			className={css`
 				display: flex;
 				flex-direction: row;
 				align-items: center;
-				justify-content: space-between;
+				justify-content: space-around;
 				// Button
 				background-color: transparent;
 				cursor: pointer;
@@ -43,26 +45,50 @@ const MarketListItem: React.FunctionComponent<{
 				toggle(false);
 			}}
 		>
-			<TokenIcon tokenAddress={surePool.tokenMint} />
-			<p className="p--medium p--white">{surePool.name}</p>
-			<a
-				className="p--small a--no-highlight"
-				target="_blank"
-				href={explorerLink(surePool.smartContract)}
+			<div
+				className={css`
+					margin-right: 20px;
+				`}
 			>
-				{prettyPublicKey(surePool.smartContract)}
-			</a>
+				<TokenIcon tokenAddress={surePool.tokenMint} />
+			</div>
 
 			<div
 				className={css`
 					display: flex;
 					flex-direction: column;
-					justify-content: center;
-					align-items: flex-start;
+					text-align: left;
+					margin-right: 20px;
+					min-width: 100px;
 				`}
 			>
-				<p className="p--small p--margin-0">{`Liquidity: ${surePool.liquidity.toString()}`}</p>
-				<p className="p--small p--margin-0">{`Premium: ${surePool.lowestPremium}bp`}</p>
+				<p className="p--medium p--white text--margin-vertical__small">
+					{surePool.name}
+				</p>
+				<a
+					className="p--small a--no-highlight"
+					target="_blank"
+					href={explorerLink(surePool.smartContract)}
+				>
+					{prettyPublicKey(surePool.smartContract)}
+				</a>
+			</div>
+
+			<div
+				className={css`
+					display: flex;
+					flex-direction: column;
+					text-align: left;
+				`}
+			>
+				<p className="p--small p--margin-0 ">
+					{`Liquidity: ${surePool.liquidity.toString()} ${
+						tokens.get(surePool.tokenMint?.toBase58())?.symbol
+					}`}
+				</p>
+				<p className="p--small p--margin-0">{`Premium: ${prettyPrintPremium(
+					surePool.lowestPremium
+				)}bp`}</p>
 			</div>
 		</button>
 	);

@@ -38,15 +38,17 @@ const ManagePools = () => {
 	const manageMarketsRef = useRef(null);
 
 	const onSubmit = handleSubmit(async (data: FieldValues) => {
-		const programIdPK = new PublicKey(data.programId);
-		const tokenMint = new PublicKey(data.tokenId);
-		if (sureProgram) {
-			const poolPDA = await sureProgram.pool.getOrCreatePool(
-				programIdPK,
-				10,
-				data.programName
-			);
-			await sureProgram?.pool.initializeTokenPool(poolPDA, tokenMint);
+		if (searchTokenToggle.selectedToken) {
+			const programIdPK = new PublicKey(data.programId);
+			const tokenMint = new PublicKey(searchTokenToggle.selectedToken?.address);
+			if (sureProgram) {
+				const poolPDA = await sureProgram.pool.getOrCreatePool(
+					programIdPK,
+					10,
+					data.programName
+				);
+				await sureProgram?.pool.initializeTokenPool(poolPDA, tokenMint);
+			}
 		}
 	});
 
@@ -178,17 +180,16 @@ const ManagePools = () => {
 						{searchTokenToggle.isOpen && (
 							<SearchTokens parentRef={manageMarketsRef} />
 						)}
+						<div className="action-container-inner-content--row_centered">
+							{wallet.connected ? (
+								<MainButton>
+									<h3 className="p--white p--margin-0">Provide Liquidity</h3>
+								</MainButton>
+							) : (
+								<WalletMultiButton />
+							)}
+						</div>
 					</form>
-
-					<div className="action-container-inner-content--row_centered">
-						{wallet.connected ? (
-							<MainButton>
-								<h3 className="p--white p--margin-0">Provide Liquidity</h3>
-							</MainButton>
-						) : (
-							<WalletMultiButton />
-						)}
-					</div>
 				</div>
 			</div>
 			<img

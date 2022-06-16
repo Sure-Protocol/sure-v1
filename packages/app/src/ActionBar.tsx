@@ -28,7 +28,7 @@ const ActionBar = () => {
 				}
 				to="/dashboard"
 			>
-				Dashboard
+				<p>Dashboard</p>
 			</NavLink>
 			<NavLink
 				className={({ isActive }) =>

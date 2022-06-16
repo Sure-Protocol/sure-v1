@@ -14,7 +14,7 @@
 
 
 .sure-navbar{
-    background-color: $sure-dark-purple;
+    background-color: $sure-blue-2;
     height:3rem;   
     border-radius: 20px;
     display: flex;
@@ -44,11 +44,12 @@
         padding-left: 10px;
         padding-right: 10px;
         font-size: small;
+        
 
     }
     &--active{
         @extend .sure-navbar-link;
-        background-color:$sure-pink;
+        background-color:$sure-dark-blue-5;
     }
 
     &--disabled{

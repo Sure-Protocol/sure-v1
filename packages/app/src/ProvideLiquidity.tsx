@@ -42,7 +42,9 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 	}, [watch()]);
 
 	const onSubmit = async (data: FieldValues) => {
+		console.log('Provide liquidity');
 		if (pool && sureSdk) {
+			console.log('Provide liquidity lfg');
 			const tokenMint = pool.tokenMint;
 			const poolPDA = await sureSdk.pool.getPoolPDA(pool?.smartContract);
 			await sureSdk.liquidity.depositLiquidity(
@@ -119,28 +121,33 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 							</div>
 						</div>
 						{isOpen && <SearchMarket parentRef={marketSelectorRef} />}
-					</form>
-					{liquidityAPYEstimate?.estimate && (
-						<div className="action-container-inner-content--row_centered">
-							<h3 className="h3--white h3--center h3--margin-s">
-								Estimated APY: 10.2%
-							</h3>
-							<p className="p--margin-s p--medium p--center">Pool APY: 10%</p>
-							<p className="p--margin-s p--small p--center">
-								Premium APY: 0.2%
-							</p>
-						</div>
-					)}
-
-					<div className="action-container-inner-content--row_centered">
-						{wallet.connected ? (
-							<MainButton>
-								<h3 className="p--white p--margin-0">Provide Liquidity</h3>
-							</MainButton>
-						) : (
-							<WalletMultiButton />
+						{liquidityAPYEstimate?.estimate && (
+							<div className="action-container-inner-content--row_centered">
+								<div className="action-container-inner-content--item">
+									<h3 className="h3--white h3--center h3--margin-s">
+										Estimated APY: 10.2%
+									</h3>
+									<p className="p--margin-s p--medium p--center">
+										Pool APY: 10%
+									</p>
+									<p className="p--margin-s p--small p--center">
+										Premium APY: 0.2%
+									</p>
+								</div>
+							</div>
 						)}
-					</div>
+						<div className="action-container-inner-content--row_centered">
+							<div className="action-container-inner-content--item">
+								{wallet.connected ? (
+									<MainButton>
+										<h3 className="p--white p--margin-0">Provide Liquidity</h3>
+									</MainButton>
+								) : (
+									<WalletMultiButton />
+								)}
+							</div>
+						</div>
+					</form>
 				</div>
 			</div>
 

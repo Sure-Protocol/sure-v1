@@ -155,56 +155,61 @@ const BuyInsurance = () => {
 							</div>
 						</div>
 						{isOpen && <SearchMarket parentRef={marketSelectorRef} />}
-					</form>
-
-					{contract?.insuredAmount.gten(0) && (
-						<div className="sure-buy-insurance-container">
-							<p className="p--margin-s p--small">Already covered</p>
-							<InfoBox title="Change">
-								<div className="sure-buy-insurance-change">
-									<div className="sure-buy-insurance-change__status">
-										<p className="p--pink">Old</p>
-										<p className="p--pink">New</p>
+						{contract?.insuredAmount.gten(0) && (
+							<div className="action-container-inner-content--row">
+								<p className="p--margin-s p--small">Already covered</p>
+								<InfoBox title="Change">
+									<div className="sure-buy-insurance-change">
+										<div className="sure-buy-insurance-change__status">
+											<p className="p--pink">Old</p>
+											<p className="p--pink">New</p>
+										</div>
+										<div className="sure-buy-insurance-change__amount">
+											<p className="p">{`${contract.insuredAmount} USDC`}</p>
+											<p className="p">10,000 USDC</p>
+										</div>
+										<div className="sure-buy-insurance-change__date">
+											<p className="p">1. June 2022</p>
+											<p className="p">28. August 2022</p>
+										</div>
 									</div>
-									<div className="sure-buy-insurance-change__amount">
-										<p className="p">{`${contract.insuredAmount} USDC`}</p>
-										<p className="p">10,000 USDC</p>
-									</div>
-									<div className="sure-buy-insurance-change__date">
-										<p className="p">1. June 2022</p>
-										<p className="p">28. August 2022</p>
-									</div>
-								</div>
-							</InfoBox>
-						</div>
-					)}
-					{estimate[0] !== '' && (
-						<div className="sure-buy-insurance-container--centered">
-							<p className="p--margin-s p--medium p--center">
-								Estimated yearly price
-							</p>
-
-							<h3 className="h3--white h3--center h3--margin-s">{`${estimate[1]} USDC`}</h3>
-							<p className="p--margin-s p--small p--center">{`Premium ${estimate[2]}bp`}</p>
-						</div>
-					)}
-					{estimateError && (
-						<WarningBox title="Premium">
-							<p className="h3--white h3--margin-s">
-								Could not estimate premium
-							</p>
-						</WarningBox>
-					)}
-
-					<div className="action-container-inner-content--row_centered">
-						{wallet.connected ? (
-							<MainButton>
-								<h3 className="p--white p--margin-0">Buy</h3>
-							</MainButton>
-						) : (
-							<WalletMultiButton />
+								</InfoBox>
+							</div>
 						)}
-					</div>
+						{estimate[0] !== '' && (
+							<div className="action-container-inner-content--row__centered">
+								<p className="p--margin-s p--medium p--center">
+									Estimated yearly price
+								</p>
+
+								<h3 className="h3--white h3--center h3--margin-s">{`${estimate[1]} USDC`}</h3>
+								<p className="p--margin-s p--small p--center">{`Premium ${estimate[2]}bp`}</p>
+							</div>
+						)}
+						{estimateError && (
+							<div className="action-container-inner-content--row__centered">
+								<div className="action-container-inner-content--item">
+									<WarningBox title="Premium">
+										<p className="h3--white h3--margin-s">
+											Could not estimate premium
+										</p>
+									</WarningBox>
+								</div>
+							</div>
+						)}
+
+						<div className="action-container-inner-content--row_centered">
+							<div className="action-container-inner-content--item">
+								{wallet.connected ? (
+									<MainButton>
+										<h3 className="p--white p--margin-0">Buy</h3>
+									</MainButton>
+								) : (
+									<WalletMultiButton />
+								)}
+							</div>
+						</div>
+					</form>
 				</div>
 			</div>
 			<img

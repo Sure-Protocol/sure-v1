@@ -1,6 +1,7 @@
 // Main colors Sure 
 $sure-black: #061122;
-$sure-pink: #ff008e;
+//$sure-pink: #ff008e;
+$sure-pink: #F50093;
 $sure-purple: #612897;
 $sure-blue: #0C1E7F;
 $sure-white: #FFEEF2;
@@ -14,6 +15,7 @@ $sure-blue-4: #324F7E;
 
 // Purple
 $sure-dark-purple:rgb(89, 36, 139);
+$sure-dark-blue-5: #092655;
 
 // Fonts
 
@@ -191,6 +193,9 @@ h1,h2,h3,h4,h5{
     &--font{
         &__bold{
             font-family: 'arvo-bold';
+        }
+        &__italix{
+            font-family: 'arvo-italic';
         }
     }
     
