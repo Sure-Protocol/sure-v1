@@ -103,6 +103,7 @@ const SearchMarket: React.FunctionComponent<{
 		<div
 			ref={ref}
 			className={css`
+				z-index: 3;
 				position: absolute;
 				width: 340px;
 				height: 400px;

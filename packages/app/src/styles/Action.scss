@@ -20,6 +20,11 @@
     @media(max-width: $small){
         width: 90%;
     }
+
+    &__blur{
+        @extend .action-container;
+        opacity: 60%;
+    }
 }
 
 .action-container-inner {

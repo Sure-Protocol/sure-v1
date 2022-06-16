@@ -27,5 +27,4 @@ test-ledger
 !packages/app/public
 */**/dist*
 */**/build*
-
 *.txt

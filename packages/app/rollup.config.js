@@ -39,6 +39,10 @@ export default {
 			targets: [
 				{ src: 'src/assets/*.ttf', dest: 'dist_up/assets/' },
 				{ src: 'src/index.html', dest: 'dist_up/' },
+				{
+					src: 'src/assets/icons/sureLogo.svg',
+					dest: 'dist_up/assets/icons/',
+				},
 			],
 		}),
 		replace({

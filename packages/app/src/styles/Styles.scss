@@ -153,3 +153,46 @@ h1,h2,h3,h4,h5{
         }
     }
 }
+
+// General text styles
+.text{
+    &--margin-vertical{
+        &__0{
+            margin:0;
+        }
+        &__small{
+            margin-bottom: 8px;
+            margin-top: 8px;
+        }
+    
+        &__xsmall{
+            margin-bottom: 8px;
+            margin-top: 8px;
+        }
+    }
+    &--margin-right{
+        &__0{
+            margin:0;
+        }
+        &__small{
+            margin-right: 8px;
+        }
+    }
+
+    &--color{
+        &__white{
+            color: $sure-white;
+        }
+        &__pink{
+            color: $sure-pink
+        }
+    }
+
+    &--font{
+        &__bold{
+            font-family: 'arvo-bold';
+        }
+    }
+    
+  
+}

@@ -71,7 +71,7 @@ const MarketSelector: React.FunctionComponent<MarketSelectorProps> = ({
 							pool?.name != undefined ? 'p--white' : ''
 						}`}
 					>
-						{pool?.name ?? 'Select protocol'}
+						{pool?.name ?? 'Select Pool'}
 					</p>
 				</div>
 				<div className="sure-icon">

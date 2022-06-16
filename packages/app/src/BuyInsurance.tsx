@@ -1,23 +1,24 @@
-import * as anchor from '@project-serum/anchor';
 import MainButton from './components/MainButton';
 import InfoBox from './components/InfoBox';
-import DateSelector from './components/DateSelector';
 import { SearchProvider, useToggle } from './context/searchToggle';
 import { useInsuranceContract } from './context/insuranceContract';
 import { usePool } from './context/surePool';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { css } from '@emotion/css';
-import { theme } from './components/Themes';
 import SearchMarket from './components/SearchMarket';
 import GodArrow from './assets/icons/godArrow.svg';
 import { useEffect, useRef, useState } from 'react';
 import { FieldValues, useForm } from 'react-hook-form';
 import { useSureSdk } from './context/sureSdk';
-import { PublicKey } from '@solana/web3.js';
 import WarningBox from './components/WarningBox';
 import { SureDate } from '@surec/sdk';
 import MarketSelector from './components/MarketSelector';
+import BuyCoverageContent from './components/popup/BuyCoverageContent';
+import _ from 'lodash';
+import TitleWithPopover from './components/popup/TitleWithPopover';
+import BuyCoverageAmountContent from './components/popup/BuyCoverageAmountContent';
+import BuyCoverageExpiryContent from './components/popup/BuyCoverageExpiryContent';
 
 const BuyInsurance = () => {
 	const { register, watch, setValue, getValues, handleSubmit } = useForm();
@@ -25,6 +26,11 @@ const BuyInsurance = () => {
 	const [contract] = useInsuranceContract();
 	const [pool] = usePool();
 	const wallet = useWallet();
+	const [isPopoverOpen, setIsPopoverOpen] = useState({
+		buyCoverage: false,
+		buyCoverageAmount: false,
+		buyCoverageExpiry: false,
+	});
 	const [isOpen, toggle] = useToggle();
 	const marketSelectorRef = useRef<HTMLDivElement>(null);
 
@@ -77,17 +83,44 @@ const BuyInsurance = () => {
 	};
 
 	return (
-		<div className="action-container">
+		<div
+			className={`action-container${
+				_.reduce(isPopoverOpen, (res, value, key) => res || value)
+					? '__blur'
+					: ''
+			}`}
+		>
 			<div className="action-container-inner">
 				<div className="action-container-inner-content">
-					<p className="p--margin-s p--large p--white ">Buy coverage</p>
+					<TitleWithPopover
+						isOpen={_.get(isPopoverOpen, 'buyCoverage')}
+						Content={BuyCoverageContent}
+						toggle={(open) =>
+							setIsPopoverOpen({ ...isPopoverOpen, buyCoverage: open })
+						}
+					>
+						<p className="p--margin-s p--large p--white ">Buy coverage</p>
+					</TitleWithPopover>
+
 					<form
 						onSubmit={handleSubmit(onSubmit)}
 						className="action-container-inner-content--form"
 					>
 						<div className="action-container-inner-content--row">
 							<div className="action-container-inner-content--item">
-								<p className="p--margin-xs p--small">Amount</p>
+								<TitleWithPopover
+									isOpen={_.get(isPopoverOpen, 'buyCoverageAmount')}
+									Content={BuyCoverageAmountContent}
+									toggle={(open) =>
+										setIsPopoverOpen({
+											...isPopoverOpen,
+											buyCoverageAmount: open,
+										})
+									}
+								>
+									<p className="p--margin-xs p--small">Protocol</p>
+								</TitleWithPopover>
+
 								<MarketSelector
 									marketRef={marketSelectorRef}
 									pool={pool}
@@ -100,7 +133,19 @@ const BuyInsurance = () => {
 								)}
 							</div>
 							<div className="action-container-inner-content--item">
-								<p className="p--margin-xs p--small">Expiry</p>
+								<TitleWithPopover
+									isOpen={_.get(isPopoverOpen, 'buyCoverageExpiry')}
+									Content={BuyCoverageExpiryContent}
+									toggle={(open) =>
+										setIsPopoverOpen({
+											...isPopoverOpen,
+											buyCoverageExpiry: open,
+										})
+									}
+								>
+									<p className="p--margin-xs p--small">Expiry</p>
+								</TitleWithPopover>
+
 								<input
 									{...register('expiry')}
 									type="date"

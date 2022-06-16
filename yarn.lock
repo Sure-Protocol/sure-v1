@@ -5904,11 +5904,13 @@ __metadata:
     esbuild-plugin-svg: ^0.1.0
     esbuild-plugin-svgr: ^1.0.1
     esbuild-sass-plugin: ^2.2.6
+    lodash: ^4.17.21
     react: ^18.1.0
     react-dom: ^18.0.0
     react-hook-form: ^7.31.2
     react-router-dom: ^6.3.0
     react-scripts: ^4.0.0
+    react-tiny-popover: ^7.0.1
     rimraf: ^3.0.2
     rollup: ^2.75.6
     rollup-plugin-copy: ^3.4.0
@@ -20230,6 +20232,16 @@ __metadata:
   bin:
     react-scripts: ./bin/react-scripts.js
   checksum: a05a46ce3145b42ac8b57633d3b90b6689c24697c1449bccf219349996d718a3cd0796e4910f4ab6abb5b024982cafd62345e88c8e7b42a45efca3bef1a0eb87
+  languageName: node
+  linkType: hard
+
+"react-tiny-popover@npm:^7.0.1":
+  version: 7.0.1
+  resolution: "react-tiny-popover@npm:7.0.1"
+  peerDependencies:
+    react: ^16.8.0 || ^17.0.0
+    react-dom: ^16.8.0 || ^17.0.0
+  checksum: 59e6627c6ef766c25a9eb3974871e91bf3dd983b1af6a382c8306b916002fd7bcbdc8935e2f91d915c41d384a586159cdce93b909e54cbac2a46c83a6f34948b
   languageName: node
   linkType: hard
 

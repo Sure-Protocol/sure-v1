@@ -3,7 +3,7 @@
 	"version": "0.0.7",
 	"private": true,
 	"scripts": {
-		"dev": "vite --host",
+		"dev": "PORT=3001 vite --host",
 		"build:vite": "tsc && vite build",
 		"build:esbuild": "rimraf dist_es/ && tsc && node esbuild.config.js && cp public/index.html dist_es/index.html",
 		"build:rollup": "rimraf dist_up/ && tsc && rollup -c rollup.config.js",
@@ -25,10 +25,12 @@
 		"@solana/web3.js": "^1.44.0",
 		"@surec/sdk": "^0.0.7",
 		"crypto-browserify": "^3.12.0",
+		"lodash": "^4.17.21",
 		"react": "^18.1.0",
 		"react-dom": "^18.0.0",
 		"react-hook-form": "^7.31.2",
 		"react-router-dom": "^6.3.0",
+		"react-tiny-popover": "^7.0.1",
 		"sass": "^1.52.1",
 		"stream-browserify": "^3.0.0"
 	},
