@@ -74,6 +74,9 @@ pub struct TokenPool {
     /// Token mint of pool
     pub token_mint: Pubkey, // 32 bytes
 
+    /// Pool 
+    pub pool: Pubkey, // 32 bytes,
+
     /// Liquidity in Token Pool
     pub liquidity: u64, // 8 bytes
 
@@ -82,7 +85,7 @@ pub struct TokenPool {
 }
 
 impl TokenPool {
-    pub const SPACE: usize = 1 + 32 + 8 + 8 + 4 + 200;
+    pub const SPACE: usize = 1 + 32 + 32 + 8 + 8 + 4 + 200;
 }
 
 #[event]

@@ -25,6 +25,10 @@ export default defineConfig({
 	},
 	define: {
 		'process.env': {},
+		'process.env.NETWORK': JSON.stringify('devnet'),
+		'process.env.PROGRAM_ID': JSON.stringify(
+			'D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM'
+		),
 		global: {},
 	},
 	optimizeDeps: {

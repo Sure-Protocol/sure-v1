@@ -846,6 +846,10 @@ export type SurePool = {
             "type": "publicKey"
           },
           {
+            "name": "pool",
+            "type": "publicKey"
+          },
+          {
             "name": "liquidity",
             "type": "u64"
           },
@@ -1943,6 +1947,10 @@ export const IDL: SurePool = {
           },
           {
             "name": "tokenMint",
+            "type": "publicKey"
+          },
+          {
+            "name": "pool",
             "type": "publicKey"
           },
           {

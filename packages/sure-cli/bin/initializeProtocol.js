@@ -43,7 +43,7 @@ function run() {
         const wallet = new anchor.Wallet(keypair);
         const network = process.env.NETWORK;
         const connection = new web3_js_1.Connection(network, {});
-        const sureSDK = sdk_1.SureSdk.init(connection, wallet);
+        const sureSDK = sdk_1.SureSdk.init(connection, wallet, new web3_js_1.PublicKey('D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM'));
         yield sureSDK.protocol.initializeProtocol();
     });
 }

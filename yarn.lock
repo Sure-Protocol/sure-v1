@@ -5944,7 +5944,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@surec/sdk@^0.0.7, @surec/sdk@workspace:packages/sure-sdk":
+"@surec/sdk@^0.0.7, @surec/sdk@workspace:^, @surec/sdk@workspace:packages/sure-sdk":
   version: 0.0.0-use.local
   resolution: "@surec/sdk@workspace:packages/sure-sdk"
   dependencies:
@@ -5969,18 +5969,6 @@ __metadata:
     typescript: ^4.6.4
   languageName: unknown
   linkType: soft
-
-"@surec/sdk@npm:^0.0.6":
-  version: 0.0.6
-  resolution: "@surec/sdk@npm:0.0.6"
-  dependencies:
-    "@metaplex-foundation/mpl-token-metadata": ^2.1.2
-    "@project-serum/anchor": ^0.24.2
-    "@solana/spl-token": ^0.2.0
-    "@solana/web3.js": ^1.43.2
-  checksum: af838bc04d2c5567840d60cff28ba04d0db0875ab0ee119d088e7237557b065301db837aa733971d0051cb7a481400487e5970d7afe1c9230a69b513b6a55b62
-  languageName: node
-  linkType: hard
 
 "@surma/rollup-plugin-off-main-thread@npm:^1.1.1":
   version: 1.4.2
@@ -21041,7 +21029,7 @@ __metadata:
     "@project-serum/anchor": ^0.24.2
     "@solana/spl-token": ^0.2.0
     "@solana/wallet-adapter-phantom": ^0.9.3
-    "@surec/sdk": ^0.0.6
+    "@surec/sdk": "workspace:^"
     "@types/chai": ^4.3.1
     "@types/mocha": ^9.0.0
     chai: ^4.3.4

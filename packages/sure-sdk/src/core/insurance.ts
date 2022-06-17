@@ -386,11 +386,13 @@ export class Insurance extends Common {
 			const sureFee = totalPremium.muln(insuranceFee).divn(10000);
 			const insurancePrice = totalPremium.add(sureFee);
 
-			const amountCoveredNum = await this.convertBNFromDecimals(
+			const amountCoveredNum = await Money.convertBNFromDecimals(
+				this.connection,
 				amountCovered,
 				tokenMint
 			);
-			const insurancePriceNum = await this.convertBNFromDecimals(
+			const insurancePriceNum = await Money.convertBNFromDecimals(
+				this.connection,
 				insurancePrice,
 				tokenMint
 			);
@@ -452,7 +454,11 @@ export class Insurance extends Common {
 		tokenMint: PublicKey
 	): Promise<string> {
 		const insuredAmount = await this.getInsuredAmountBN(pool, tokenMint);
-		return this.convertBNFromDecimals(insuredAmount, tokenMint);
+		return await Money.convertBNFromDecimals(
+			this.connection,
+			insuredAmount,
+			tokenMint
+		);
 	}
 
 	/**
@@ -598,7 +604,8 @@ export class Insurance extends Common {
 		endTimestamp: number
 	) {
 		try {
-			const newInsuredAmountBN = await this.convertBNToDecimals(
+			const newInsuredAmountBN = await Money.convertBNToDecimals(
+				this.connection,
 				new anchor.BN(newInsuredAmount),
 				tokenMint
 			);

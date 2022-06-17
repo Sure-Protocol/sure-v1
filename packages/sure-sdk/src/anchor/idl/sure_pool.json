@@ -846,6 +846,10 @@
             "type": "publicKey"
           },
           {
+            "name": "pool",
+            "type": "publicKey"
+          },
+          {
             "name": "liquidity",
             "type": "u64"
           },
@@ -1097,6 +1101,6 @@
     }
   ],
   "metadata": {
-    "address": "6JqrqLaHQu9YPpp5z9KzF2nUeR4tnm3y3z9UMzkhVAwG"
+    "address": "D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM"
   }
 }

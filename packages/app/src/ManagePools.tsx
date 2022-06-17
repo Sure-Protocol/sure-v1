@@ -15,12 +15,6 @@ import down from './assets/icons/down.svg';
 import SearchTokens from './components/SearchTokens';
 import TokenIconInfo from './components/TokenIconInfo';
 import GodLife from './assets/icons/godLife.svg';
-interface CreateMarkets {
-	protocolName: string;
-	ticker: string;
-	programId: string;
-	token: string;
-}
 
 const ManagePools = () => {
 	const sureProgram = useSureSdk();
@@ -42,12 +36,12 @@ const ManagePools = () => {
 			const programIdPK = new PublicKey(data.programId);
 			const tokenMint = new PublicKey(searchTokenToggle.selectedToken?.address);
 			if (sureProgram) {
-				const poolPDA = await sureProgram.pool.getOrCreatePool(
+				const txId = await sureProgram?.pool.initializeTokenPool(
 					programIdPK,
-					10,
-					data.programName
+					tokenMint,
+					0,
+					data.poolName
 				);
-				await sureProgram?.pool.initializeTokenPool(poolPDA, tokenMint);
 			}
 		}
 	});
@@ -78,7 +72,7 @@ const ManagePools = () => {
 							<div className="action-container-inner-content--item">
 								<p className="p--margin-xs p--small">Pool Name</p>
 								<input
-									{...register('programName')}
+									{...register('poolName')}
 									className={'input-text-field'}
 									type={'text'}
 								/>
@@ -183,7 +177,7 @@ const ManagePools = () => {
 						<div className="action-container-inner-content--row_centered">
 							{wallet.connected ? (
 								<MainButton>
-									<h3 className="p--white p--margin-0">Provide Liquidity</h3>
+									<h3 className="p--white p--margin-0">Create Pool</h3>
 								</MainButton>
 							) : (
 								<WalletMultiButton />

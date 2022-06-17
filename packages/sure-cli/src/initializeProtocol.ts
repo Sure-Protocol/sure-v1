@@ -1,5 +1,5 @@
 import * as anchor from '@project-serum/anchor';
-import { Connection, Keypair } from '@solana/web3.js';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { SureSdk } from '@surec/sdk';
 
 async function run() {
@@ -16,7 +16,11 @@ async function run() {
 	const network = process.env.NETWORK!;
 	const connection = new Connection(network, {});
 
-	const sureSDK = SureSdk.init(connection, wallet);
+	const sureSDK = SureSdk.init(
+		connection,
+		wallet,
+		new PublicKey('D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM')
+	);
 	await sureSDK.protocol.initializeProtocol();
 }
 

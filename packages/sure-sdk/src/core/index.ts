@@ -1,8 +1,7 @@
 import * as anchor from '@project-serum/anchor';
-import { Connection } from '@solana/web3.js';
+import { Connection, PublicKey } from '@solana/web3.js';
 import { IDL, SurePool } from './../anchor/types/sure_pool';
 
-import { PROGRAM_ID } from './constants';
 import { Insurance } from './insurance';
 import { Liquidity } from './liquidity';
 import { Pool } from './pool';
@@ -44,13 +43,17 @@ export class SureSdk {
 		this.tickAccount = new TickAccount(program, connection, wallet);
 	}
 
-	static init(connection: anchor.web3.Connection, wallet: anchor.Wallet) {
+	static init(
+		connection: anchor.web3.Connection,
+		wallet: anchor.Wallet,
+		programId: PublicKey
+	) {
 		const provider = new anchor.AnchorProvider(connection, wallet, {
 			skipPreflight: false,
 		});
 		anchor.setProvider(provider);
 
-		const sureProgram = new anchor.Program<SurePool>(IDL, PROGRAM_ID, provider);
+		const sureProgram = new anchor.Program<SurePool>(IDL, programId, provider);
 
 		return new this(sureProgram, connection, wallet);
 	}

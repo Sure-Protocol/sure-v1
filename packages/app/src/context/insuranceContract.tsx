@@ -22,7 +22,7 @@ export const InsuranceContractProvider: React.FunctionComponent<{
 	children: JSX.Element;
 }> = ({ children }) => {
 	const sureSdk = useSureSdk();
-	const surePools = useSurePools();
+	const [surePools] = useSurePools();
 	const [insuranceContract, setInsuranceContract] = useState<
 		PoolInsuranceContract | undefined
 	>(undefined);

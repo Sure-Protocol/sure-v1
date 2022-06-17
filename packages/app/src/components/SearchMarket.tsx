@@ -1,7 +1,7 @@
 import { css, cx } from '@emotion/css';
 import { PoolInformation } from '@surec/sdk';
 import { useInsuranceContract } from '../context/insuranceContract';
-import { useSurePools } from '../context/surePools';
+import { loadSurePools, useSurePools } from '../context/surePools';
 import { explorerLink } from '../utils/links';
 import { prettyPublicKey } from '../utils/publickey';
 import { theme } from './Themes';
@@ -115,7 +115,7 @@ const MarketList: React.FunctionComponent<MarketListProps> = ({
 const SearchMarket: React.FunctionComponent<{
 	parentRef: React.RefObject<HTMLDivElement>;
 }> = ({ parentRef }) => {
-	const surePools = useSurePools();
+	const [surePools] = useSurePools();
 	const [isOpen, toggle] = useToggle();
 	const ref = useRef<HTMLDivElement>(null);
 	useEffect(() => {

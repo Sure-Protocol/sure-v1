@@ -1,10 +1,17 @@
 import * as anchor from '@project-serum/anchor';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { insurance, pool, PoolAccount, PoolInformation } from '@surec/sdk';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useWatch } from 'react-hook-form';
 import { useSureSdk } from './sureSdk';
 
-export const SurePoolsContext = createContext<undefined | PoolInformation[]>(
+type SurePoolsContextType = [
+	PoolInformation[],
+	(data: PoolInformation[]) => void
+];
+
+export const SurePoolsContext = createContext<SurePoolsContextType | undefined>(
 	undefined
 );
 
@@ -19,23 +26,35 @@ export const SurePoolsProvider: React.FunctionComponent<Props> = ({
 		undefined
 	);
 	const sureSdk = useSureSdk();
+	const wallet = useWallet();
 
 	useEffect(() => {
 		(async () => {
 			if (sureSdk !== undefined) {
-				const pools = await sureSdk.pool.getPoolsInformation();
+				console.log('Get token pools information');
+				const pools = await sureSdk.pool.getTokenPoolsInformation();
+				console.log('pools: ', pools);
 				setSurePools(pools);
 			}
 		})();
-	}, [sureSdk]);
+	}, [sureSdk, wallet]);
 
 	return (
-		<SurePoolsContext.Provider value={surePools}>
+		<SurePoolsContext.Provider value={[surePools, setSurePools]}>
 			{children}
 		</SurePoolsContext.Provider>
 	);
 };
 
-export const useSurePools = (): PoolInformation[] | undefined => {
+export const loadSurePools = async () => {
+	const sureSdk = useSureSdk();
+	const [pools, setPools] = useContext(SurePoolsContext);
+	if (sureSdk !== undefined) {
+		const pools = await sureSdk.pool.getTokenPoolsInformation();
+		setPools(pools);
+	}
+};
+
+export const useSurePools = (): SurePoolsContextType | undefined => {
 	return useContext(SurePoolsContext);
 };

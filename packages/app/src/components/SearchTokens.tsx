@@ -1,12 +1,8 @@
 import { css, cx } from '@emotion/css';
-import { PoolInformation } from '@surec/sdk';
 import { useInsuranceContract } from '../context/insuranceContract';
-import { useSurePools } from '../context/surePools';
 import { explorerLink } from '../utils/links';
 import { prettyPublicKey } from '../utils/publickey';
 import { theme } from './Themes';
-import { useToggle } from '../context/searchToggle';
-import { usePool } from '../context/surePool';
 import { TokensMap, useTokens } from '../context/tokens';
 import TokenIcon from './TokenIcon';
 import React, { useEffect, useMemo, useRef, useState } from 'react';

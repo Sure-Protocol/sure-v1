@@ -11,3 +11,7 @@ export class SureDate extends Date {
 		return new SureDate(this.setTime(this.getTime() + 60 * 60 * 1000 * hours));
 	}
 }
+
+export const getUnixTime = () => {
+	return new Date().valueOf() / 1000;
+};

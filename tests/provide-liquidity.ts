@@ -6,6 +6,7 @@ import {
 	PublicKey,
 	LAMPORTS_PER_SOL,
 	TokenAccountsFilter,
+	Keypair,
 } from '@solana/web3.js';
 import {
 	createAssociatedTokenAccount,
@@ -15,6 +16,7 @@ import {
 	mintTo,
 } from '@solana/spl-token';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
+import { keypairIdentity } from '@metaplex-foundation/js-next';
 
 const program = anchor.workspace.SurePool as Program<SurePool>;
 
@@ -26,7 +28,10 @@ describe('Provide Liquidity', () => {
 	const { wallet } = program.provider as anchor.AnchorProvider;
 	const { connection } = provider;
 	anchor.setProvider(provider);
-	const sureSdk = SureSdk.init(connection, wallet);
+	const sureSdk = SureSdk.init(connection, wallet, program.programId);
+	let tokenAccountAtaPK;
+	let tokenAccountAta;
+	let tokenAccountAtaAmount;
 	it('Initialize test', async () => {
 		await connection.requestAirdrop(wallet.publicKey, 10 * LAMPORTS_PER_SOL);
 
@@ -41,29 +46,30 @@ describe('Provide Liquidity', () => {
 		const tokenMintAccount = await getMint(connection, tokenMint);
 
 		// Create associated token account
-		const tokenAccountAta = await createAssociatedTokenAccount(
+		tokenAccountAtaPK = await createAssociatedTokenAccount(
 			connection,
 			(wallet as NodeWallet).payer,
 			tokenMint,
 			wallet.publicKey
 		);
 
-		console.log('tokenMintAccount.decimals: ', tokenMintAccount.decimals);
 		const mintAmount = Money.new(tokenMintAccount.decimals, 110);
 		await mintTo(
 			connection,
 			(wallet as NodeWallet).payer,
 			tokenMint,
-			tokenAccountAta,
+			tokenAccountAtaPK,
 			(wallet as NodeWallet).payer,
 			mintAmount.convertToDecimals().toNumber()
 		);
 
 		// Assert the correct amount
-		const account = await getAccount(connection, tokenAccountAta);
-		console.log('account amount: ', account.amount);
-		const amount = new anchor.BN(account.amount);
-		assert(new anchor.BN(mintAmount.convertToDecimals()).eq(amount));
+		tokenAccountAta = await getAccount(connection, tokenAccountAtaPK);
+		console.log('account amount: ', tokenAccountAta.amount);
+		tokenAccountAtaAmount = new anchor.BN(tokenAccountAta.amount);
+		assert(
+			new anchor.BN(mintAmount.convertToDecimals()).eq(tokenAccountAtaAmount)
+		);
 
 		// Create protocol owner
 		try {
@@ -71,25 +77,26 @@ describe('Provide Liquidity', () => {
 		} catch (err) {
 			throw new Error('sure.test. create protocol owner. Cause: ' + err);
 		}
-
-		// Create Sure pool
+	});
+	it('Initialize token pool ', async () => {
 		const insuranceFee = 0;
-		const smartContract = PublicKey.default;
+		const smartContract = Keypair.generate();
 
-		poolPDA = await sureSdk?.pool.getPoolPDA(smartContract);
-		await sureSdk.pool.createPool(smartContract, insuranceFee, 'sure-test');
-		const newPool = await program.account.poolAccount.fetch(poolPDA);
-		assert.isAbove(newPool.bump, 0);
+		poolPDA = await sureSdk?.pool.getPoolPDA(smartContract.publicKey);
 
-		// Create pool Vault for mint
-		await sureSdk.pool.initializeTokenPool(poolPDA, tokenMint);
-
+		await sureSdk.pool.initializeTokenPool(
+			smartContract.publicKey,
+			tokenMint,
+			insuranceFee,
+			'Test pool'
+		);
+	});
+	it('Deposit some liquidity into a pool', async () => {
 		/// Deposit liquidity in range
 		const liquidityAmount = 100; // amount to draw from account
 		const tickStart = 210; // 300bp tick
 		const tickEnd = 220;
 
-		// TODO: Deposit some more liquidity from other LPs
 		try {
 			await sureSdk.liquidity.depositLiquidity(
 				poolPDA,
@@ -102,6 +109,42 @@ describe('Provide Liquidity', () => {
 			console.log('logs?: ', err?.logs);
 			throw new Error('Deposit liquidity error. Cause:' + err);
 		}
+
+		tokenAccountAta = await getAccount(connection, tokenAccountAtaPK);
+		let expectedAmount = tokenAccountAtaAmount.sub(
+			await Money.convertBNToDecimals(
+				connection,
+				new anchor.BN(liquidityAmount),
+				tokenMint
+			)
+		);
+		console.log('expectedAmount: ', expectedAmount.toString());
+		tokenAccountAtaAmount = new anchor.BN(tokenAccountAta.amount);
+		console.log('amount: ', tokenAccountAtaAmount.toString());
+		assert.equal(tokenAccountAtaAmount.toString(), expectedAmount);
+	});
+	it.skip('Test performance of getTokenPoolInformation', async () => {
+		let smartContract: Keypair;
+		const numPools = 2;
+		const insuranceFee = 0;
+
+		// Create a bunch of pools
+		for (let i = 0; i < numPools; i++) {
+			smartContract = Keypair.generate();
+			await sureSdk.pool.initializeTokenPool(
+				smartContract.publicKey,
+				tokenMint,
+				insuranceFee,
+				'Test pool'
+			);
+		}
+
+		// Fetch pools
+		let startTimeMs = new Date().valueOf();
+		const pools = await sureSdk.pool.getTokenPoolsInformation();
+		let endTIme = (new Date().valueOf() - startTimeMs) / 1000;
+		console.log('V2 Time to fetch: ', endTIme, 's');
+		assert.equal(pools.length, numPools + 1);
 	});
 	it('Estimate insurance price', async () => {
 		// Estimate insurance price
@@ -127,16 +170,6 @@ describe('Provide Liquidity', () => {
 			tokenMint,
 			buyAmount,
 			contractExpiryInSeconds
-		);
-
-		console.log(
-			'insured amount:',
-			await sureSdk.insurance.getInsuredAmount(poolPDA, tokenMint)
-		);
-
-		console.log(
-			'get pools information',
-			await sureSdk.pool.getPoolsInformation()
 		);
 	});
 });

@@ -5,7 +5,7 @@
 		"@project-serum/anchor": "^0.24.2",
 		"@solana/spl-token": "^0.2.0",
 		"@solana/wallet-adapter-phantom": "^0.9.3",
-		"@surec/sdk": "^0.0.6",
+		"@surec/sdk": "^0.0.7",
 		"@types/chai": "^4.3.1",
 		"yarn": "^1.22.19"
 	},
@@ -32,7 +32,7 @@
 		"lerna:bootstrap": "lerna bootstrap",
 		"dev": "lerna run dev",
 		"build": "lerna run build",
-		"init:sure": "lerna run initialize",
+		"init:sure": "lerna run sure:init",
 		"build:rollup": "lerna run build:rollup",
 		"build:craco": "lerna run build:craco",
 		"build:esbuild": "lerna run build:esbuild",

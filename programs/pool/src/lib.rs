@@ -16,10 +16,9 @@ use anchor_spl::*;
 use context::*;
 use mpl_token_metadata::instruction::{create_metadata_accounts_v2, update_metadata_accounts_v2};
 use mpl_token_metadata::state::Creator;
-use std::cmp;
 use vipers::prelude::*;
 
-declare_id!("6JqrqLaHQu9YPpp5z9KzF2nUeR4tnm3y3z9UMzkhVAwG");
+declare_id!("D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM");
 
 #[program]
 pub mod sure_pool {
@@ -190,6 +189,7 @@ pub mod sure_pool {
         token_pool.liquidity = 0;
         token_pool.used_liquidity = 0;
         token_pool.token_mint = ctx.accounts.pool_vault_token_mint.key();
+        token_pool.pool = pool.key();
 
         // Update pool with new tokenPool entry
         pool.token_pools.push(token_pool.key().clone());

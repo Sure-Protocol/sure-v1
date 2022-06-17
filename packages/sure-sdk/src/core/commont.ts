@@ -11,7 +11,6 @@ import {
 	SURE_PROTOCOL_OWNER,
 	SURE_TOKEN_POOL_SEED,
 } from './seeds';
-import { PROGRAM_ID } from './constants';
 import { LiquidityTickInfo } from 'src/types';
 import { Account, getMint } from '@solana/spl-token';
 
@@ -22,37 +21,27 @@ export class Common {
 		readonly wallet: anchor.Wallet
 	) {}
 
-	static init(connection: anchor.web3.Connection, wallet: anchor.Wallet) {
-		const provider = new anchor.AnchorProvider(connection, wallet, {
-			skipPreflight: false,
-		});
+	// async convertBNFromDecimals(
+	// 	amount: anchor.BN,
+	// 	mint: PublicKey
+	// ): Promise<string> {
+	// 	const mintInfo = await getMint(this.connection, mint);
+	// 	const base = new anchor.BN(10 ** mintInfo.decimals);
+	// 	let fraction = amount.mod(base).toString(10);
+	// 	while (fraction.length < mintInfo.decimals) {
+	// 		fraction = `0${fraction}`;
+	// 	}
+	// 	const whole = amount.div(base).toString(10);
+	// 	return `${whole}${fraction == '0' ? '' : `.${fraction}`}`;
+	// }
 
-		const sureProgram = new anchor.Program<SurePool>(IDL, PROGRAM_ID, provider);
-
-		return new this(sureProgram, connection, wallet);
-	}
-
-	async convertBNFromDecimals(
-		amount: anchor.BN,
-		mint: PublicKey
-	): Promise<string> {
-		const mintInfo = await getMint(this.connection, mint);
-		const base = new anchor.BN(10 ** mintInfo.decimals);
-		let fraction = amount.mod(base).toString(10);
-		while (fraction.length < mintInfo.decimals) {
-			fraction = `0${fraction}`;
-		}
-		const whole = amount.div(base).toString(10);
-		return `${whole}${fraction == '0' ? '' : `.${fraction}`}`;
-	}
-
-	async convertBNToDecimals(
-		amount: anchor.BN,
-		mint: PublicKey
-	): Promise<anchor.BN> {
-		const mintInfo = await getMint(this.connection, mint);
-		return amount.mul(new anchor.BN(10 ** mintInfo.decimals));
-	}
+	// async convertBNToDecimals(
+	// 	amount: anchor.BN,
+	// 	mint: PublicKey
+	// ): Promise<anchor.BN> {
+	// 	const mintInfo = await getMint(this.connection, mint);
+	// 	return amount.mul(new anchor.BN(10 ** mintInfo.decimals));
+	// }
 
 	async getProtocolOwner(): Promise<[PublicKey, number]> {
 		return await PublicKey.findProgramAddress(
