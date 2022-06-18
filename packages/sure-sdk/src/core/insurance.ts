@@ -21,7 +21,7 @@ import { min } from 'bn.js';
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
 import { InsuranceContractsInfo, PoolInsuranceContract } from 'src/types';
-import { Money, Bitmap } from './../utils';
+import { Money, Bitmap, sendTransaction } from './../utils';
 import { token } from '@project-serum/anchor/dist/cjs/utils';
 
 export class Insurance extends Common {
@@ -107,7 +107,15 @@ export class Insurance extends Common {
 				await this.program.account.poolInsuranceContract.fetch(
 					poolInsuranceContractPDA
 				);
-			return poolInsuranceContract;
+
+			return {
+				...poolInsuranceContract,
+				insuredAmount: await Money.convertBNFromDecimals(
+					this.connection,
+					poolInsuranceContract.insuredAmount,
+					poolInsuranceContract.tokenMint
+				),
+			};
 		} catch (err) {
 			throw new Error(
 				'sure-sdk.insurance.getPoolInsuranceContractInfo.error. Cause: ' + err
@@ -873,11 +881,10 @@ export class Insurance extends Common {
 			// Get the previous tick in the bitmap
 			currentTick = liquidityPositions.getNextTick(currentTick);
 		}
-		tx.recentBlockhash = (await this.connection.getLatestBlockhash()).blockhash;
-		tx.feePayer = this.wallet.publicKey;
 
 		try {
-			await this.program.provider.sendAndConfirm?.(tx);
+			const txId = await sendTransaction(this.connection, tx, this.wallet);
+			console.log('txId: ', txId);
 		} catch (err) {
 			console.log('logs?: ', err?.logs);
 			throw new Error(
@@ -908,7 +915,7 @@ export class Insurance extends Common {
 			tokenMint
 		);
 		// Create Anchor Transaction
-		let txs = new anchor.web3.Transaction();
+		let tx = new anchor.web3.Transaction();
 		// Initialize parameters
 		let liquidityTickInfoPDA;
 		let insuranceTickContractPDA;
@@ -938,7 +945,7 @@ export class Insurance extends Common {
 				amountToReduceForTick
 			);
 
-			txs.add(
+			tx.add(
 				await this.program.methods
 					.updateInsuranceTickContract(
 						amountToInsureForTick,
@@ -963,15 +970,10 @@ export class Insurance extends Common {
 			// Get the previous tick in the bitmap
 			currentTick = bitmap.getPreviousTick(currentTick);
 		}
-		txs.recentBlockhash = (
-			await this.connection.getLatestBlockhash()
-		).blockhash;
-		txs.feePayer = this.wallet.publicKey;
 
 		try {
-			const provider = await anchor.getProvider();
-			console.log('provider.send: ', provider.send);
-			await provider.send?.(txs);
+			const txId = await sendTransaction(this.connection, tx, this.wallet);
+			console.log('txId: ', txId);
 		} catch (err) {
 			console.log('logs?: ', err?.logs);
 			throw new Error(

@@ -44,6 +44,7 @@ export interface TokenPool {
 }
 
 export interface PoolInformation {
+	address: PublicKey;
 	name: string;
 	tokenMint: PublicKey;
 	insuranceFee: number;
@@ -62,7 +63,7 @@ export interface PoolInsuranceContract {
 	expiryTs: anchor.BN; // 8 byte
 
 	/// Contract Amount
-	insuredAmount: anchor.BN; // 8 byte
+	insuredAmount: string; // 8 byte
 
 	/// token mint
 	tokenMint: PublicKey;

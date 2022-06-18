@@ -150,30 +150,32 @@ const BuyInsurance = () => {
 									{...register('expiry')}
 									type="date"
 									className="sure-buy-insurance-selector--date"
-									placeholder="10.August 2022"
+									placeholder={Date.now().toString()}
 								/>
 							</div>
 						</div>
 						{isOpen && <SearchMarket parentRef={marketSelectorRef} />}
-						{contract?.insuredAmount.gten(0) && (
-							<div className="action-container-inner-content--row">
-								<p className="p--margin-s p--small">Already covered</p>
-								<InfoBox title="Change">
-									<div className="sure-buy-insurance-change">
-										<div className="sure-buy-insurance-change__status">
-											<p className="p--pink">Old</p>
-											<p className="p--pink">New</p>
+						{parseInt(contract?.insuredAmount) > 0 && (
+							<div className="action-container-inner-content--row__centered">
+								<div className="action-container-inner-content--item">
+									<p className="p--margin-s p--small">Already covered</p>
+									<InfoBox title="Change">
+										<div className="sure-buy-insurance-change">
+											<div className="sure-buy-insurance-change__status">
+												<p className="p--pink">Old</p>
+												<p className="p--pink">New</p>
+											</div>
+											<div className="sure-buy-insurance-change__amount">
+												<p className="p">{`${contract.insuredAmount} USDC`}</p>
+												<p className="p">{`${getValues('amount')}`}</p>
+											</div>
+											<div className="sure-buy-insurance-change__date">
+												<p className="p">{getValues('expiry')}</p>
+												<p className="p"></p>
+											</div>
 										</div>
-										<div className="sure-buy-insurance-change__amount">
-											<p className="p">{`${contract.insuredAmount} USDC`}</p>
-											<p className="p">10,000 USDC</p>
-										</div>
-										<div className="sure-buy-insurance-change__date">
-											<p className="p">1. June 2022</p>
-											<p className="p">28. August 2022</p>
-										</div>
-									</div>
-								</InfoBox>
+									</InfoBox>
+								</div>
 							</div>
 						)}
 						{estimate[0] !== '' && (

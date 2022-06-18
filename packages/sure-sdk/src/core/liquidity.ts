@@ -23,7 +23,7 @@ import {
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
-import { Bitmap, Money } from './../utils';
+import { Bitmap, Money, sendTransaction } from './../utils';
 import { LiquidityTickInfo, TokenPoolStatistics } from 'src/types';
 
 export class Liquidity extends Common {
@@ -252,14 +252,8 @@ export class Liquidity extends Common {
 				tick = tick + bitmap.spacing;
 			}
 
-			tx.recentBlockhash = (
-				await this.connection.getLatestBlockhash()
-			).blockhash;
-			tx.feePayer = this.wallet.publicKey;
-
-			const provider = await anchor.getProvider();
-			const txRes = await provider.sendAndConfirm?.(tx);
-			console.log('txRes_ ', txRes);
+			const txId = await sendTransaction(this.connection, tx, this.wallet);
+			console.log('txId: ', txId);
 		} catch (err) {
 			if (err.logs) {
 				console.log(err.logs);

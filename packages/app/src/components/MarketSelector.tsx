@@ -2,13 +2,10 @@ import { css } from '@emotion/css';
 import { theme } from './Themes';
 import down from './../assets/icons/down.svg';
 import { useToggle } from '../context/searchToggle';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { PoolInformation } from '@surec/sdk';
 import { FieldValues, UseFormRegister } from 'react-hook-form';
 import { TokensMap, useTokens } from '../context/tokens';
-import { TokenInfo } from '@solana/spl-token-registry';
-import TokenIcon from './TokenIcon';
-import { PublicKey } from '@solana/web3.js';
 import TokenIconInfo from './TokenIconInfo';
 import { selectRandomToken } from '../utils/string';
 

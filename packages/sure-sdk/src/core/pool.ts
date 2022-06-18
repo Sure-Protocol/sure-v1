@@ -143,7 +143,8 @@ export class Pool extends Common {
 						)[0].account;
 
 						resolve({
-							name: 'some name',
+							address: tokenPool.publicKey,
+							name: pool.name,
 							tokenMint: tokenPool.account.tokenMint,
 							insuranceFee: 0,
 							smartContract: pool.smartContract,

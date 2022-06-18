@@ -2,7 +2,12 @@ import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
 import { SurePool, IDL, SureSdk } from '@surec/sdk';
 import * as anchor from '@project-serum/anchor';
 import React, { useContext, useEffect, useState } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import {
+	useAnchorWallet,
+	useConnection,
+	useWallet,
+} from '@solana/wallet-adapter-react';
+import { PublicKey } from '@solana/web3.js';
 
 export const SureSdkContext = React.createContext<undefined | SureSdk>(
 	undefined
@@ -16,15 +21,19 @@ export const SureSdkProvider: React.FunctionComponent<Props> = ({
 	children,
 }) => {
 	const { connection } = useConnection();
-	const wallet = useWallet();
+	const wallet = useAnchorWallet();
 	const [surePoolProgram, setSurePoolProgram] = useState<undefined | SureSdk>(
 		undefined
 	);
 	useEffect(() => {
-		if (wallet.publicKey) {
+		if (wallet?.publicKey) {
 			/// @ts-ignore
 			setSurePoolProgram(
-				SureSdk.init(connection, wallet, process.env.PROGRAM_ID)
+				SureSdk.init(
+					connection,
+					wallet as anchor.Wallet,
+					new PublicKey(process.env.PROGRAM_ID)
+				)
 			);
 		}
 	}, [wallet]);

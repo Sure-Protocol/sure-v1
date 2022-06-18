@@ -1,7 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { IDL, SurePool } from './../anchor/types/sure_pool';
-
+import {} from '@solana/web3.js';
 import { Insurance } from './insurance';
 import { Liquidity } from './liquidity';
 import { Pool } from './pool';

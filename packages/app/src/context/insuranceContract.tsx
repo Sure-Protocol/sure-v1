@@ -29,13 +29,15 @@ export const InsuranceContractProvider: React.FunctionComponent<{
 
 	const updateInsuranceContract = async (pool: PoolInformation) => {
 		if (sureSdk) {
-			const poolPDA = await sureSdk?.pool.getPoolPDA(pool.smartContract);
-			const insuranceContract =
-				await sureSdk?.insurance.getPoolInsuranceContractInfo(
-					poolPDA,
-					pool.tokenMint
-				);
-			setInsuranceContract(insuranceContract);
+			try {
+				const poolPDA = await sureSdk?.pool.getPoolPDA(pool.smartContract);
+				const insuranceContract =
+					await sureSdk?.insurance.getPoolInsuranceContractInfo(
+						poolPDA,
+						pool.tokenMint
+					);
+				setInsuranceContract(insuranceContract);
+			} catch (_) {}
 		}
 	};
 
