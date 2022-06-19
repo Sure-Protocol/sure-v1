@@ -30,6 +30,7 @@ export default {
 			preventAssignment: true,
 			values: {
 				'process.env.NODE_ENV': JSON.stringify(env),
+				'process.env.ANCHOR_BROWSER': JSON.stringify(true),
 			},
 		}),
 		terser(),
