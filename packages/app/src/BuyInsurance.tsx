@@ -64,7 +64,10 @@ const BuyInsurance = () => {
 						setEstimate([estimate[0], estimate[1], estimate[2]]);
 					}
 				} catch (err) {
-					if (err?.error == SureErrors.NotEnoughLiquidity) {
+					if (
+						err instanceof SureError &&
+						err?.error == SureErrors.NotEnoughLiquidity
+					) {
 						setEstimateError({
 							errorMsg: 'Could not estimate premium',
 							cause: SureErrors.NotEnoughLiquidity.name,
