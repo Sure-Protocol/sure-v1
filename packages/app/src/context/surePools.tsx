@@ -31,9 +31,7 @@ export const SurePoolsProvider: React.FunctionComponent<Props> = ({
 	useEffect(() => {
 		(async () => {
 			if (sureSdk !== undefined) {
-				console.log('Get token pools information');
-				const pools = await sureSdk.pool.getTokenPoolsInformation();
-				console.log('pools: ', pools);
+				const pools = await sureSdk.pool.getTokenPoolsInformationV2();
 				setSurePools(pools);
 			}
 		})();
@@ -50,7 +48,7 @@ export const loadSurePools = async () => {
 	const sureSdk = useSureSdk();
 	const [pools, setPools] = useContext(SurePoolsContext);
 	if (sureSdk !== undefined) {
-		const pools = await sureSdk.pool.getTokenPoolsInformation();
+		const pools = await sureSdk.pool.getTokenPoolsInformationV2();
 		setPools(pools);
 	}
 };

@@ -39,6 +39,9 @@ const WarningBox: React.FunctionComponent<Props> = ({ title, children }) => {
 				className={css`
 					display: flex;
 					justify-content: center;
+					flex-direction: column;
+					padding-left: 20px;
+					padding-right: 20px;
 				`}
 			>
 				{children}

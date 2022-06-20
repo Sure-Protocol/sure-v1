@@ -43,8 +43,6 @@ export class Bitmap {
 		const u256 = this.word.flatMap((word) => {
 			return word.toString(2, 64).split('').reverse().join('');
 		})[0];
-		console.log('getHighestBit: ', u256);
-		console.log('u256.lastIndexOf ', u256.lastIndexOf('1'));
 
 		return u256.lastIndexOf('1');
 	}
@@ -101,7 +99,6 @@ export class Bitmap {
 		if (lastBit === -1) {
 			return lastBit;
 		}
-		console.log('');
 
 		return this.getTickFromBit(lastBit);
 	}

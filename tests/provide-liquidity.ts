@@ -78,24 +78,23 @@ describe('Provide Liquidity', () => {
 			throw new Error('sure.test. create protocol owner. Cause: ' + err);
 		}
 	});
-	it('Initialize token pool ', async () => {
-		const insuranceFee = 0;
-		const smartContract = Keypair.generate();
-
-		poolPDA = await sureSdk?.pool.getPoolPDA(smartContract.publicKey);
-
-		await sureSdk.pool.initializeTokenPool(
-			smartContract.publicKey,
-			tokenMint,
-			insuranceFee,
-			'Test pool'
-		);
-	});
 	it('Deposit some liquidity into a pool', async () => {
 		/// Deposit liquidity in range
 		const liquidityAmount = 100; // amount to draw from account
 		const tickStart = 210; // 300bp tick
 		const tickEnd = 220;
+
+		const insuranceFee = 0;
+		const smartContract = Keypair.generate();
+
+		poolPDA = await sureSdk?.pool.getPoolPDA(smartContract.publicKey);
+
+		const txId = await sureSdk.pool.initializeTokenPool(
+			smartContract.publicKey,
+			tokenMint,
+			insuranceFee,
+			'Test pool'
+		);
 
 		try {
 			await sureSdk.liquidity.depositLiquidity(
@@ -123,9 +122,9 @@ describe('Provide Liquidity', () => {
 		console.log('amount: ', tokenAccountAtaAmount.toString());
 		assert.equal(tokenAccountAtaAmount.toString(), expectedAmount);
 	});
-	it.skip('Test performance of getTokenPoolInformation', async () => {
+	it('Test performance of getTokenPoolInformation', async () => {
 		let smartContract: Keypair;
-		const numPools = 2;
+		const numPools = 5;
 		const insuranceFee = 0;
 
 		// Create a bunch of pools
@@ -143,8 +142,33 @@ describe('Provide Liquidity', () => {
 		let startTimeMs = new Date().valueOf();
 		const pools = await sureSdk.pool.getTokenPoolsInformation();
 		let endTIme = (new Date().valueOf() - startTimeMs) / 1000;
-		console.log('V2 Time to fetch: ', endTIme, 's');
+		console.log('V1 Time to fetch: ', endTIme, 's');
 		assert.equal(pools.length, numPools + 1);
+		startTimeMs = new Date().valueOf();
+		const poolsV2 = await sureSdk.pool.getTokenPoolsInformationV2();
+		endTIme = (new Date().valueOf() - startTimeMs) / 1000;
+		console.log('V2 Time to fetch: ', endTIme, 's');
+		assert.equal(poolsV2.length, numPools + 1);
+		console.log(
+			'poolsV2: ',
+			poolsV2.sort((a, b) =>
+				a.address.toBase58().localeCompare(b.address.toBase58())
+			)
+		);
+		console.log(
+			'poolsV1: ',
+			pools.sort((a, b) =>
+				a.address.toBase58().localeCompare(b.address.toBase58())
+			)
+		);
+		assert.equal(
+			pools.sort((a, b) =>
+				a.address.toBase58().localeCompare(b.address.toBase58())
+			),
+			poolsV2.sort((a, b) =>
+				a.address.toBase58().localeCompare(b.address.toBase58())
+			)
+		);
 	});
 	it('Estimate insurance price', async () => {
 		// Estimate insurance price

@@ -23,6 +23,7 @@ import { Common } from './commont';
 import { InsuranceContractsInfo, PoolInsuranceContract } from '../types';
 import { Money, Bitmap, sendTransaction } from './../utils';
 import { token } from '@project-serum/anchor/dist/cjs/utils';
+import { SureError, SureErrors } from './errors';
 
 export class Insurance extends Common {
 	constructor(
@@ -309,111 +310,112 @@ export class Insurance extends Common {
 	): Promise<
 		[amountCovered: string, insurancePrice: string, insurancePremium: string]
 	> {
+		let poolAccount;
 		try {
-			let poolAccount;
-			try {
-				poolAccount = await this.program.account.poolAccount.fetch(pool);
-			} catch (err) {
-				throw new Error("couldn't get pool account. " + err);
-			}
-
-			const insuranceFee = poolAccount.insuranceFee;
-			const tokenDecimals = (await getMint(this.connection, tokenMint))
-				.decimals;
-			const amountInDecimals = new Money(
-				tokenDecimals,
-				amount
-			).convertToDecimals();
-
-			/// Estimate premium
-			let bitmapPDA = await this.getPoolLiquidityTickBitmapPDA(pool, tokenMint);
-			let liquidityPositions;
-			try {
-				liquidityPositions = await this.program.account.bitMap.fetch(bitmapPDA);
-			} catch (err) {
-				throw new Error('could not get liquidity position bitmap. ' + err);
-			}
-
-			const bitmap = Bitmap.new(liquidityPositions);
-
-			// Check if there is enough
-			let totalPremium = new anchor.BN(0);
-			let coverageAmountAtTick = new anchor.BN(0);
-			let amountToCover = new anchor.BN(amountInDecimals);
-			let amountCovered = new anchor.BN(0);
-			let tickAccount;
-			let tickAccountPDA;
-			let availableLiquidity = new anchor.BN(0);
-			let tick = bitmap.getLowestTick();
-			if (tick === -1) {
-				throw new Error('no available liquidity');
-			}
-
-			while (amountToCover.gt(new anchor.BN(0)) && tick !== -1) {
-				console.log('tick: ', tick);
-				console.log('amount to cover: ', amountToCover.toString());
-				// Get liquidity at given tick
-				tickAccountPDA = await this.getLiquidityTickInfoPDA(
-					pool,
-					tokenMint,
-					tick
-				);
-				try {
-					tickAccount = await this.program.account.tick.fetch(tickAccountPDA);
-				} catch (err) {
-					throw new Error('could not get tickaccount, ' + err);
-				}
-				availableLiquidity = tickAccount.liquidity.sub(
-					tickAccount.usedLiquidity
-				);
-
-				if (availableLiquidity.gte(new anchor.BN(amountToCover))) {
-					// Enough liquidity for one tick
-					coverageAmountAtTick = amountToCover;
-				} else {
-					// Buy all the liquidity for one tick
-					coverageAmountAtTick = availableLiquidity;
-				}
-
-				// Buy insurance for tick
-				totalPremium = totalPremium.add(
-					coverageAmountAtTick.muln(tick).divn(10000)
-				);
-
-				amountToCover = amountToCover.sub(coverageAmountAtTick);
-
-				// find next liquidity
-				amountCovered = amountCovered.add(coverageAmountAtTick);
-				tick = bitmap.getNextTick(tick);
-			}
-
-			// Add insurance fee
-			const insurancePremiumPreFee = totalPremium
-				.muln(10000)
-				.div(amountCovered);
-			const sureFee = totalPremium.muln(insuranceFee).divn(10000);
-			const insurancePrice = totalPremium.add(sureFee);
-
-			const amountCoveredNum = await Money.convertBNFromDecimals(
-				this.connection,
-				amountCovered,
-				tokenMint
-			);
-			const insurancePriceNum = await Money.convertBNFromDecimals(
-				this.connection,
-				insurancePrice,
-				tokenMint
-			);
-			return [
-				amountCoveredNum,
-				insurancePriceNum,
-				insurancePremiumPreFee.toString(),
-			];
+			poolAccount = await this.program.account.poolAccount.fetch(pool);
 		} catch (err) {
-			throw new Error(
-				'sure-sdk.insurance.estimateYearlyPremium.error. Cause: ' + err
+			throw new SureError(
+				"couldn't get pool account. " + err,
+				SureErrors.CouldNotGetAccount
 			);
 		}
+
+		const insuranceFee = poolAccount.insuranceFee;
+		const tokenDecimals = (await getMint(this.connection, tokenMint)).decimals;
+		const amountInDecimals = new Money(
+			tokenDecimals,
+			amount
+		).convertToDecimals();
+
+		/// Estimate premium
+		let bitmapPDA = await this.getPoolLiquidityTickBitmapPDA(pool, tokenMint);
+		let liquidityPositions;
+		try {
+			liquidityPositions = await this.program.account.bitMap.fetch(bitmapPDA);
+		} catch (err) {
+			throw new SureError(
+				'could not get liquidity position bitmap. ' + err,
+				SureErrors.CouldNotGetAccount
+			);
+		}
+
+		const bitmap = Bitmap.new(liquidityPositions);
+
+		// Check if there is enough
+		let totalPremium = new anchor.BN(0);
+		let coverageAmountAtTick = new anchor.BN(0);
+		let amountToCover = new anchor.BN(amountInDecimals);
+		let amountCovered = new anchor.BN(0);
+		let tickAccount;
+		let tickAccountPDA;
+		let availableLiquidity = new anchor.BN(0);
+		let tick = bitmap.getLowestTick();
+		if (tick === -1) {
+			throw new SureError(
+				'not enough liquidity',
+				SureErrors.NotEnoughLiquidity
+			);
+		}
+
+		while (amountToCover.gt(new anchor.BN(0)) && tick !== -1) {
+			console.log('tick: ', tick);
+			console.log('amount to cover: ', amountToCover.toString());
+			// Get liquidity at given tick
+			tickAccountPDA = await this.getLiquidityTickInfoPDA(
+				pool,
+				tokenMint,
+				tick
+			);
+			try {
+				tickAccount = await this.program.account.tick.fetch(tickAccountPDA);
+			} catch (err) {
+				throw new SureError(
+					'could not get tick account',
+					SureErrors.NotEnoughLiquidity
+				);
+			}
+			availableLiquidity = tickAccount.liquidity.sub(tickAccount.usedLiquidity);
+
+			if (availableLiquidity.gte(new anchor.BN(amountToCover))) {
+				// Enough liquidity for one tick
+				coverageAmountAtTick = amountToCover;
+			} else {
+				// Buy all the liquidity for one tick
+				coverageAmountAtTick = availableLiquidity;
+			}
+
+			// Buy insurance for tick
+			totalPremium = totalPremium.add(
+				coverageAmountAtTick.muln(tick).divn(10000)
+			);
+
+			amountToCover = amountToCover.sub(coverageAmountAtTick);
+
+			// find next liquidity
+			amountCovered = amountCovered.add(coverageAmountAtTick);
+			tick = bitmap.getNextTick(tick);
+		}
+
+		// Add insurance fee
+		const insurancePremiumPreFee = totalPremium.muln(10000).div(amountCovered);
+		const sureFee = totalPremium.muln(insuranceFee).divn(10000);
+		const insurancePrice = totalPremium.add(sureFee);
+
+		const amountCoveredNum = await Money.convertBNFromDecimals(
+			this.connection,
+			amountCovered,
+			tokenMint
+		);
+		const insurancePriceNum = await Money.convertBNFromDecimals(
+			this.connection,
+			insurancePrice,
+			tokenMint
+		);
+		return [
+			amountCoveredNum,
+			insurancePriceNum,
+			insurancePremiumPreFee.toString(),
+		];
 	}
 
 	/**

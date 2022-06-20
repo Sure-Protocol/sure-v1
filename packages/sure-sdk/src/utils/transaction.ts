@@ -19,7 +19,6 @@ async function getTxConfirmation(
 
 	// wait for transaction confirmation
 	while (!attemptFinished) {
-		console.log('> get signature status');
 		// Run each confirmation task async in case some calls crashes or stalls
 		(async () => {
 			try {
@@ -36,7 +35,6 @@ async function getTxConfirmation(
 					}
 
 					if (signatureStatus.confirmationStatus === 'confirmed') {
-						console.log('Transaction confirmed.');
 						attemptFinished = true;
 					}
 				}
@@ -58,6 +56,7 @@ async function sendAndConfirm(
 	let txConfirmed = false;
 	const timeout = 15 * 1000;
 	const txStart = getUnixTime();
+
 	// Start sending transaction until confirmation
 	let txId = await connection.sendRawTransaction(signedTx.serialize(), {
 		skipPreflight: true,
@@ -65,7 +64,6 @@ async function sendAndConfirm(
 
 	(async () => {
 		while (!txConfirmed && getUnixTime() - txStart < timeout) {
-			console.log('> send transaction');
 			await connection.sendRawTransaction(signedTx.serialize(), {
 				skipPreflight: true,
 			});
@@ -75,17 +73,14 @@ async function sendAndConfirm(
 
 	// Try to get confirmation within timeout
 	try {
-		getTxConfirmation(connection, timeout, txId);
+		await getTxConfirmation(connection, timeout, txId);
 	} catch (err) {
 		txConfirmed = true;
-		console.log('confirmation failed');
 		throw new Error(err);
 	} finally {
 		txConfirmed = true;
 	}
 
-	console.log('transaction confirmed: ');
-	console.log('Latency', txId, getUnixTime() - txStart);
 	return txId;
 }
 export async function sendTransaction(

@@ -253,7 +253,6 @@ export class Liquidity extends Common {
 			}
 
 			const txId = await sendTransaction(this.connection, tx, this.wallet);
-			console.log('txId: ', txId);
 		} catch (err) {
 			if (err.logs) {
 				console.log(err.logs);

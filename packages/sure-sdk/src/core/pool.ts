@@ -17,6 +17,8 @@ import { Bitmap, Money, sendTransaction } from './../utils';
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
 import { SURE_POOL_MANAGER_SEED } from './seeds';
+import _ from 'lodash';
+import { BitmapType } from 'src/utils/bitmap';
 
 export class Pool extends Common {
 	constructor(
@@ -170,6 +172,84 @@ export class Pool extends Common {
 		return await Promise.all(promises);
 	}
 
+	/**
+	 * Get Token Pools Information
+	 * 	Get token pool information
+	 *
+	 * @returns PoolInformation array
+	 */
+	async getTokenPoolsInformationV2(): Promise<PoolInformation[]> {
+		let pool: PoolAccount;
+		let liquidityBitmapPDA: PublicKey;
+		const tokenPools = await this.program.account.tokenPool.all();
+		const pools = await this.program.account.poolAccount.all();
+		const promises: Promise<{
+			tokenPool: any;
+			liquidityBitmapPDA: PublicKey;
+		}>[] = [];
+		for (const tokenPool of tokenPools) {
+			promises.push(
+				new Promise(async (resolve, reject) => {
+					try {
+						liquidityBitmapPDA = await this.getPoolLiquidityTickBitmapPDA(
+							tokenPool.account.pool,
+							tokenPool.account.tokenMint
+						);
+
+						resolve({
+							tokenPool: tokenPool,
+							liquidityBitmapPDA: liquidityBitmapPDA,
+						});
+					} catch (err) {
+						console.log('could not get token pool');
+						reject(err);
+					}
+				})
+			);
+		}
+		const res = await Promise.all(promises);
+		const liquidityBitmaps = await this.program.account.bitMap.fetchMultiple(
+			res.map((val) => val.liquidityBitmapPDA)
+		);
+		if (liquidityBitmaps.some((lb) => lb === null)) {
+			throw new Error(
+				'getTokenPoolsInformationV2.error. At least one liquidity bitmap address does not exist.'
+			);
+		}
+		const val = Promise.all(
+			res.map(async (value, idx) => {
+				const tokenPool = value.tokenPool;
+				const pool = pools.filter(
+					(pool) =>
+						pool.publicKey.toBase58() == tokenPool.account.pool.toBase58()
+				)[0].account;
+				return {
+					address: tokenPool.publicKey,
+					name: pool.name,
+					tokenMint: tokenPool.account.tokenMint,
+					insuranceFee: 0,
+					smartContract: pool.smartContract,
+					liquidity: await Money.convertBNFromDecimals(
+						this.connection,
+						tokenPool.account.liquidity,
+						tokenPool.account.tokenMint
+					),
+					usedLiquidity: await Money.convertBNFromDecimals(
+						this.connection,
+						tokenPool.account.usedLiquidity,
+						tokenPool.account.tokenMint
+					),
+					lowestPremium:
+						typeof liquidityBitmaps[idx] !== null
+							? Bitmap.new(liquidityBitmaps[idx] as BitmapType).getLowestTick()
+							: 0,
+					locked: false,
+				};
+			})
+		);
+		return val;
+	}
+
 	async getOrCreatePool(
 		smartContractAddress: PublicKey,
 		insuranceFee: number,
@@ -264,7 +344,6 @@ export class Pool extends Common {
 			const poolLiquidityTickBitmapPDA =
 				await this.getPoolLiquidityTickBitmapPDA(pool, tokenMint);
 			const tokenPoolPDA = await this.getTokenPoolPDA(pool, tokenMint);
-
 			const tx = new anchor.web3.Transaction();
 			// Check if pool exists
 			const createPoolIx = await this.getOrCreatePoolInstruction(

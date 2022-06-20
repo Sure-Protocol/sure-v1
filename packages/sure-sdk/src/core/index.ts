@@ -16,6 +16,7 @@ export * as protocol from './protocol';
 export * as seeds from './seeds';
 export * as Tick from './tickAccount';
 export * as Common from './commont';
+export * from './errors';
 
 export default interface Sdk {
 	readonly program: anchor.Program<SurePool>;

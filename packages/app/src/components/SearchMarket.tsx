@@ -1,7 +1,7 @@
 import { css, cx } from '@emotion/css';
 import { PoolInformation } from '@surec/sdk';
 import { useInsuranceContract } from '../context/insuranceContract';
-import { loadSurePools, useSurePools } from '../context/surePools';
+import { useSurePools } from '../context/surePools';
 import { explorerLink } from '../utils/links';
 import { prettyPublicKey } from '../utils/publickey';
 import { theme } from './Themes';
@@ -81,11 +81,21 @@ const MarketListItem: React.FunctionComponent<{
 					text-align: left;
 				`}
 			>
+				<p className="p--small p--margin-0 ">{`Utilization: ${
+					(100 * parseInt(surePool.usedLiquidity)) /
+					parseInt(surePool.liquidity)
+				}%`}</p>
 				<p className="p--small p--margin-0 ">
-					{`Liquidity: ${surePool.liquidity.toString()} ${
+					{`Liquidity: ${parseInt(surePool.liquidity.toString())} ${
 						tokens?.get(surePool.tokenMint?.toBase58())?.symbol ?? '?'
 					}`}
 				</p>
+				<p className="p--small p--margin-0 ">
+					{`Used Liquidity: ${parseInt(surePool.usedLiquidity)} ${
+						tokens?.get(surePool.tokenMint?.toBase58())?.symbol ?? '?'
+					}`}
+				</p>
+
 				<p className="p--small p--margin-0">{`Premium: ${prettyPrintPremium(
 					surePool.lowestPremium
 				)}bp`}</p>

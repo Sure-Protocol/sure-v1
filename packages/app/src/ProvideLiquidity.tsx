@@ -42,9 +42,7 @@ const ProvideLiquidity: React.FunctionComponent = () => {
 	}, [watch()]);
 
 	const onSubmit = async (data: FieldValues) => {
-		console.log('Provide liquidity');
 		if (pool && sureSdk) {
-			console.log('Provide liquidity lfg');
 			const tokenMint = pool.tokenMint;
 			const poolPDA = await sureSdk.pool.getPoolPDA(pool?.smartContract);
 			await sureSdk.liquidity.depositLiquidity(

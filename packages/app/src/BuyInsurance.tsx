@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { FieldValues, useForm } from 'react-hook-form';
 import { useSureSdk } from './context/sureSdk';
 import WarningBox from './components/WarningBox';
-import { SureDate } from '@surec/sdk';
+import { SureDate, SureError, SureErrors } from '@surec/sdk';
 import MarketSelector from './components/MarketSelector';
 import BuyCoverageContent from './components/popup/BuyCoverageContent';
 import _ from 'lodash';
@@ -35,7 +35,10 @@ const BuyInsurance = () => {
 	const marketSelectorRef = useRef<HTMLDivElement>(null);
 
 	const [estimate, setEstimate] = useState(['', '', '']);
-	const [estimateError, setEstimateError] = useState('');
+	const [estimateError, setEstimateError] = useState<{
+		errorMsg: string;
+		cause: string;
+	} | null>(null);
 
 	useEffect(() => {
 		register('smartContract');
@@ -61,7 +64,17 @@ const BuyInsurance = () => {
 						setEstimate([estimate[0], estimate[1], estimate[2]]);
 					}
 				} catch (err) {
-					setEstimateError('Could not estimate premium');
+					if (err?.error == SureErrors.NotEnoughLiquidity) {
+						setEstimateError({
+							errorMsg: 'Could not estimate premium',
+							cause: SureErrors.NotEnoughLiquidity.name,
+						});
+					} else {
+						setEstimateError({
+							errorMsg: 'Could not estimate premium',
+							cause: '',
+						});
+					}
 				}
 			};
 			estimateYearlyPremium();
@@ -128,7 +141,9 @@ const BuyInsurance = () => {
 								/>
 								{pool && (
 									<p className="p--small p--margin-s">
-										{`Available liquidity in pool ${pool.liquidity} USDC`}
+										{`Available liquidity in pool ${
+											parseInt(pool.liquidity) - parseInt(pool.usedLiquidity)
+										} USDC`}
 									</p>
 								)}
 							</div>
@@ -155,7 +170,7 @@ const BuyInsurance = () => {
 							</div>
 						</div>
 						{isOpen && <SearchMarket parentRef={marketSelectorRef} />}
-						{/* {parseInt(contract?.insuredAmount) > 0 && (
+						{parseInt(contract?.insuredAmount) > 0 && (
 							<div className="action-container-inner-content--row__centered">
 								<div className="action-container-inner-content--item">
 									<p className="p--margin-s p--small">Already covered</p>
@@ -177,7 +192,7 @@ const BuyInsurance = () => {
 									</InfoBox>
 								</div>
 							</div>
-						)} */}
+						)}
 						{estimate[0] !== '' && (
 							<div className="action-container-inner-content--row__centered">
 								<p className="p--margin-s p--medium p--center">
@@ -192,9 +207,14 @@ const BuyInsurance = () => {
 							<div className="action-container-inner-content--row__centered">
 								<div className="action-container-inner-content--item">
 									<WarningBox title="Premium">
-										<p className="h3--white h3--margin-s">
-											Could not estimate premium
-										</p>
+										<div>
+											<p className="p--white p--margin-s p--medium">
+												{estimateError.errorMsg}
+											</p>
+											<p className="p--white p--margin-s p--small">
+												{estimateError.cause}
+											</p>
+										</div>
 									</WarningBox>
 								</div>
 							</div>
