@@ -21,27 +21,20 @@ export class Common {
 		readonly wallet: anchor.Wallet
 	) {}
 
-	// async convertBNFromDecimals(
-	// 	amount: anchor.BN,
-	// 	mint: PublicKey
-	// ): Promise<string> {
-	// 	const mintInfo = await getMint(this.connection, mint);
-	// 	const base = new anchor.BN(10 ** mintInfo.decimals);
-	// 	let fraction = amount.mod(base).toString(10);
-	// 	while (fraction.length < mintInfo.decimals) {
-	// 		fraction = `0${fraction}`;
-	// 	}
-	// 	const whole = amount.div(base).toString(10);
-	// 	return `${whole}${fraction == '0' ? '' : `.${fraction}`}`;
-	// }
+	static init(
+		connection: anchor.web3.Connection,
+		wallet: anchor.Wallet,
+		programId: PublicKey
+	) {
+		const provider = new anchor.AnchorProvider(connection, wallet, {
+			skipPreflight: false,
+		});
+		anchor.setProvider(provider);
 
-	// async convertBNToDecimals(
-	// 	amount: anchor.BN,
-	// 	mint: PublicKey
-	// ): Promise<anchor.BN> {
-	// 	const mintInfo = await getMint(this.connection, mint);
-	// 	return amount.mul(new anchor.BN(10 ** mintInfo.decimals));
-	// }
+		const sureProgram = new anchor.Program<SurePool>(IDL, programId, provider);
+
+		return new this(sureProgram, connection, wallet);
+	}
 
 	async getProtocolOwner(): Promise<[PublicKey, number]> {
 		return await PublicKey.findProgramAddress(
