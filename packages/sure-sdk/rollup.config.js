@@ -31,6 +31,7 @@ export default {
 			values: {
 				'process.env.NODE_ENV': JSON.stringify('production'),
 				'process.env.ANCHOR_BROWSER': JSON.stringify(true),
+				'process.env.NODE_DEBUG': JSON.stringify(false),
 			},
 		}),
 		terser(),

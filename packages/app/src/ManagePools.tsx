@@ -38,7 +38,9 @@ const ManagePools = () => {
 			if (sureProgram) {
 				const txId = await sureProgram?.pool.initializeTokenPool(
 					programIdPK,
-					tokenMint
+					tokenMint,
+					0,
+					data.poolName
 				);
 			}
 		}

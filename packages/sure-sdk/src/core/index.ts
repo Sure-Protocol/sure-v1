@@ -7,7 +7,6 @@ import { Liquidity } from './liquidity';
 import { Pool } from './pool';
 import { Protocol } from './protocol';
 import { TickAccount } from './tickAccount';
-import { PROGRAM_ID } from './constants';
 import { NFT } from './nft';
 export * as nft from './nft';
 export * as liquidity from './liquidity';
@@ -44,13 +43,17 @@ export class SureSdk {
 		this.tickAccount = new TickAccount(program, connection, wallet);
 	}
 
-	static init(connection: anchor.web3.Connection, wallet: anchor.Wallet) {
+	static init(
+		connection: anchor.web3.Connection,
+		wallet: anchor.Wallet,
+		programId: PublicKey
+	) {
 		const provider = new anchor.AnchorProvider(connection, wallet, {
 			skipPreflight: false,
 		});
 		anchor.setProvider(provider);
-
-		const sureProgram = new anchor.Program<SurePool>(IDL, PROGRAM_ID, provider);
+		console.log('connecting to ', programId.toBase58());
+		const sureProgram = new anchor.Program<SurePool>(IDL, programId, provider);
 
 		return new this(sureProgram, connection, wallet);
 	}

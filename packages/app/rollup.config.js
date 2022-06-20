@@ -49,6 +49,10 @@ export default {
 			}),
 			replace({
 				'process.env.NODE_ENV': JSON.stringify('production'),
+				'process.env.NODE_DEBUG': JSON.stringify(false),
+				'process.env.PROGRAM_ID': JSON.stringify(
+					'D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM'
+				),
 			}),
 		],
 		env === 'development'

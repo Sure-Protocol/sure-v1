@@ -20,21 +20,6 @@ export class Common {
 		readonly wallet: anchor.Wallet
 	) {}
 
-	static init(
-		connection: anchor.web3.Connection,
-		wallet: anchor.Wallet,
-		programId: PublicKey
-	) {
-		const provider = new anchor.AnchorProvider(connection, wallet, {
-			skipPreflight: false,
-		});
-		anchor.setProvider(provider);
-
-		const sureProgram = new anchor.Program<SurePool>(IDL, programId, provider);
-
-		return new this(sureProgram, connection, wallet);
-	}
-
 	async getProtocolOwner(): Promise<[PublicKey, number]> {
 		return await PublicKey.findProgramAddress(
 			[SURE_PROTOCOL_OWNER],
