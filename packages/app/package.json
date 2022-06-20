@@ -1,13 +1,13 @@
 {
 	"name": "@surec/app",
-	"version": "0.0.12",
+	"version": "0.0.13",
 	"private": true,
 	"scripts": {
 		"dev": "PORT=3001 vite --host",
 		"build:vite": "tsc && vite build",
 		"build:esbuild": "rimraf dist_es/ && tsc && node esbuild.config.js && cp public/index.html dist_es/index.html",
-		"build:rollup": "rimraf dist_up/ && tsc && rollup -c rollup.config.js",
-		"start:rollup": "rollup -c rollup.config.js -w",
+		"build:rollup": "rimraf dist_up/ && tsc && NODE_ENV=production rollup -c rollup.config.js",
+		"start:rollup": "NODE_ENV=development rollup -c rollup.config.js -w",
 		"build:craco": "rimraf build && NODE_OPTIONS=--openssl-legacy-provider craco build",
 		"start:craco": "PORT=3006 NODE_OPTIONS=--openssl-legacy-provider craco start",
 		"preview": "vite preview"
@@ -23,16 +23,14 @@
 		"@solana/wallet-adapter-react-ui": "^0.9.7",
 		"@solana/wallet-adapter-wallets": "^0.16.1",
 		"@solana/web3.js": "^1.44.0",
-		"@surec/sdk": "^0.0.12",
-		"crypto-browserify": "^3.12.0",
+		"@surec/sdk": "^0.0.13",
 		"lodash": "^4.17.21",
 		"react": "^18.1.0",
 		"react-dom": "^18.0.0",
 		"react-hook-form": "^7.31.2",
 		"react-router-dom": "^6.3.0",
 		"react-tiny-popover": "^7.0.1",
-		"sass": "^1.52.1",
-		"stream-browserify": "^3.0.0"
+		"sass": "^1.52.1"
 	},
 	"devDependencies": {
 		"@babel/preset-react": "^7.17.12",
@@ -56,6 +54,7 @@
 		"@types/react-dom": "^18.0.0",
 		"@vitejs/plugin-react": "^1.3.0",
 		"craco-webpack-resolve": "^1.2.1",
+		"crypto-browserify": "^3.12.0",
 		"esbuild": "^0.14.43",
 		"esbuild-plugin-alias": "^0.2.1",
 		"esbuild-plugin-babel": "^0.2.3",
@@ -74,6 +73,7 @@
 		"rollup-plugin-scss": "^3.0.0",
 		"rollup-plugin-serve": "^1.1.0",
 		"rollup-plugin-url": "^3.0.1",
+		"stream-browserify": "^3.0.0",
 		"ts-loader": "^9.3.0",
 		"typescript": "^4.7.3",
 		"vite": "^2.9.9",

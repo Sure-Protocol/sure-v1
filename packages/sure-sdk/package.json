@@ -1,6 +1,6 @@
 {
 	"name": "@surec/sdk",
-	"version": "0.0.12",
+	"version": "0.0.13",
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
@@ -27,9 +27,6 @@
 		"@solana/web3.js": "^1.43.2"
 	},
 	"devDependencies": {
-		"@babel/core": "^7.18.2",
-		"@babel/preset-env": "^7.18.2",
-		"@rollup/plugin-babel": "^5.3.1",
 		"@rollup/plugin-commonjs": "^22.0.0",
 		"@rollup/plugin-json": "^4.1.0",
 		"@rollup/plugin-node-resolve": "^13.3.0",
@@ -37,6 +34,8 @@
 		"@rollup/plugin-typescript": "^8.3.2",
 		"@typescript-eslint/eslint-plugin": "latest",
 		"@typescript-eslint/parser": "latest",
+		"bn.js": "^5.2.1",
+		"dotenv": "^16.0.1",
 		"prettier": "2.6.2",
 		"rimraf": "^3.0.2",
 		"rollup": "^2.74.1",

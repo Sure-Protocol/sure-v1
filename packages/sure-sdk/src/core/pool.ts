@@ -12,12 +12,11 @@ import {
 	PoolInformation,
 	TokenPool,
 	TokenPoolStatistics,
-} from 'src/types';
+} from '../types';
 import { Bitmap, Money, sendTransaction } from './../utils';
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
 import { SURE_POOL_MANAGER_SEED } from './seeds';
-import { token } from '@project-serum/anchor/dist/cjs/utils';
 
 export class Pool extends Common {
 	constructor(

@@ -20,7 +20,7 @@ import { min } from 'bn.js';
 
 import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
-import { InsuranceContractsInfo, PoolInsuranceContract } from 'src/types';
+import { InsuranceContractsInfo, PoolInsuranceContract } from '../types';
 import { Money, Bitmap, sendTransaction } from './../utils';
 import { token } from '@project-serum/anchor/dist/cjs/utils';
 

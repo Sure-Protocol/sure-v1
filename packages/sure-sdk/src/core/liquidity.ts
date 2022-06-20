@@ -24,7 +24,7 @@ import { SurePool } from './../anchor/types/sure_pool';
 import { Common } from './commont';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { Bitmap, Money, sendTransaction } from './../utils';
-import { LiquidityTickInfo, TokenPoolStatistics } from 'src/types';
+import { LiquidityTickInfo, TokenPoolStatistics } from '../types';
 
 export class Liquidity extends Common {
 	constructor(

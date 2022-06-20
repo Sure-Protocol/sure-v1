@@ -1138,7 +1138,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.1.0, @babel/core@npm:^7.12.3, @babel/core@npm:^7.15.5, @babel/core@npm:^7.16.0, @babel/core@npm:^7.17.10, @babel/core@npm:^7.18.2, @babel/core@npm:^7.7.5, @babel/core@npm:^7.8.4":
+"@babel/core@npm:^7.1.0, @babel/core@npm:^7.12.3, @babel/core@npm:^7.15.5, @babel/core@npm:^7.16.0, @babel/core@npm:^7.17.10, @babel/core@npm:^7.7.5, @babel/core@npm:^7.8.4":
   version: 7.18.5
   resolution: "@babel/core@npm:7.18.5"
   dependencies:
@@ -2407,7 +2407,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/preset-env@npm:^7.12.1, @babel/preset-env@npm:^7.15.6, @babel/preset-env@npm:^7.16.4, @babel/preset-env@npm:^7.18.2, @babel/preset-env@npm:^7.8.4":
+"@babel/preset-env@npm:^7.12.1, @babel/preset-env@npm:^7.15.6, @babel/preset-env@npm:^7.16.4, @babel/preset-env@npm:^7.8.4":
   version: 7.18.2
   resolution: "@babel/preset-env@npm:7.18.2"
   dependencies:
@@ -5936,7 +5936,7 @@ __metadata:
   dependencies:
     "@project-serum/anchor": ^0.25.0-beta.1
     "@solana/web3.js": ^1.43.4
-    "@surec/sdk": ^0.0.7
+    "@surec/sdk": ^0.0.12
     rimraf: ^3.0.2
     typescript: ^4.7.2
   bin:
@@ -5944,15 +5944,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@surec/sdk@^0.0.7, @surec/sdk@workspace:^, @surec/sdk@workspace:packages/sure-sdk":
+"@surec/sdk@^0.0.12, @surec/sdk@workspace:packages/sure-sdk":
   version: 0.0.0-use.local
   resolution: "@surec/sdk@workspace:packages/sure-sdk"
   dependencies:
-    "@babel/core": ^7.18.2
-    "@babel/preset-env": ^7.18.2
     "@metaplex-foundation/mpl-token-metadata": ^2.1.2
     "@project-serum/anchor": ^0.24.2
-    "@rollup/plugin-babel": ^5.3.1
     "@rollup/plugin-commonjs": ^22.0.0
     "@rollup/plugin-json": ^4.1.0
     "@rollup/plugin-node-resolve": ^13.3.0
@@ -5962,6 +5959,8 @@ __metadata:
     "@solana/web3.js": ^1.43.2
     "@typescript-eslint/eslint-plugin": latest
     "@typescript-eslint/parser": latest
+    bn.js: ^5.2.1
+    dotenv: ^16.0.1
     prettier: 2.6.2
     rimraf: ^3.0.2
     rollup: ^2.74.1
@@ -5969,6 +5968,18 @@ __metadata:
     typescript: ^4.6.4
   languageName: unknown
   linkType: soft
+
+"@surec/sdk@npm:^0.0.7":
+  version: 0.0.7
+  resolution: "@surec/sdk@npm:0.0.7"
+  dependencies:
+    "@metaplex-foundation/mpl-token-metadata": ^2.1.2
+    "@project-serum/anchor": ^0.24.2
+    "@solana/spl-token": ^0.2.0
+    "@solana/web3.js": ^1.43.2
+  checksum: cac845f1101975026dc09bb3cb3a13ab84c027690f6f85fe668acd775ce0ec44ac66db4cc612a49f64c1fea347a862a28d4da3c1fd47eb4caada6c2267c20902
+  languageName: node
+  linkType: hard
 
 "@surma/rollup-plugin-off-main-thread@npm:^1.1.1":
   version: 1.4.2
@@ -11347,6 +11358,13 @@ __metadata:
   version: 8.2.0
   resolution: "dotenv@npm:8.2.0"
   checksum: ad4c8e0df3e24b4811c8e93377d048a10a9b213dcd9f062483b4a2d3168f08f10ec9c618c23f5639060d230ccdb174c08761479e9baa29610aa978e1ee66df76
+  languageName: node
+  linkType: hard
+
+"dotenv@npm:^16.0.1":
+  version: 16.0.1
+  resolution: "dotenv@npm:16.0.1"
+  checksum: f459ffce07b977b7f15d8cc4ee69cdff77d4dd8c5dc8c85d2d485ee84655352c2415f9dd09d42b5b5985ced3be186130871b34e2f3e2569ebc72fbc2e8096792
   languageName: node
   linkType: hard
 
@@ -21029,7 +21047,7 @@ __metadata:
     "@project-serum/anchor": ^0.24.2
     "@solana/spl-token": ^0.2.0
     "@solana/wallet-adapter-phantom": ^0.9.3
-    "@surec/sdk": "workspace:^"
+    "@surec/sdk": ^0.0.12
     "@types/chai": ^4.3.1
     "@types/mocha": ^9.0.0
     chai: ^4.3.4

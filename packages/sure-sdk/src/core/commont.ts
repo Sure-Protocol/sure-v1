@@ -11,8 +11,7 @@ import {
 	SURE_PROTOCOL_OWNER,
 	SURE_TOKEN_POOL_SEED,
 } from './seeds';
-import { LiquidityTickInfo } from 'src/types';
-import { Account, getMint } from '@solana/spl-token';
+import { LiquidityTickInfo } from '../types';
 
 export class Common {
 	constructor(

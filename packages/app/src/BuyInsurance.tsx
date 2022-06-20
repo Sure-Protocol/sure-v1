@@ -155,7 +155,7 @@ const BuyInsurance = () => {
 							</div>
 						</div>
 						{isOpen && <SearchMarket parentRef={marketSelectorRef} />}
-						{parseInt(contract?.insuredAmount) > 0 && (
+						{/* {parseInt(contract?.insuredAmount) > 0 && (
 							<div className="action-container-inner-content--row__centered">
 								<div className="action-container-inner-content--item">
 									<p className="p--margin-s p--small">Already covered</p>
@@ -177,7 +177,7 @@ const BuyInsurance = () => {
 									</InfoBox>
 								</div>
 							</div>
-						)}
+						)} */}
 						{estimate[0] !== '' && (
 							<div className="action-container-inner-content--row__centered">
 								<p className="p--margin-s p--medium p--center">
