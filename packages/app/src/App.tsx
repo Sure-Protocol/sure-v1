@@ -30,6 +30,7 @@ import { TokensProvider } from './context/tokens';
 import { SureSdkProvider } from './context/sureSdk';
 import { SurePoolsProvider } from './context/surePools';
 import { TransactionHistoryProvider } from './context/transactionHistory';
+import TransactionHistoryModal from './components/TransactionHistoryModal';
 
 // Default styles that can be overridden by your app
 //require('@solana/wallet-adapter-react-ui/styles.css');
@@ -63,6 +64,7 @@ const App: FC = () => {
 								<TokensProvider>
 									<TransactionHistoryProvider>
 										<Navigation />
+										<TransactionHistoryModal />
 									</TransactionHistoryProvider>
 								</TokensProvider>
 							</SurePoolsProvider>
