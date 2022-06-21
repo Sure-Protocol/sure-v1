@@ -49,11 +49,15 @@ const TransactionHistoryModal: React.FunctionComponent = () => {
 
 	useEffect(() => {
 		setShowTxDetails(
-			transactionHistory.reduce((map, tx) => {
-				map.set(tx.signatures[0], false);
-				return map;
-			}, new Map())
+			new Map(
+				transactionHistory.reduce((map, tx) => {
+					map.set(tx.signatures[0], false);
+					return map;
+				}, new Map())
+			)
 		);
+
+		console.log('transactionHistory2: ', transactionHistory);
 	}, [transactionHistory]);
 
 	const toggleTxDetails = ({ sig }: { sig: string }) => {
@@ -274,8 +278,8 @@ const TransactionHistoryModal: React.FunctionComponent = () => {
 							justify-content: center;
 						`}
 					>
-						<MainButton size="small">
-							<p>Load more</p>
+						<MainButton isSubmit={false} onClick={() => getMore()}>
+							<p className="p--white">Load more</p>
 						</MainButton>
 					</div>
 				</ul>

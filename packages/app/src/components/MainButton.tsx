@@ -3,12 +3,18 @@ import { css } from '@emotion/css';
 import { theme } from './Themes';
 type Props = {
 	children: JSX.Element;
+	onClick?: () => void;
+	isSubmit?: boolean;
 };
 
-const MainButton: React.FunctionComponent<Props> = ({ children }) => {
+const MainButton: React.FunctionComponent<Props> = ({
+	children,
+	onClick = () => {},
+	isSubmit = true,
+}) => {
 	return (
 		<button
-			type="submit"
+			type={isSubmit ? 'submit' : 'button'}
 			className={css`
 				background-color: ${theme.colors.surePurple};
 				border-radius: 10px;
@@ -23,6 +29,7 @@ const MainButton: React.FunctionComponent<Props> = ({ children }) => {
 					background-color: ${theme.colors.sureDarkPuprle};
 				}
 			`}
+			onClick={() => onClick()}
 		>
 			{children}
 		</button>

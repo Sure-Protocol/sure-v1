@@ -126,9 +126,8 @@ export const TransactionHistoryProvider: React.FunctionComponent<{
 				};
 			})
 		);
-		console.log('prettySureTxs: ', prettySureTxs);
 		setLastSignature(sigs[sigs.length - 1].signature);
-		setTransactionHistory(prettySureTxs);
+		setTransactionHistory(transactionHistory.concat(prettySureTxs));
 	};
 
 	useEffect(() => {
