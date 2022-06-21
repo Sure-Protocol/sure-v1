@@ -50,7 +50,7 @@ const MarketListItem: React.FunctionComponent<{
 					margin-right: 20px;
 				`}
 			>
-				<TokenIcon tokenAddress={surePool.tokenMint} />
+				<TokenIcon tokenAddress={surePool.tokenMint.toBase58()} />
 			</div>
 
 			<div

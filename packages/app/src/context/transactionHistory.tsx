@@ -30,6 +30,7 @@ export interface SureTransaction {
 	programId: PublicKey;
 	fee: number;
 	signatures: string[];
+	tokenChange: boolean;
 	preBalanceToken: SureTokenBalance;
 	postBalanceToken: SureTokenBalance;
 	prettyInstructions: PrettyInstruction[];
@@ -100,6 +101,7 @@ export const TransactionHistoryProvider: React.FunctionComponent<{
 				process.env.PROGRAM_ID
 			);
 		});
+		console.log(suretxs[0]);
 		const prettySureTxs = await Promise.all(
 			suretxs.map(async (tx): Promise<SureTransaction> => {
 				const userPreTokenBalance = txTokenBalanceToUserBalanceToken(
@@ -115,6 +117,8 @@ export const TransactionHistoryProvider: React.FunctionComponent<{
 					programId: tx.transaction.message.instructions[0]?.programId,
 					fee: tx.meta.fee,
 					signatures: tx.transaction.signatures,
+					tokenChange:
+						userPreTokenBalance?.uiAmount !== undefined ? true : false,
 					preBalanceToken: userPreTokenBalance,
 					postBalanceToken: userPostTokenBalance,
 					prettyInstructions: extractInstructions(tx.meta.logMessages),

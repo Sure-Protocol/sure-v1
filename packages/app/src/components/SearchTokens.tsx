@@ -40,7 +40,7 @@ const MarketListItem: React.FunctionComponent<{
 				searchTokenToggle.toggle(false);
 			}}
 		>
-			<TokenIcon tokenAddress={new PublicKey(token.address)} />
+			<TokenIcon tokenAddress={token.address} />
 			<p className="p--medium p--white">{token.symbol}</p>
 			<a
 				className="p--small a--no-highlight"

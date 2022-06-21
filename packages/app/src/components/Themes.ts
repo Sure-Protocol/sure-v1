@@ -11,8 +11,10 @@ export const theme = {
 		sureBlue4: '#324F7E',
 		surePink: '#ff008e',
 		sureSuccess: 'rgba(9, 232, 93,0.10);',
+		sureSuccess100: 'rgba(9, 232, 93,1);',
 		sureWarning: 'rgba(217, 232, 9,0.10)',
 		sureError: 'rgba(212, 16, 11,0.1)',
+		sureError100: 'rgba(212, 16, 11,1)',
 	},
 	screenSize: {
 		small: '450px',
