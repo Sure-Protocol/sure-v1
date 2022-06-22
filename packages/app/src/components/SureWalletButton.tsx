@@ -13,6 +13,7 @@ import React, {
 	useRef,
 	useState,
 } from 'react';
+import { useTransactionModal } from '../context/transactionModalProvider';
 
 export const SureWalletButton: React.FunctionComponent<{}> = ({}) => {
 	const { publicKey, wallet, disconnect } = useWallet();
@@ -20,6 +21,8 @@ export const SureWalletButton: React.FunctionComponent<{}> = ({}) => {
 	const [copied, setCopied] = useState(false);
 	const [active, setActive] = useState(false);
 	const ref = useRef<HTMLUListElement>(null);
+	const [isTransactionModalOpen, setIsTransactionModalOpen] =
+		useTransactionModal();
 
 	const base58 = useMemo(() => publicKey?.toBase58(), [publicKey]);
 	const content = useMemo(() => {
@@ -47,6 +50,11 @@ export const SureWalletButton: React.FunctionComponent<{}> = ({}) => {
 		setVisible(true);
 		closeDropdown();
 	}, [closeDropdown]);
+
+	const openTransactionModal = useCallback(() => {
+		setIsTransactionModalOpen(true);
+		closeDropdown();
+	}, []);
 
 	useEffect(() => {
 		const listener = (event: MouseEvent | TouchEvent) => {
@@ -126,7 +134,7 @@ export const SureWalletButton: React.FunctionComponent<{}> = ({}) => {
 					Change wallet
 				</li>
 				<li
-					onClick={openModal}
+					onClick={openTransactionModal}
 					className="wallet-adapter-dropdown-list-item"
 					role="menuitem"
 				>

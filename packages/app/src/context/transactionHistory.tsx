@@ -10,6 +10,7 @@ import {
 } from '@solana/web3.js';
 import { last, values } from 'lodash';
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useIsLoading } from './loadingProvider';
 import { useTokens } from './tokens';
 
 export type TransactionHistoryValues = [SureTransaction[], () => void];
@@ -48,6 +49,7 @@ export const TransactionHistoryProvider: React.FunctionComponent<{
 	const connection = useConnection();
 	const tokens = useTokens();
 	const wallet = useWallet();
+	const [isLoading, setIsLoading] = useIsLoading();
 	const [transactionHistory, setTransactionHistory] = useState<
 		TransactionHistoryValues[0]
 	>([]);
@@ -77,11 +79,23 @@ export const TransactionHistoryProvider: React.FunctionComponent<{
 		return logMessages
 			.filter((lm) => lm.includes('log: Instruction'))
 			.map((lm) => {
-				return { title: lm.match(/\w+$/g)[0] };
+				const ix = lm.match(/\w+$/g)[0];
+
+				const prettyIx = ix.match(/[A-Z][a-z]+/g);
+				if (prettyIx?.length > 0) {
+					return {
+						title: prettyIx
+							.join(' ')
+							.replace(/\s[A-Z]/g, (w) => ' ' + w.toLowerCase()),
+					};
+				}
+				return { title: ix };
 			});
 	};
 
 	const loadMoreTxs = async () => {
+		console.log('load more transactions');
+		setIsLoading(true);
 		const signatureForAddressOptions: SignaturesForAddressOptions = {
 			limit: 5,
 		};
@@ -101,7 +115,6 @@ export const TransactionHistoryProvider: React.FunctionComponent<{
 				process.env.PROGRAM_ID
 			);
 		});
-		console.log(suretxs[0]);
 		const prettySureTxs = await Promise.all(
 			suretxs.map(async (tx): Promise<SureTransaction> => {
 				const userPreTokenBalance = txTokenBalanceToUserBalanceToken(
@@ -128,6 +141,7 @@ export const TransactionHistoryProvider: React.FunctionComponent<{
 		);
 		setLastSignature(sigs[sigs.length - 1].signature);
 		setTransactionHistory(transactionHistory.concat(prettySureTxs));
+		setIsLoading(false);
 	};
 
 	useEffect(() => {

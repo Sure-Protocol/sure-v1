@@ -191,6 +191,20 @@ h1,h2,h3,h4,h5{
         }
     }
 
+    &--margin-left{
+        &__small{
+            margin-left: 8px;
+        }
+
+        &__medium{
+            margin-left: 14px;
+        }
+
+        &__large{
+            margin-left: 24px;
+        }
+    }
+
     &--color{
         &__white{
             color: $sure-white;
@@ -225,6 +239,16 @@ h1,h2,h3,h4,h5{
             width: 84px;
         }
     }
+
+    &--position{
+        &__center{
+            text-align: center;
+        }
+        &__right{
+            text-align: right;
+        }
+    }
+
     
   
 }

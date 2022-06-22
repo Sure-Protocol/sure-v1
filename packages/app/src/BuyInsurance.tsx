@@ -225,13 +225,9 @@ const BuyInsurance = () => {
 
 						<div className="action-container-inner-content--row_centered">
 							<div className="action-container-inner-content--item">
-								{wallet.connected ? (
-									<MainButton>
-										<h3 className="p--white p--margin-0">Buy</h3>
-									</MainButton>
-								) : (
-									<WalletMultiButton />
-								)}
+								<MainButton>
+									<h3 className="p--white p--margin-0">Buy</h3>
+								</MainButton>
 							</div>
 						</div>
 					</form>
