@@ -1,0 +1,23 @@
+name: Pull Request trigger
+
+on:
+pull_request:
+  branches:
+    - main
+    - 'releases/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    environment: dapp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build dockerfile
+        id: build-image
+        run: |
+          docker build -f dockerfile.dapp
