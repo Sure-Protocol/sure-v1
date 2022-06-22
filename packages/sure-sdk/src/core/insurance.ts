@@ -566,6 +566,31 @@ export class Insurance extends Common {
 		};
 	}
 
+	/**
+	 * Get Insurance Contract for user across pools
+	 *
+	 * @param pool
+	 * @param tokenMint
+	 * @returns
+	 */
+	async getInsuranceContractsInfo(): Promise<
+		{
+			pool: PublicKey;
+			tokenMint: PublicKey;
+			tokenPool: PublicKey;
+			insuredAmount: anchor.BN;
+			Expiry: anchor.BN;
+		}[]
+	> {
+		const insuranceContractsPDA = await this.getInsuranceContractsPDA();
+		const insuranceContracts =
+			await this.program.account.insuranceContracts.fetch(
+				insuranceContractsPDA
+			);
+		const res = Promise.all([]);
+		return res;
+	}
+
 	async getOrCreateUserPoolInsuranceContract(
 		pool: PublicKey,
 		tokenMint: PublicKey

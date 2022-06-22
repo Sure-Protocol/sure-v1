@@ -11,6 +11,7 @@ import { useTokens } from '../context/tokens';
 import TokenIcon from './TokenIcon';
 import React, { useEffect, useRef } from 'react';
 import { prettyPrintPremium } from '../utils/premium';
+import LoadingSpinner from './LoadingSpinner';
 
 interface MarketListProps {
 	surePools: PoolInformation[];
@@ -197,7 +198,9 @@ const SearchMarket: React.FunctionComponent<{
 						placeholder="Search Pool"
 					/>
 				</div>
-				{surePools && <MarketList surePools={surePools} />}
+				<LoadingSpinner>
+					{surePools && <MarketList surePools={surePools} />}
+				</LoadingSpinner>
 			</div>
 		</div>
 	);

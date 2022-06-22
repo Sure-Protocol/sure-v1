@@ -4,6 +4,7 @@ import { PublicKey } from '@solana/web3.js';
 import { insurance, pool, PoolAccount, PoolInformation } from '@surec/sdk';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useWatch } from 'react-hook-form';
+import { useIsLoading } from './loadingProvider';
 import { useSureSdk } from './sureSdk';
 
 type SurePoolsContextType = [
@@ -27,6 +28,7 @@ export const SurePoolsProvider: React.FunctionComponent<Props> = ({
 	);
 	const sureSdk = useSureSdk();
 	const wallet = useWallet();
+	const [isLoading, setIsLoading] = useIsLoading();
 
 	useEffect(() => {
 		(async () => {
