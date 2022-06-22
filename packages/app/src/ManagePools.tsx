@@ -175,13 +175,9 @@ const ManagePools = () => {
 							<SearchTokens parentRef={manageMarketsRef} />
 						)}
 						<div className="action-container-inner-content--row_centered">
-							{wallet.connected ? (
-								<MainButton>
-									<h3 className="p--white p--margin-0">Create Pool</h3>
-								</MainButton>
-							) : (
-								<WalletMultiButton />
-							)}
+							<MainButton>
+								<h3 className="p--white p--margin-0">Create Pool</h3>
+							</MainButton>
 						</div>
 					</form>
 				</div>

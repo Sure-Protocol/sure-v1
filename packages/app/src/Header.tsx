@@ -1,6 +1,7 @@
 import { css } from '@emotion/css';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import SureLogoSlogan from './assets/icons/sureLogoSlogan.svg';
+import { SureWalletButton } from './components/SureWalletButton';
 function Header() {
 	return (
 		<div className="header">
@@ -17,7 +18,7 @@ function Header() {
 				</div>
 				<div className="header-navbar--item">
 					<div className="sure-wallet">
-						<WalletMultiButton className="sure-wallet-button" />
+						<SureWalletButton />
 					</div>
 				</div>
 			</div>

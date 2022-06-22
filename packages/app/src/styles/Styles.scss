@@ -17,6 +17,11 @@ $sure-blue-4: #324F7E;
 $sure-dark-purple:rgb(89, 36, 139);
 $sure-dark-blue-5: #092655;
 
+// status colors
+$success: #09e85d;
+$warning: rgba(217, 232, 9,100);
+$error: #d4100b;
+
 // Fonts
 
 // Screen sizes 
@@ -96,6 +101,11 @@ h1,h2,h3,h4,h5{
         margin-left: 4px;
         margin-right: 4px;
     }
+
+    &--padding-s{
+       padding:8px;
+    }
+    
 
     &--small{
         font-size: small;
@@ -181,6 +191,20 @@ h1,h2,h3,h4,h5{
         }
     }
 
+    &--margin-left{
+        &__small{
+            margin-left: 8px;
+        }
+
+        &__medium{
+            margin-left: 14px;
+        }
+
+        &__large{
+            margin-left: 24px;
+        }
+    }
+
     &--color{
         &__white{
             color: $sure-white;
@@ -198,6 +222,33 @@ h1,h2,h3,h4,h5{
             font-family: 'arvo-italic';
         }
     }
+    &--width{
+        &__small{
+            width: 32px;
+        }
+
+        &__medium{
+            width: 42px;
+        }
+
+         &__large{
+            width: 62px;
+        }
+
+        &__xlarge{
+            width: 84px;
+        }
+    }
+
+    &--position{
+        &__center{
+            text-align: center;
+        }
+        &__right{
+            text-align: right;
+        }
+    }
+
     
   
 }
