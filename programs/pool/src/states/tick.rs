@@ -1,16 +1,13 @@
+use crate::helpers::tick::{self, MAX_TICK, MIN_SQRT_RATIO};
 use crate::utils::errors;
 use anchor_lang::prelude::Clock;
-///! Tick contains methods to manage tick pool
-///! tick will not manage the premium pool but rather keep
-///! track of the potential rewards.
-///!
 use anchor_lang::prelude::*;
 use std::fmt::{self};
 use std::{error::Error, fmt::Display, fmt::Formatter, result::Result};
 
-pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: usize = 255;
+pub const MAX_NUMBER_OF_LIQUIDITY_POSITIONS: usize = 32;
 pub const SECONDS_IN_A_YEAR: usize = 31556926;
-
+pub const NUM_TICKS: usize = 17;
 
 /// Tick acount (PDA) is used to hold information about
 /// the liquidity at a current tick
@@ -19,50 +16,55 @@ pub const SECONDS_IN_A_YEAR: usize = 31556926;
 #[account(zero_copy)]
 #[repr(packed)]
 pub struct Tick {
-    /// The bump identity of the PDA
-    pub bump: u8, // 1 byte
-
     /// The active liquidity at the tick
     pub liquidity: u64, // 8bytes
 
     /// Amount of liquidity used from the pool
     pub used_liquidity: u64, // 8 bytes
 
-    /// token mint used as liqudiity
-    pub token_mint: Pubkey,
-
     /// last slot the tick was updated on
     pub last_updated: i64, // 8 bytes
 
-    /// The tick in basis points
-    pub tick: u16, // 8 bytes
+    /// Current tick
+    pub tick: i32, // 4 bytes
 
     /// Boolean representing whether the liquidity is active
     pub active: bool, // 1 byte
 
     /// Ids of liquidity positions
-    pub liquidity_position_id: [u8; MAX_NUMBER_OF_LIQUIDITY_POSITIONS], // 1*255 =255
+    pub liquidity_position_id: [u8; MAX_NUMBER_OF_LIQUIDITY_POSITIONS], // 1*16 =255
 
     /// Accumulation of Liquidity Provided
-    pub liquidity_position_accumulated: [u64; MAX_NUMBER_OF_LIQUIDITY_POSITIONS], // 8*255 =
+    pub liquidity_position_accumulated: [u64; MAX_NUMBER_OF_LIQUIDITY_POSITIONS], // 8*16 =
 
     /// rewards
-    pub liquidity_position_rewards: [u64; MAX_NUMBER_OF_LIQUIDITY_POSITIONS], // 8*255
+    pub liquidity_position_rewards: [u64; MAX_NUMBER_OF_LIQUIDITY_POSITIONS], // 8*32
 
     pub last_liquidity_position_idx: u8, // 1
 }
 
 impl Tick {
+    pub const SIZE: usize = 8
+        + 8
+        + 8
+        + 4
+        + 1
+        + 1 * MAX_NUMBER_OF_LIQUIDITY_POSITIONS
+        + 8 * MAX_NUMBER_OF_LIQUIDITY_POSITIONS
+        + 8 * MAX_NUMBER_OF_LIQUIDITY_POSITIONS
+        + 1;
     pub fn validate(&self) -> Result<(), errors::SureError> {
         Ok(())
     }
 
-    pub fn initialize(&mut self, bump: u8, tick_bp: u16) -> Result<(), error::Error> {
-        self.bump = bump;
+    /// Initialize tick in a tick array
+    ///
+    /// sqrt_price_x32
+    pub fn initialize(&mut self, bump: u8, sqrt_price_x32: u64) -> Result<(), error::Error> {
         self.liquidity = 0;
         self.used_liquidity = 0;
         self.last_updated = Clock::get()?.unix_timestamp;
-        self.tick = tick_bp;
+        self.tick = tick::get_tick_at_sqrt_ratio(sqrt_price_x32)?;
         self.active = true;
         self.liquidity_position_id = [0; MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
         self.liquidity_position_accumulated = [0; MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize];
@@ -70,6 +72,14 @@ impl Tick {
         self.last_liquidity_position_idx = 0;
 
         Ok(())
+    }
+
+    pub fn is_valid_tick(tick: i32, tick_spacing: u16) -> bool {
+        if tick < tick::MIN_TICK_INDEX || tick > tick::MAX_TICK_INDEX {
+            return false;
+        }
+
+        tick % tick_spacing as i32 == 0
     }
 }
 
@@ -201,7 +211,6 @@ impl TickTrait for Tick {
         self.active = true;
         self.last_liquidity_position_idx += 1;
         self.liquidity_position_id[new_idx as usize] = new_id;
-        self.token_mint = token_mint;
 
         self.update_callback();
         Ok(())
@@ -518,10 +527,8 @@ mod tests {
         let init_liq_rewards = [0; (MAX_NUMBER_OF_LIQUIDITY_POSITIONS as usize)];
         let last_liq = 0;
         Tick {
-            bump: 1,
             liquidity: 0,
             used_liquidity: 0,
-            token_mint: anchor_spl::mint::USDC,
             last_updated: time,
             tick: 300,
             active: false,

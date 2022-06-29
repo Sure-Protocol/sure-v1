@@ -1,0 +1,105 @@
+use crate::helpers::token;
+use crate::states::*;
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{self, Mint, Token, TokenAccount};
+use sure_nft_update_authority::ID as SURE_NFT_UPDATE_AUTH;
+mod sure_nft_update_authority {
+    use super::*;
+    declare_id!("");
+}
+
+#[derive(Accounts)]
+pub struct InitializeLiquidityPosition<'info> {
+    #[account(mut)]
+    pub liquidity_provider: Signer<'info>,
+
+    pub pool: Box<Account<'info, Pool>>,
+
+    #[account(
+        init,
+        payer = liquidity_provider,
+        seeds = [
+            SURE_LIQUIDITY_POSITION.as_bytes(),
+            position_mint.key().as_ref()
+        ],
+        space = 8 + LiquidityPosition::SPACE,
+        bump,
+    )]
+    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
+
+    /// Mint of NFT representing the
+    /// liquidity position
+    #[account(
+        init,
+        space = Mint::LEN,
+        mint::authority = pool,
+        mint::decimals = 0,
+    )]
+    pub position_mint: Account<'info, Mint>,
+
+    /// Token account to hold the minted
+    /// NFT
+    #[account(
+        init,
+        payer = liquidity_provider,
+        associated_token::mint = position_mint,
+        associated_token::authority = liquidity_provider,
+    )]
+    pub position_token_account: Box<Account<'info, TokenAccount>>,
+
+    /// Token program to mint new NFT position
+    #[account(address = token::ID)]
+    pub token_program: Program<'info, Token>,
+
+    /// CHECK: Metaplex account is checked in the CPI
+    #[account(mut)]
+    pub metadata_account: UncheckedAccount<'info>,
+
+    /// CHECK: is checked in account contraints
+    #[account(address = mpl_token_metadata::ID)]
+    pub metadata_program: UncheckedAccount<'info>,
+
+    /// CHECK: is checked in the account contraint
+    /// only a given key can upgrade the metadata
+    #[account(address = SURE_NFT_UPDATE_AUTH)]
+    pub metadata_update_authority: UncheckedAccount<'info>,
+
+    /// associated token program
+    /// used to create an account
+    pub associated_token_program: Program<'info, AssociatedToken>,
+
+    pub rent: Sysvar<'info, Rent>,
+
+    pub system_program: Program<'info, System>,
+}
+
+pub fn handler(ctx: Context<LiquidityPosition>, tick_upper: i32, tick_lower: i32) -> Result<()> {
+    let pool = &ctx.accounts.pool;
+    let position_mint = &ctx.accounts.position_mint;
+
+    // Initialize liquidity position
+    liquidity::LiquidityPosition.initialize(pool, tick_upper, tick_lower, position_mint)?;
+
+    // Mint Liquidity Position NFT
+    token::create_liquidity_position_with_metadata(
+        &ctx.accounts.metadata_account,
+        &ctx.accounts.metadata_program,
+        &ctx.accounts.metadata_update_authority,
+        pool,
+        &ctx.accounts.liquidity_provider,
+        position_mint,
+        &ctx.accounts.token_program,
+        &ctx.accounts.system_program,
+        &ctx.accounts.rent,
+    )?;
+    emit!(InitializeLiquidityPositionEvent {
+        title: String::from("Minted a liquidity position NFT")
+    });
+    Ok(())
+}
+
+#[event]
+pub struct InitializeLiquidityPositionEvent {
+    title: String,
+}

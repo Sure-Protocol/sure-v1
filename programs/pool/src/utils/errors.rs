@@ -1,6 +1,8 @@
 use anchor_lang::prelude::*;
+use std::num::TryFromIntError;
 
 #[error_code]
+#[derive(PartialEq)]
 pub enum SureError {
     #[msg("Invalid mint")]
     InvalidMint,
@@ -36,4 +38,49 @@ pub enum SureError {
 
     #[msg("Insurance Contract is not active")]
     InsuranceContractIsNotActive,
+
+    #[msg("Number of pools in product pools is exceeded")]
+    PoolsInProductPoolExceeded,
+
+    #[msg("Product Pool is empty")]
+    ProductPoolIsEmpty,
+
+    #[msg("Fee rate exceeds the max of 10 000bp = 100%")]
+    MaxFeeRateExceeded,
+
+    #[msg("The Protocol fee rate exceeded 3 200bp=33%")]
+    MaxProtocolFeeRateExceeded,
+
+    #[msg("The sum of the sub fee rates exceeds the fee_rate")]
+    InvalidSubFeeRates,
+
+    #[msg("The max founders fee is exceeded")]
+    MaxFoundersFeeRateExceeded,
+
+    #[msg("The Liquidity Provider fee rate is too low")]
+    TooLowLiquidityProviderFeeRate,
+
+    #[msg("Square root price ratio is not within ranges")]
+    SqrtRatioNotWithinRange,
+
+    #[msg("The ordering of token mint are wrong")]
+    WrongTokenMintOrder,
+
+    #[msg("The word position is too large")]
+    TooLargeWordPosition,
+
+    #[msg("The word position is too small")]
+    TooSmallWordPosition,
+
+    #[msg("The specified word does not match the given tick arrat")]
+    InvalidTickArrayWord,
+
+    #[msg("Invalid upper and lower tick provided")]
+    InvalidTickIndexProvided,
+}
+
+impl From<TryFromIntError> for SureError {
+    fn from(_: TryFromIntError) -> Self {
+        SureError::InvalidAmount
+    }
 }
