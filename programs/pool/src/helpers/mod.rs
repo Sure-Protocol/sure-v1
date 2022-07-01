@@ -1,3 +1,3 @@
 pub mod liquidity;
+pub mod sToken;
 pub mod tick;
-pub mod token;

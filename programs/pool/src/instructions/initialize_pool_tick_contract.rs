@@ -46,9 +46,6 @@ pub struct InitializePoolTickContract<'info> {
     #[account(mut)]
     pub pool_insurance_contract_info: Box<Account<'info, PoolInsuranceContract>>,
 
-    #[account(mut)]
-    pub pool_insurance_contract_bitmap: Box<Account<'info, BitMap>>,
-
     /// System Contract used to create accounts
     pub system_program: Program<'info, System>,
 }

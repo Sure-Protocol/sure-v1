@@ -11,11 +11,20 @@ pub enum SureError {
     #[msg("Invalid Range size")]
     InvalidRangeSize,
 
-    #[msg("Invalid tick to provide liquidity to")]
+    #[msg("Invalid tick")]
     InvalidTick,
+
+    #[msg("Invalid tick spacing. Tick spacing might be 0.")]
+    InvalidTickSpacing,
 
     #[msg("Invalid Amount")]
     InvalidAmount,
+
+    #[msg("Provided Liquidity is too large")]
+    LiquidityTooLarge,
+
+    #[msg("The provided liquidity have to be greater than 0")]
+    LiquidityHaveToBeGreaterThan0,
 
     #[msg("All of the liquidity is used")]
     LiquidityFilled,
@@ -72,11 +81,26 @@ pub enum SureError {
     #[msg("The word position is too small")]
     TooSmallWordPosition,
 
-    #[msg("The specified word does not match the given tick arrat")]
+    #[msg("The specified word does not match the given tick array")]
     InvalidTickArrayWord,
 
     #[msg("Invalid upper and lower tick provided")]
     InvalidTickIndexProvided,
+
+    #[msg("Not a valid owner. The expected user does not have ownership over the account")]
+    InvalidOwner,
+
+    #[msg("Could not update the pool liquidity")]
+    CouldNotUpdatePoolLiquidity,
+
+    #[msg("Liquidity change causes total liquidity to overflow")]
+    LiquidityOverflow,
+
+    #[msg("Liquidity change causes total liquidity to underflow")]
+    LiquidityUnderflow,
+
+    #[msg("Invalid fee growth subtraction")]
+    InvalidFeeGrowthSubtraction,
 }
 
 impl From<TryFromIntError> for SureError {

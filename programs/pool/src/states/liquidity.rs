@@ -30,16 +30,16 @@ pub struct LiquidityPosition {
     pub tick_index_lower: i32,
 
     /// Checkpoint last fee in vault a
-    pub fee_checkpoint_in_a_last_x32: u64,
+    pub fee_checkpoint_in_0_last_x32: u64,
 
     /// Checkpoint last fee in vault b
-    pub fee_checkpoint_in_b_last_x32: u64,
+    pub fee_checkpoint_in_1_last_x32: u64,
 
     /// Non collected fees from vault a
-    pub fee_owed_in_a: u64,
+    pub fee_owed_in_0: u64,
 
     /// Non collected fees from vault b
-    pub fee_owed_in_b: u64,
+    pub fee_owed_in_1: u64,
 }
 
 impl LiquidityPosition {
@@ -64,6 +64,31 @@ impl LiquidityPosition {
         self.position_mint = position_mint;
         self.tick_index_upper = tick_index_upper;
         self.tick_index_lower = tick_index_lower;
+        Ok(())
+    }
+
+    /// Update the liquidity position
+    ///
+    /// This happens if the liquidity position is changed
+    /// or the user wants to collect the fees
+    pub fn update(
+        &mut self,
+        liquidity_delta: u64,
+        fee_growth_inside_0: u64,
+        fee_growth_inside_1: u64,
+    ) -> Result<()> {
+        let fee_change_per_unit_0 = fee_growth_inside_0
+            .checked_sub(self.fee_checkpoint_in_0_last_x32)
+            .ok_or(SureError::InvalidFeeGrowthSubtraction)?;
+
+        let fee_change_per_unit_1 = fee_growth_inside_1
+            .checked_sub(self.fee_checkpoint_in_1_last_x32)
+            .ok_or(SureError::InvalidFeeGrowthSubtraction)?;
+
+        //let fee_change_1 = checked_mult
+
+        self.fee_checkpoint_in_0_last_x32 = fee_growth_inside_0;
+        self.fee_checkpoint_in_1_last_x32 = fee_growth_inside_1;
         Ok(())
     }
 }

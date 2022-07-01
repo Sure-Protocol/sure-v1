@@ -1,5 +1,5 @@
 use crate::states::*;
-use crate::utils::*;
+use crate::utils::{self, account, errors::SureError, liquidity};
 use anchor_spl::token::{self};
 
 use anchor_lang::prelude::*;
@@ -11,7 +11,6 @@ use anchor_spl::{
 };
 use mpl_token_metadata::instruction::{create_metadata_accounts_v2, update_metadata_accounts_v2};
 use mpl_token_metadata::state::Creator;
-use vipers::*;
 
 /// --- Deposit Liquidity ---
 ///
@@ -92,15 +91,78 @@ pub struct IncreaseLiquidityPosition<'info> {
 
 /// Increase Liquidity Position
 /// is responsible for
-///  - Initializing a liquidity position
+///  - Calculating the amounts that have to be transferred to the pools
+///  - Updating the liquidity position
+///  - Updating
 ///  - Transfer tokens to the correct vaults
-///  -
+///  
+/// If it is a one sided pool (insurance, loan) the liquidity amount is the amount
+/// to be transferred into vault a. Vault b would stay empty and will be used for premiums
+///
+/// If it is a
 pub fn handler(
     ctx: Context<IncreaseLiquidityPosition>,
-    tick: u16,
-    tick_pos: u64,
-    amount: u64,
+    liquidity_amount: u64, // Amount of liquidity in token a
+    max_token_a: u64,      // Max amount of token a that can be deposited
+    min_token_b: u64,      // Max amount of token b that can be deposited
 ) -> Result<()> {
+    let pool = &ctx.accounts.pool;
+    let liquidity_position = &ctx.accounts.liquidity_position;
+    if liquidity_amount == 0 {
+        return Err(SureError::LiquidityHaveToBeGreaterThan0.into());
+    }
+
+    // Check that the liquidity provider owns the
+    // the liquidity position nft account
+    account::validate_token_account_ownership(
+        &ctx.accounts.position_token_account,
+        &ctx.accounts.liquidity_provider,
+    )?;
+
+    let productId = pool.productId;
+    let liquidity_delta = liquidity::validate_liquidity_amount(liquidity_amount, true)?;
+
+    // Calculate Tick changes
+    // Get Tick accounts
+    let tick_array_lower = &ctx.accounts.tick_array_lower.load()?;
+    let tick_lower =
+        tick_array_lower.get_tick(liquidity_position.tick_index_lower, pool.tick_spacing)?;
+    let tick_array_upper = &ctx.accounts.tick_array_upper.load()?;
+    let tick_upper =
+        tick_array_upper.get_tick(liquidity_position.tick_index_upper, pool.tick_spacing)?;
+
+    // Calculate the updated liquidity
+    let next_pool_liquidity = pool.next_pool_liquidity(liquidity_position, liquidity_delta)?;
+
+    // Update lower tick
+    tick_lower.update_tick(
+        liquidity_position.tick_index_lower,
+        pool.get_current_tick_index()?,
+        pool.fee_growth_0_x32,
+        pool.fee_growth_1_x32,
+        liquidity_delta,
+        false,
+    )?;
+    // Update upper tick
+    tick_upper.update_tick(
+        liquidity_position.tick_index_upper,
+        pool.get_current_tick_index()?,
+        pool.fee_growth_0_x32,
+        pool.fee_growth_1_x32,
+        liquidity_delta,
+        true,
+    )?;
+
+    // Update liquidity position
+    let (fee_growth_inside_0, fee_growth_inside_1) = tick_lower.calculate_next_fee_growth(
+        liquidity_position.tick_index_lower,
+        tick_upper,
+        liquidity_position.tick_index_upper,
+        pool.get_current_tick_index()?,
+        pool.fee_growth_0_x32,
+        pool.fee_growth_1_x32,
+    )?;
+
     Ok(())
 }
 

@@ -1,5 +1,5 @@
-use crate::helpers::tick::{self, MAX_TICK, MIN_SQRT_RATIO};
-use crate::utils::errors;
+use crate::helpers::tick::{self, MIN_SQRT_RATIO};
+use crate::utils::{self, errors, liquidity::calculate_updated_liquidity};
 use anchor_lang::prelude::Clock;
 use anchor_lang::prelude::*;
 use std::fmt::{self};

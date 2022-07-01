@@ -1,7 +1,6 @@
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
-use anchor_lang::solana_program::entrypoint::ProgramResult;
 use anchor_lang::solana_program::instruction::Instruction;
 use anchor_spl::token::spl_token::instruction::AuthorityType;
 use anchor_spl::token::{

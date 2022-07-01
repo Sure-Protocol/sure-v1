@@ -155,7 +155,7 @@ pub mod sure_pool {
         _token: Pubkey,
         tick_bp: u16,
     ) -> Result<()> {
-        instructions::initialize_pool_tick_liquidity::handler(ctx, tick_bp)
+        instructions::initialize_tick::handler(ctx, tick_bp)
     }
 
     /// --- Close Tick Account ---

@@ -1,11 +1,11 @@
 use crate::{
     fee,
     helpers::tick::{get_sqrt_ratio_at_tick, get_tick_at_sqrt_ratio},
-    utils::errors::SureError,
+    utils::{errors::SureError, liquidity::calculate_new_liquidity},
 };
 use anchor_lang::{prelude::*, Result};
 
-use super::seeds::SURE_TOKEN_POOL_SEED;
+use super::{liquidity::LiquidityPosition, seeds::SURE_TOKEN_POOL_SEED};
 
 /// Product Pool
 /// The product pool holds information regarding the specific product
@@ -85,20 +85,22 @@ pub struct Pool {
     pub liquidity: u64, // 8 bytes
 
     /// The current market price as
-    pub sqrt_price: u64, // 16bytes
+    /// use Q32.32 meaning 32 bytes at each
+    /// side of decimal point
+    pub sqrt_price_x32: u64, // 16bytes
 
     /// Tokens in vault a that is owed to the sure
     pub fees_token_a_owed: u64,
     /// total fees in vault a collected per unit of liquidity
-    pub fee_growth_a_x32: u64,
+    pub fee_growth_0_x32: u64,
 
     /// Tokens in vault a that is owed to the sure
     pub fees_token_b_owed: u64,
     /// total fees collected in vault b per unit of liquidity
-    pub fee_growth_b_x32: u64,
+    pub fee_growth_1_x32: u64,
 
-    /// Current tick corrensponding to sqrt price
-    pub current_tick: i32,
+    /// Current tick index corrensponding to sqrt price
+    pub current_tick_index: i32,
 
     /// Token mint A of pool
     pub token_mint_a: Pubkey, // 32 bytes
@@ -151,8 +153,8 @@ impl Pool {
         self.founders_fee_rate = fee_package.founders_fee_rate;
 
         self.liquidity = 0;
-        self.current_tick = get_tick_at_sqrt_ratio(sqrt_price_x32)?;
-        self.sqrt_price = sqrt_price_x32;
+        self.current_tick_index = get_tick_at_sqrt_ratio(sqrt_price_x32)?;
+        self.sqrt_price_x32 = sqrt_price_x32;
         if token_mint_a.ge(&token_mint_b) {
             return Err(SureError::WrongTokenMintOrder.into());
         }
@@ -175,18 +177,23 @@ impl Pool {
         is_fee_in_a: bool,
     ) -> Result<()> {
         self.liquidity = liquidity;
-        self.sqrt_price = get_sqrt_ratio_at_tick(tick)?;
+        self.sqrt_price_x32 = get_sqrt_ratio_at_tick(tick)?;
         if is_fee_in_a {
-            self.fee_growth_a_x32 = fee_growth;
+            self.fee_growth_0_x32 = fee_growth;
             self.fees_token_a_owed += protocol_fee;
         } else {
-            self.fee_growth_b_x32 = fee_growth;
+            self.fee_growth_1_x32 = fee_growth;
             self.fees_token_b_owed += protocol_fee;
         }
 
         Ok(())
     }
 
+    /// Get the current tick index from the
+    /// current sqrt price
+    pub fn get_current_tick_index(&self) -> Result<i32> {
+        get_tick_at_sqrt_ratio(self.sqrt_price_x32)
+    }
     /// Update the fee package
     pub fn update_fee_package(&mut self, fee_package: fee::FeePackage) -> Result<()> {
         fee_package.validate_fee_rates()?;
@@ -194,6 +201,25 @@ impl Pool {
         self.protocol_fee_rate = fee_package.protocol_fee_rate;
         self.founders_fee_rate = fee_package.founders_fee_rate;
         Ok(())
+    }
+
+    pub fn is_position_in_range(&self, position: &LiquidityPosition) -> Result<bool> {
+        let current_tick_index = get_tick_at_sqrt_ratio(self.sqrt_price_x32)?;
+        if current_tick_index >= position.tick_index_lower
+            && current_tick_index < position.tick_index_upper
+        {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    pub fn next_pool_liquidity(&self, position: &LiquidityPosition, delta: i64) -> Result<u64> {
+        if self.is_position_in_range(position)? {
+            calculate_new_liquidity(self.liquidity, delta)
+        } else {
+            Ok(self.liquidity)
+        }
     }
 }
 
