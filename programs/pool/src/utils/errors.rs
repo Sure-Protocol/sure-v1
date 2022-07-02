@@ -101,6 +101,12 @@ pub enum SureError {
 
     #[msg("Invalid fee growth subtraction")]
     InvalidFeeGrowthSubtraction,
+
+    #[msg("Q32.32 multiplication overflow")]
+    MultiplictationQ3232Overflow,
+
+    #[msg("Q32.32 division error")]
+    DivisionQ3232Error,
 }
 
 impl From<TryFromIntError> for SureError {

@@ -65,7 +65,7 @@ impl Tick {
     }
 
     pub fn update_tick(
-        &self,
+        &mut self,
         tick_index: i32,
         tick_current_index: i32,
         fee_growth_global_0_x32: u64,

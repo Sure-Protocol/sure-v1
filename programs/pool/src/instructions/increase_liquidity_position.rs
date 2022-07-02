@@ -153,7 +153,7 @@ pub fn handler(
         true,
     )?;
 
-    // Update liquidity position
+    // Calculate
     let (fee_growth_inside_0, fee_growth_inside_1) = tick_lower.calculate_next_fee_growth(
         liquidity_position.tick_index_lower,
         tick_upper,
@@ -162,6 +162,11 @@ pub fn handler(
         pool.fee_growth_0_x32,
         pool.fee_growth_1_x32,
     )?;
+
+    // update liquidity position
+    liquidity_position.update(liquidity_delta, fee_growth_inside_0, fee_growth_inside_1)?;
+    // Update Pool liquidity
+    pool.update_liquidity(next_pool_liquidity)?;
 
     Ok(())
 }

@@ -189,6 +189,10 @@ impl Pool {
         Ok(())
     }
 
+    pub fn update_liquidity(&mut self, liquidity: u64) -> Result<()> {
+        self.liquidity = liquidity;
+    }
+
     /// Get the current tick index from the
     /// current sqrt price
     pub fn get_current_tick_index(&self) -> Result<i32> {

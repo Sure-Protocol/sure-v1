@@ -1,4 +1,6 @@
 use crate::utils::errors::SureError;
+use crate::utils::fixed_point_math::mul_round_down_Q3232;
+use crate::utils::liquidity::calculate_new_liquidity;
 use anchor_lang::prelude::*;
 use vipers::{assert_is_ata, prelude::*};
 
@@ -73,7 +75,7 @@ impl LiquidityPosition {
     /// or the user wants to collect the fees
     pub fn update(
         &mut self,
-        liquidity_delta: u64,
+        liquidity_delta: i64,
         fee_growth_inside_0: u64,
         fee_growth_inside_1: u64,
     ) -> Result<()> {
@@ -85,10 +87,17 @@ impl LiquidityPosition {
             .checked_sub(self.fee_checkpoint_in_1_last_x32)
             .ok_or(SureError::InvalidFeeGrowthSubtraction)?;
 
-        //let fee_change_1 = checked_mult
+        let fee_change_total_0 = mul_round_down_Q3232(self.liquidity, fee_change_per_unit_0)?;
+        let fee_change_total_1 = mul_round_down_Q3232(self.liquidity, fee_change_per_unit_1)?;
 
         self.fee_checkpoint_in_0_last_x32 = fee_growth_inside_0;
         self.fee_checkpoint_in_1_last_x32 = fee_growth_inside_1;
+
+        self.fee_owed_in_0 = self.fee_owed_in_0.wrapping_add(fee_change_total_0);
+        self.fee_owed_in_1 = self.fee_owed_in_1.wrapping_add(fee_change_total_1);
+
+        self.liquidity = calculate_new_liquidity(self.liquidity, liquidity_delta)?;
+
         Ok(())
     }
 }
