@@ -4,7 +4,9 @@ use crate::helpers::tick::{MAX_TICK_INDEX, MIN_TICK_INDEX};
 use crate::pool::*;
 use crate::utils::errors::SureError;
 use crate::utils::liquidity::calculate_new_liquidity;
+use std::cell::RefMut;
 use std::mem::size_of;
+
 pub const NUM_TICKS_IN_TICK_ARRAY: i32 = 64;
 pub const NUM_TICKS_IN_TICK_ARRAY_USIZE: usize = 64;
 
@@ -27,9 +29,13 @@ pub struct Tick {
     pub liquidity_net: i64, // 8 bytes
 
     /// The total amount of liquidity
-    /// If liquidity_net=0, liquidity_gross references
+    /// If liquidity_net=0, liquidity_gross indicates
     /// whether the tick is referenced by a position
     pub liquidity_gross: u64, // 8 bytes
+
+    /// Locked liquidity indicates how much of the
+    /// liquidity is locked in long term commitments
+    pub liquidity_locked: u64, // 8 bytes
 
     /// Fee growth
     pub fee_growth_outside_0_x32: u64, // 8 bytes
@@ -43,6 +49,7 @@ impl Tick {
     pub fn update(&mut self, new_tick: &NewTick) {
         self.liquidity_net = new_tick.liquidity_net;
         self.liquidity_gross = new_tick.liquidity_gross;
+        self.liquidity_locked = new_tick.liquidity_gross;
         self.fee_growth_outside_0_x32 = new_tick.fee_growth_outside_0_x32;
         self.fee_growth_outside_1_x32 = new_tick.fee_growth_outside_1_x32;
     }
@@ -62,6 +69,20 @@ impl Tick {
         } else {
             true
         }
+    }
+
+    pub fn is_available_liquidity(&self) -> bool {
+        let potential_available_liquidity = self.get_available_liquidity();
+        if potential_available_liquidity > 0 {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn get_available_liquidity(&self) -> u64 {
+        let liquidity_net_abs = self.liquidity_net.abs() as u64;
+        self.liquidity_gross + liquidity_net_abs - self.liquidity_locked
     }
 
     pub fn update_tick(
@@ -104,9 +125,11 @@ impl Tick {
                 .ok_or(SureError::LiquidityOverflow)?
         };
 
+        let liquidity_locked = 0;
         self.update(&NewTick {
             liquidity_net,
             liquidity_gross,
+            liquidity_locked,
             fee_growth_outside_0_x32,
             fee_growth_outside_1_x32,
         });
@@ -169,6 +192,7 @@ impl Tick {
 pub struct NewTick {
     pub liquidity_net: i64,
     pub liquidity_gross: u64,
+    pub liquidity_locked: u64,
     pub fee_growth_outside_0_x32: u64,
     pub fee_growth_outside_1_x32: u64,
 }
@@ -178,6 +202,7 @@ impl NewTick {
         NewTick {
             liquidity_net: tick.liquidity_net,
             liquidity_gross: tick.liquidity_gross,
+            liquidity_locked: tick.liquidity_locked,
             fee_growth_outside_0_x32: tick.fee_growth_outside_0_x32,
             fee_growth_outside_1_x32: tick.fee_growth_outside_1_x32,
         }
@@ -219,6 +244,10 @@ impl TickArray {
         Ok(())
     }
 
+    pub fn get_max_tick_index(&self, tick_spacing: u16) -> i32 {
+        self.start_tick_index + tick_spacing as i32 * NUM_TICKS_IN_TICK_ARRAY
+    }
+
     /// Check if tick is in the tick array
     pub fn validate_tick_index(&self, tick_index: i32, tick_spacing: u16) -> bool {
         let lower_tick_index = self.start_tick_index;
@@ -246,6 +275,68 @@ impl TickArray {
         Ok(tick_location)
     }
 
+    pub fn find_next_conditional_tick(
+        &self,
+        tick_index: i32,
+        tick_spacing: u16,
+        a_to_b: bool,
+        condition: fn(&Tick) -> bool,
+    ) -> Result<Option<i32>> {
+        if !self.validate_tick_index(tick_index, tick_spacing) {
+            return Err(SureError::InvalidTick.into());
+        }
+
+        // tick_index location in tick array
+        let mut tick_array_loc = self.get_tick_location(tick_index, tick_spacing)?;
+
+        if !a_to_b {
+            tick_array_loc += 1;
+        }
+
+        while tick_array_loc >= 0 && tick_array_loc < NUM_TICKS_IN_TICK_ARRAY {
+            let current_tick = self.ticks[tick_array_loc as usize];
+            if condition(&current_tick) {
+                return Ok(Some(
+                    (tick_array_loc * tick_spacing as i32) + self.start_tick_index,
+                ));
+            }
+            tick_array_loc = if a_to_b {
+                tick_array_loc - 1
+            } else {
+                tick_array_loc + 1
+            }
+        }
+
+        Ok(None)
+    }
+
+    /// Find the next intialized tick
+    /// in the tick array.
+    pub fn find_next_initialized_tick(
+        &self,
+        tick_index: i32,
+        tick_spacing: u16,
+        a_to_b: bool,
+    ) -> Result<Option<i32>> {
+        self.find_next_conditional_tick(tick_index, tick_spacing, a_to_b, |tick: &Tick| {
+            tick.is_initialized()
+        })
+    }
+
+    /// Find the next initialized tick
+    /// in the tick array based on the
+    /// amount of free/available liquidity
+    pub fn find_next_available_tick(
+        &self,
+        tick_index: i32,
+        tick_spacing: u16,
+        a_to_b: bool,
+    ) -> Result<Option<i32>> {
+        self.find_next_conditional_tick(tick_index, tick_spacing, a_to_b, |tick: &Tick| {
+            tick.is_available_liquidity()
+        })
+    }
+
     pub fn get_tick(&mut self, tick_index: i32, tick_spacing: u16) -> Result<&Tick> {
         if !self.validate_tick_index(tick_index, tick_spacing)
             || !Tick::is_valid_tick(tick_index, tick_spacing)
@@ -255,5 +346,79 @@ impl TickArray {
 
         let tick_location = self.get_tick_location(tick_index, tick_spacing)?;
         Ok(&self.ticks[tick_location as usize])
+    }
+}
+
+/// Tick Array Pool
+///
+/// Used for combining tick arrays and perform
+/// operations on top of each
+pub struct TickArrayPool<'info> {
+    pub arrays: Vec<RefMut<'info, TickArray>>,
+}
+
+impl<'info> TickArrayPool<'info> {
+    pub fn new(
+        ta0: RefMut<'info, TickArray>,
+        ta1: Option<RefMut<'info, TickArray>>,
+        ta2: Option<RefMut<'info, TickArray>>,
+    ) -> Self {
+        let tick_array_pool = Vec::with_capacity(3);
+        tick_array_pool.push(ta0);
+        if ta1.is_some() {
+            tick_array_pool.push(ta1.unwrap());
+        }
+        if ta2.is_some() {
+            tick_array_pool.push(ta2.unwrap())
+        }
+
+        Self {
+            arrays: tick_array_pool,
+        }
+    }
+
+    /// Find the next tick with free/available liquidity that contains
+    /// available liquidity
+    pub fn find_next_free_tick_index(
+        &self,
+        current_tick_index: i32,
+        tick_spacing: u16,
+        a_to_b: bool,
+        current_array_index: usize,
+    ) -> Result<(usize, i32)> {
+        let tick_array_width_in_ticks = NUM_TICKS_IN_TICK_ARRAY * tick_spacing as i32;
+        let mut tick_index_point = current_tick_index;
+        let mut tick_array_point = current_array_index;
+
+        loop {
+            let tick_array = match self.arrays.get(tick_array_point) {
+                Some(array) => array,
+                None => return Err(SureError::InvalidTickArrayIndexInTickArrayPool.into()),
+            };
+
+            let tick_index =
+                tick_array.find_next_available_tick(tick_index_point, tick_spacing, false)?;
+
+            match tick_index {
+                Some(tick_index) => return Ok((tick_array_point, tick_index)),
+                None => {
+                    // If last tick array
+                    if tick_array_point + 1 != self.arrays.len() {
+                        return Ok((
+                            tick_array_point,
+                            tick_array.get_max_tick_index(tick_spacing),
+                        ));
+                    }
+
+                    tick_index_point = if a_to_b {
+                        tick_array.start_tick_index - 1
+                    } else {
+                        tick_array.start_tick_index + tick_array_width_in_ticks - 1
+                    };
+
+                    tick_array_point += 1;
+                }
+            }
+        }
     }
 }

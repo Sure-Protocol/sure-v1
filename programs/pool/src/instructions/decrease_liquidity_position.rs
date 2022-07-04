@@ -1,7 +1,13 @@
+use crate::helpers::sToken::withdraw_from_vault;
 use crate::states::*;
-use crate::utils::*;
+use crate::utils::{
+    account,
+    errors::SureError,
+    liquidity::{calculate_token_0_delta, calculate_token_1_delta, validate_liquidity_amount},
+};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::*;
+use anchor_spl::token;
 use anchor_spl::token::{transfer, Token, TokenAccount, Transfer};
 use mpl_token_metadata::{instruction::update_metadata_accounts_v2, state::Creator};
 use vipers::*;
@@ -9,60 +15,60 @@ use vipers::*;
 /// Allow holder of NFT to redeem liquidity from pool
 #[derive(Accounts)]
 pub struct DecreaseLiquidityPosition<'info> {
-    /// Holder of the LP NFT
-    pub nft_holder: Signer<'info>,
-
-    /// Sure Protocol Pool Account
+    /// Liquidity provider
     #[account(mut)]
-    pub pool: Box<Account<'info, PoolAccount>>,
+    pub liquidity_provider: Signer<'info>,
+
+    /// Liquidity position
+    #[account(mut,has_one = pool)]
+    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
+
+    /// Position token account
+    /// holds the nft representing the liquidity
+    /// position
+    #[account(
+       constraint = position_token_account.mint == liquidity_position.position_mint,
+       constraint = position_token_account.amount == 1,
+   )]
+    pub position_token_account: Box<Account<'info, TokenAccount>>,
 
     /// Token pool account which holds overview
     #[account(mut)]
-    pub token_pool: Box<Account<'info, TokenPool>>,
+    pub pool: Box<Account<'info, Pool>>,
 
-    /// NFT that proves ownership of position
-    #[account(
-        constraint = liquidity_position_nft_account.mint ==liquidity_position.nft_mint
-    )]
-    pub liquidity_position_nft_account: Box<Account<'info, TokenAccount>>,
+    /// Associated token acount for tokens of type A
+    #[account(mut,
+       constraint = origin_account_a.mint == pool.token_mint_a
+   )]
+    pub origin_account_a: Box<Account<'info, TokenAccount>>,
 
-    /// Protocol owner as the authority of mints
-    pub protocol_owner: Account<'info, ProtocolOwner>,
+    /// Associated token acount for tokens of type B
+    #[account(mut,
+       constraint = origin_account_b.mint == pool.token_mint_b
+   )]
+    pub origin_account_b: Box<Account<'info, TokenAccount>>,
 
-    /// Liquidity position
-    #[account(mut)]
-    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
+    /// Pool Vault A to deposit into
+    #[account(mut,
+       constraint = vault_a.key() == pool.pool_vault_a
+   )]
+    pub vault_a: Account<'info, TokenAccount>,
 
-    /// Token account to recieve the tokens
-    #[account(mut)]
-    pub liquidity_provider_ata: Box<Account<'info, TokenAccount>>,
+    /// Pool Vault A to deposit into
+    #[account(mut,
+       constraint = vault_b.key() == pool.pool_vault_b
+   )]
+    pub vault_b: Account<'info, TokenAccount>,
 
-    /// Pool Vault to transfer tokens from
-    #[account(mut)]
-    pub pool_vault: Box<Account<'info, TokenAccount>>,
+    /// Lower tick array to use to deposit liquidity into
+    #[account(mut,has_one = pool)]
+    pub tick_array_lower: AccountLoader<'info, tick_v2::TickArray>,
 
-    /// Pool Liquidity Tick Bitmap
-    ///
-    /// Holds information on which ticks that contains
-    /// available liquidity
-    #[account(mut)]
-    pub pool_liquidity_tick_bitmap: Box<Account<'info, BitMap>>,
-    #[account(mut)]
-    pub liquidity_tick_info: AccountLoader<'info, Tick>,
+    #[account(mut,has_one = pool)]
+    pub tick_array_upper: AccountLoader<'info, tick_v2::TickArray>,
 
-    /// CHECK: Account used to hold metadata on the LP NFT
-    #[account(mut)]
-    pub metadata_account: AccountInfo<'info>,
-
-    /// CHECK: Checks that the address is the metadata metaplex program
-    #[account(address = mpl_token_metadata::ID)]
-    pub metadata_program: AccountInfo<'info>,
-
-    // Token program that executes the transfer
+    #[account(address = token::ID)]
     pub token_program: Program<'info, Token>,
-
-    /// Provide the system program
-    pub system_program: Program<'info, System>,
 }
 
 impl<'info> Validate<'info> for DecreaseLiquidityPosition<'info> {
@@ -71,93 +77,103 @@ impl<'info> Validate<'info> for DecreaseLiquidityPosition<'info> {
     }
 }
 
-pub fn handler(ctx: Context<DecreaseLiquidityPosition>) -> Result<()> {
+pub fn handler(
+    ctx: Context<DecreaseLiquidityPosition>,
+    liquidity_amount: u64,
+    token_min_a: u64,
+    token_min_b: u64,
+) -> Result<()> {
+    let pool = &ctx.accounts.pool;
     let liquidity_position = &ctx.accounts.liquidity_position;
-
-    let tick_account_state =
-        AccountLoader::<tick::Tick>::try_from(&ctx.accounts.liquidity_tick_info.to_account_info())?;
-    let mut liquidity_tick_info = tick_account_state.load_mut()?;
-    let pool_liquidity_tick_bitmap = &mut ctx.accounts.pool_liquidity_tick_bitmap;
-    let protocol_owner = &ctx.accounts.protocol_owner;
-    let pool = &mut ctx.accounts.pool;
-    let token_pool = &mut ctx.accounts.token_pool;
-
-    // Available liquidity
-    let free_liquidity = liquidity_tick_info.available_liquidity(liquidity_position.tick_id);
-    require!(free_liquidity > 0, errors::SureError::LiquidityFilled);
-
-    // _______________ Functionality _______________
-
-    let pool_seeds = [
-        &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
-        &pool.smart_contract.to_bytes() as &[u8],
-        &[pool.bump],
-    ];
-
-    // # 1 Transfer excess liquidity back to nft holder
-    transfer(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info().clone(),
-            Transfer {
-                from: ctx.accounts.pool_vault.to_account_info().clone(),
-                to: ctx
-                    .accounts
-                    .liquidity_provider_ata
-                    .to_account_info()
-                    .clone(),
-                authority: ctx.accounts.pool.to_account_info().clone(),
-            },
-            &[&pool_seeds[..]],
-        ),
-        free_liquidity,
-    )?;
-
-    // # 2. Update nft metadata to reflect token
-    let updated_metaplex = mpl_token_metadata::state::DataV2 {
-        name: String::from("Sure LP NFT V1"),
-        symbol: String::from("SURE-LP"),
-        uri: format!("https://sure.claims"),
-        seller_fee_basis_points: 0,
-        creators: Some(vec![Creator {
-            address: ctx.accounts.protocol_owner.key(),
-            verified: true,
-            share: 100,
-        }]),
-        collection: None,
-        uses: None,
-    };
-    let update_metaplex_metadata_ix = update_metadata_accounts_v2(
-        ctx.accounts.metadata_program.key(),
-        ctx.accounts.metadata_account.key(),
-        ctx.accounts.protocol_owner.key(),
-        None,
-        Some(updated_metaplex),
-        None,
-        None,
-    );
-
-    program::invoke_signed(
-        &update_metaplex_metadata_ix,
-        &[
-            ctx.accounts.metadata_account.to_account_info().clone(),
-            ctx.accounts.protocol_owner.to_account_info().clone(),
-            ctx.accounts.system_program.to_account_info().clone(),
-        ],
-        &[&[&[protocol_owner.bump]]],
-    )?;
-
-    // Update Token Pool
-    token_pool.liquidity -= free_liquidity;
-
-    // # 3 Update tick poo
-    liquidity_tick_info
-        .remove_liquidity(liquidity_position.tick_id)
-        .map_err(|e| e.to_anchor_error())?;
-
-    if !liquidity_tick_info.active {
-        if pool_liquidity_tick_bitmap.is_initialized(liquidity_position.tick) {
-            pool_liquidity_tick_bitmap.flip_bit(liquidity_position.tick);
-        }
+    if liquidity_amount == 0 {
+        return Err(SureError::LiquidityHaveToBeGreaterThan0.into());
     }
+
+    // Check that the liquidity provider owns the
+    // the liquidity position nft account
+    account::validate_token_account_ownership(
+        &ctx.accounts.position_token_account,
+        &ctx.accounts.liquidity_provider,
+    )?;
+
+    let productId = pool.productId;
+
+    let liquidity_delta = validate_liquidity_amount(liquidity_amount, false)?;
+
+    // Calculate Tick changes
+    // Get Tick accounts
+    let tick_array_lower = &ctx.accounts.tick_array_lower.load()?;
+    let tick_lower =
+        tick_array_lower.get_tick(liquidity_position.tick_index_lower, pool.tick_spacing)?;
+    let tick_array_upper = &ctx.accounts.tick_array_upper.load()?;
+    let tick_upper =
+        tick_array_upper.get_tick(liquidity_position.tick_index_upper, pool.tick_spacing)?;
+
+    // Calculate the updated liquidity
+    let next_pool_liquidity = pool.next_pool_liquidity(liquidity_position, liquidity_delta)?;
+
+    // Update lower tick
+    tick_lower.update_tick(
+        liquidity_position.tick_index_lower,
+        pool.get_current_tick_index()?,
+        pool.fee_growth_0_x32,
+        pool.fee_growth_1_x32,
+        liquidity_delta,
+        false,
+    )?;
+    // Update upper tick
+    tick_upper.update_tick(
+        liquidity_position.tick_index_upper,
+        pool.get_current_tick_index()?,
+        pool.fee_growth_0_x32,
+        pool.fee_growth_1_x32,
+        liquidity_delta,
+        true,
+    )?;
+
+    // Calculate the growth in fees
+    let (fee_growth_inside_0, fee_growth_inside_1) = tick_lower.calculate_next_fee_growth(
+        liquidity_position.tick_index_lower,
+        tick_upper,
+        liquidity_position.tick_index_upper,
+        pool.get_current_tick_index()?,
+        pool.fee_growth_0_x32,
+        pool.fee_growth_1_x32,
+    )?;
+
+    // update liquidity position
+    liquidity_position.update(liquidity_delta, fee_growth_inside_0, fee_growth_inside_1)?;
+    // Update Pool liquidity
+    pool.update_liquidity(next_pool_liquidity)?;
+
+    let token_0_delta = calculate_token_0_delta(
+        liquidity_delta,
+        &liquidity_position,
+        pool.current_tick_index,
+    )?;
+
+    let token_1_delta = calculate_token_1_delta(
+        liquidity_delta,
+        &liquidity_position,
+        pool.current_tick_index,
+    )?;
+
+    // Deposit tokens 0 into vault
+    withdraw_from_vault(
+        &pool,
+        &ctx.accounts.vault_a,
+        &ctx.accounts.origin_account_a,
+        &ctx.accounts.token_program,
+        liquidity_amount,
+    )?;
+
+    // Deposit token 1 into vault
+    withdraw_from_vault(
+        &pool,
+        &ctx.accounts.vault_b,
+        &ctx.accounts.origin_account_b,
+        &ctx.accounts.token_program,
+        liquidity_amount,
+    )?;
     Ok(())
 }

@@ -1,4 +1,6 @@
+use crate::helpers::sToken::deposit_into_vault;
 use crate::states::*;
+use crate::utils::liquidity::{calculate_token_0_delta, calculate_token_1_delta};
 use crate::utils::{self, account, errors::SureError, liquidity};
 use anchor_spl::token::{self};
 
@@ -31,7 +33,6 @@ use mpl_token_metadata::state::Creator;
 ///     - nft_account: nft account to hold the newly minted Liquidity position NFT
 ///
 #[derive(Accounts)]
-#[instruction(tick: u16,tick_pos: u64)]
 pub struct IncreaseLiquidityPosition<'info> {
     /// Liquidity provider
     #[account(mut)]
@@ -56,25 +57,25 @@ pub struct IncreaseLiquidityPosition<'info> {
 
     /// Associated token acount for tokens of type A
     #[account(mut,
-        constraint = origin_account_a.mint == pool.token_mint_a
+        constraint = origin_account_a.mint == pool.token_mint_0
     )]
     pub origin_account_a: Box<Account<'info, TokenAccount>>,
 
     /// Associated token acount for tokens of type B
     #[account(mut,
-        constraint = origin_account_b.mint == pool.token_mint_b
+        constraint = origin_account_b.mint == pool.token_mint_1
     )]
     pub origin_account_b: Box<Account<'info, TokenAccount>>,
 
     /// Pool Vault A to deposit into
     #[account(mut,
-        constraint = vault_a.key() == pool.pool_vault_a
+        constraint = vault_a.key() == pool.pool_vault_0
     )]
     pub vault_a: Account<'info, TokenAccount>,
 
     /// Pool Vault A to deposit into
     #[account(mut,
-        constraint = vault_b.key() == pool.pool_vault_b
+        constraint = vault_b.key() == pool.pool_vault_1
     )]
     pub vault_b: Account<'info, TokenAccount>,
 
@@ -120,6 +121,7 @@ pub fn handler(
     )?;
 
     let productId = pool.productId;
+
     let liquidity_delta = liquidity::validate_liquidity_amount(liquidity_amount, true)?;
 
     // Calculate Tick changes
@@ -153,7 +155,7 @@ pub fn handler(
         true,
     )?;
 
-    // Calculate
+    // Calculate the growth in fees
     let (fee_growth_inside_0, fee_growth_inside_1) = tick_lower.calculate_next_fee_growth(
         liquidity_position.tick_index_lower,
         tick_upper,
@@ -168,6 +170,35 @@ pub fn handler(
     // Update Pool liquidity
     pool.update_liquidity(next_pool_liquidity)?;
 
+    let token_0_delta = calculate_token_0_delta(
+        liquidity_delta,
+        &liquidity_position,
+        pool.current_tick_index,
+    )?;
+
+    let token_1_delta = calculate_token_1_delta(
+        liquidity_delta,
+        &liquidity_position,
+        pool.current_tick_index,
+    )?;
+
+    // Deposit tokens 0 into vault
+    deposit_into_vault(
+        &ctx.accounts.liquidity_provider,
+        &ctx.accounts.vault_a,
+        &ctx.accounts.origin_account_a,
+        &ctx.accounts.token_program,
+        liquidity_amount,
+    )?;
+
+    // Deposit token 1 into vault
+    deposit_into_vault(
+        &ctx.accounts.liquidity_provider,
+        &ctx.accounts.vault_b,
+        &ctx.accounts.origin_account_b,
+        &ctx.accounts.token_program,
+        liquidity_amount,
+    )?;
     Ok(())
 }
 

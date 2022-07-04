@@ -111,6 +111,62 @@ pub fn mint_nft<'info>(
     )
 }
 
+/// Create Proof of Coverage Position NFT with MetaPlex
+///
+///
+pub fn create_coverage_position_with_metadata<'info>(
+    metadata_account: &UncheckedAccount<'info>,
+    metadata_program: &UncheckedAccount<'info>,
+    metadata_update_auth: &UncheckedAccount<'info>,
+    pool: &Account<'info, Pool>,
+    user: &Signer<'info>,
+    position_mint: &Account<'info, Mint>,
+    token_program: &Program<'info, Token>,
+    system_program: &Program<'info, System>,
+    rent: &Sysvar<'info, Rent>,
+) -> Result<()> {
+    let create_metadata_accounts_ix = create_metadata_accounts_v2(
+        metadata_program.key(),
+        metadata_account.key(),
+        position_mint.key(),
+        pool.key(),
+        user.key(),
+        metadata_update_auth.key(),
+        String::from("Sure Proof of Coverage V1"),
+        String::from("SURE-POC-v1"),
+        format!("https://sure.claims"),
+        None,
+        0,
+        true,
+        true,
+        None,
+        None,
+    );
+
+    // Protocol owner signs the transaction with seeds
+    // and bump
+    solana_program::program::invoke_signed(
+        &create_metadata_accounts_ix,
+        &[
+            metadata_account.to_account_info().clone(),
+            position_mint.to_account_info().clone(),
+            pool.to_account_info().clone(),
+            metadata_update_auth.to_account_info().clone(),
+            user.to_account_info().clone(),
+            metadata_program.to_account_info().clone(),
+            system_program.to_account_info().clone(),
+            rent.to_account_info().clone(),
+        ],
+        &[&pool.seeds()],
+    )?;
+
+    remove_liquidity_position_authority(pool, position_mint, token_program)
+}
+
+/// Create Liquidity Position with Metadata
+///
+/// creates a metadata account for the given
+/// position mint
 pub fn create_liquidity_position_with_metadata<'info>(
     metadata_account: &UncheckedAccount<'info>,
     metadata_program: &UncheckedAccount<'info>,

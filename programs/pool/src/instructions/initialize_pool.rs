@@ -1,4 +1,5 @@
 use crate::states::*;
+use crate::utils::seeds::*;
 use anchor_lang::{prelude::*, solana_program::instruction};
 use anchor_spl::{
     mint,
@@ -23,6 +24,7 @@ pub struct InitializePool<'info> {
         payer = creator,
         seeds = [
             SURE_TOKEN_POOL_SEED.as_bytes(),
+            productId.to_le_bytes().as_ref(),
             token_mint_a.key().as_ref(),
             token_mint_b.key().as_ref(),
             tick_spacing.to_le_bytes().as_ref()

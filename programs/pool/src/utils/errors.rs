@@ -17,6 +17,9 @@ pub enum SureError {
     #[msg("Invalid tick spacing. Tick spacing might be 0.")]
     InvalidTickSpacing,
 
+    #[msg("Tick array not found in tick array pool")]
+    InvalidTickArrayIndexInTickArrayPool,
+
     #[msg("Invalid Amount")]
     InvalidAmount,
 
@@ -107,6 +110,12 @@ pub enum SureError {
 
     #[msg("Q32.32 division error")]
     DivisionQ3232Error,
+
+    #[msg("Q32.32 Substraction error")]
+    SubtractionQ3232Error,
+
+    #[msg("U64 overflow")]
+    OverflowU64,
 }
 
 impl From<TryFromIntError> for SureError {

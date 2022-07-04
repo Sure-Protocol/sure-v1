@@ -1,4 +1,4 @@
-use crate::helpers::token;
+use crate::helpers::sToken;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
@@ -82,7 +82,7 @@ pub fn handler(ctx: Context<LiquidityPosition>, tick_upper: i32, tick_lower: i32
     liquidity::LiquidityPosition.initialize(pool, tick_upper, tick_lower, position_mint)?;
 
     // Mint Liquidity Position NFT
-    token::create_liquidity_position_with_metadata(
+    sToken::create_liquidity_position_with_metadata(
         &ctx.accounts.metadata_account,
         &ctx.accounts.metadata_program,
         &ctx.accounts.metadata_update_authority,
