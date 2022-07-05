@@ -1,5 +1,6 @@
 use super::errors::SureError;
-use crate::{helpers::tick::*, states::liquidity::LiquidityPosition};
+use super::tick_math::get_sqrt_ratio_at_tick;
+use crate::states::liquidity::LiquidityPosition;
 use anchor_lang::prelude::*;
 
 pub fn validate_liquidity_amount(liquidity_amount: u64, increase: bool) -> Result<i64> {

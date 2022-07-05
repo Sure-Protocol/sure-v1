@@ -1,5 +1,5 @@
 ///! Basic implementation of a U256 bitmap for storing binary state
-use crate::utils::uint::U256;
+use super::uint::U256;
 use std::ops::BitXor;
 
 #[derive(Copy, Clone)]

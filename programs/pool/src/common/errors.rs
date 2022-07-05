@@ -26,6 +26,9 @@ pub enum SureError {
     #[msg("Provided Liquidity is too large")]
     LiquidityTooLarge,
 
+    #[msg("Tick index is out of range")]
+    TickOutOfRange,
+
     #[msg("The provided liquidity have to be greater than 0")]
     LiquidityHaveToBeGreaterThan0,
 

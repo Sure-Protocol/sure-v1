@@ -1,11 +1,10 @@
-use crate::utils::errors::SureError;
-use crate::utils::fixed_point_math::mul_round_down_Q3232;
-use crate::utils::liquidity::calculate_new_liquidity;
+use crate::common::errors::SureError;
+use crate::common::fixed_point_math::mul_round_down_Q3232;
+use crate::common::liquidity::calculate_new_liquidity;
 use anchor_lang::prelude::*;
 use vipers::{assert_is_ata, prelude::*};
 
-use super::pool::Pool;
-use super::tick::Tick;
+use super::{pool::Pool, tick_v2::Tick};
 
 /// -- Liquidity Position --
 ///

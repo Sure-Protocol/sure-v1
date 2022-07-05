@@ -1,4 +1,4 @@
-use crate::utils::errors::SureError;
+use crate::common::errors::SureError;
 use anchor_lang::{prelude::*, Result};
 
 #[account]

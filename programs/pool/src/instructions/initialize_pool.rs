@@ -1,5 +1,5 @@
 use crate::states::*;
-use crate::utils::seeds::*;
+use crate::common::seeds::*;
 use anchor_lang::{prelude::*, solana_program::instruction};
 use anchor_spl::{
     mint,

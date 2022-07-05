@@ -1,3 +1,4 @@
+use crate::common::seeds::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use std::mem::size_of;
@@ -23,8 +24,8 @@ pub struct InitializeTickArray<'info> {
         init,
         seeds = [
             SURE_BITMAP.as_bytes(),
-            pool.token_mint_a.as_ref(),
-            pool.token_mint_b.as_ref(),
+            pool.token_mint_0.as_ref(),
+            pool.token_mint_1.as_ref(),
             &pool.fee_rate.to_be_bytes(),
             &start_tick_index.to_be_bytes()
         ],

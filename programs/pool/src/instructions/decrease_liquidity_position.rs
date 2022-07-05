@@ -1,15 +1,13 @@
-use crate::helpers::sToken::withdraw_from_vault;
-use crate::states::*;
-use crate::utils::{
+use crate::common::token_tx::withdraw_from_vault;
+use crate::common::{
     account,
     errors::SureError,
     liquidity::{calculate_token_0_delta, calculate_token_1_delta, validate_liquidity_amount},
 };
+use crate::states::*;
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::*;
 use anchor_spl::token;
 use anchor_spl::token::{transfer, Token, TokenAccount, Transfer};
-use mpl_token_metadata::{instruction::update_metadata_accounts_v2, state::Creator};
 use vipers::*;
 /// Redeem liquidity
 /// Allow holder of NFT to redeem liquidity from pool
@@ -38,25 +36,25 @@ pub struct DecreaseLiquidityPosition<'info> {
 
     /// Associated token acount for tokens of type A
     #[account(mut,
-       constraint = origin_account_a.mint == pool.token_mint_a
+       constraint = origin_account_a.mint == pool.token_mint_0
    )]
     pub origin_account_a: Box<Account<'info, TokenAccount>>,
 
     /// Associated token acount for tokens of type B
     #[account(mut,
-       constraint = origin_account_b.mint == pool.token_mint_b
+       constraint = origin_account_b.mint == pool.token_mint_1
    )]
     pub origin_account_b: Box<Account<'info, TokenAccount>>,
 
     /// Pool Vault A to deposit into
     #[account(mut,
-       constraint = vault_a.key() == pool.pool_vault_a
+       constraint = vault_a.key() == pool.pool_vault_0
    )]
     pub vault_a: Account<'info, TokenAccount>,
 
     /// Pool Vault A to deposit into
     #[account(mut,
-       constraint = vault_b.key() == pool.pool_vault_b
+       constraint = vault_b.key() == pool.pool_vault_1
    )]
     pub vault_b: Account<'info, TokenAccount>,
 

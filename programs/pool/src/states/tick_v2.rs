@@ -1,14 +1,17 @@
 use anchor_lang::prelude::*;
 
-use crate::helpers::tick::{MAX_TICK_INDEX, MIN_TICK_INDEX};
+use crate::common::errors::SureError;
+use crate::common::liquidity::calculate_new_liquidity;
+use crate::common::tick_math::*;
 use crate::pool::*;
-use crate::utils::errors::SureError;
-use crate::utils::liquidity::calculate_new_liquidity;
 use std::cell::RefMut;
+
 use std::mem::size_of;
 
 pub const NUM_TICKS_IN_TICK_ARRAY: i32 = 64;
 pub const NUM_TICKS_IN_TICK_ARRAY_USIZE: usize = 64;
+pub const MAX_PROTOCOL_FEE: u64 = 10_000;
+pub const MAX_100th_BP: u64 = 1_000_000;
 
 // _____________ v2 _________________
 // Instead of recording 256 ticks in each tick array
@@ -85,6 +88,69 @@ impl Tick {
         self.liquidity_gross + liquidity_net_abs - self.liquidity_locked
     }
 
+    /// Buy Coverage
+    ///
+    /// Coverage is bought from each tick.
+    /// Calculate
+    ///     - Amount insured
+    ///     - Premium
+    ///     - Total fee amount
+    ///     - Protocol fee
+    ///     - Founder fee
+    ///
+    /// Returns:
+    pub fn buy_coverage(&self, tick_index: i32, coverage_amount: u64, fee_rate: u16) -> Result<()> {
+        let available_liquidity = self.get_available_liquidity();
+        // calculate the coverage for the given tick
+        let delta = if coverage_amount >= available_liquidity {
+            available_liquidity
+        } else {
+            coverage_amount
+        };
+
+        // calculate premium
+        let sqrt_price_x32 = get_sqrt_ratio_at_tick(tick_index)?;
+        let premium = calculate_premium_amount(sqrt_price_x32, coverage_amount)?;
+
+        // calculate base fee amount of amount
+        let fee_amount = coverage_amount
+            .wrapping_mul(fee_rate as u64)
+            .wrapping_div(MAX_100th_BP - fee_rate as u64);
+
+        Ok(())
+    }
+
+    /// Update tick on Buy
+    ///
+    /// update tick position when it is used to buy from
+    /// buy operations includes
+    ///     - insurance
+    ///     - swap
+    ///     - lending
+    pub fn update_tick_on_buy(
+        &mut self,
+        a_to_b: bool,
+        liquidity: u64,
+        fee_growth_global_0_x32: u64,
+        fee_growth_global_1_x32: u64,
+    ) -> Result<(u64)> {
+        let liquidity_net: i64 = if a_to_b {
+            -self.liquidity_net
+        } else {
+            self.liquidity_net
+        };
+
+        self.fee_growth_outside_0_x32 =
+            fee_growth_global_0_x32.wrapping_sub(self.fee_growth_outside_0_x32);
+        self.fee_growth_outside_1_x32 =
+            fee_growth_global_1_x32.wrapping_sub(self.fee_growth_outside_1_x32);
+        let next_liquidity = add_liquidity_delta(liquidity, liquidity_net)?;
+        Ok(next_liquidity)
+    }
+
+    /// Update Tick
+    ///
+    /// update the tick liquidity is added or subtracted
     pub fn update_tick(
         &mut self,
         tick_index: i32,
@@ -189,6 +255,68 @@ impl Tick {
     }
 }
 
+/// Add Liquidity Delta
+///
+/// Add the delta to the liquidity depending on the
+/// delta sign
+pub fn add_liquidity_delta(liquidity: u64, delta: i64) -> Result<u64> {
+    if delta == 0 {
+        return Ok(liquidity);
+    }
+    if delta > 0 {
+        liquidity
+            .checked_add(delta as u64)
+            .ok_or(SureError::LiquidityOverflow.into())
+    } else {
+        liquidity
+            .checked_sub(delta.abs() as u64)
+            .ok_or(SureError::LiquidityUnderflow.into())
+    }
+}
+
+/// Calculate the sub fee rate on an amount
+pub fn calculate_sub_fee(amount: u64, fee_rate: u16) -> Result<u64> {
+    if fee_rate > 0 {
+        return amount
+            .checked_mul(fee_rate as u64)
+            .ok_or(SureError::MultiplictationQ3232Overflow)?
+            .checked_div(MAX_PROTOCOL_FEE)
+            .ok_or(SureError::DivisionQ3232Error.into());
+    }
+    Ok(0)
+}
+
+/// Calculate fee amounts
+///
+/// Based on the total fee amount
+/// calculate the
+///     - protocol fee
+///     - founders fee
+pub fn calculate_fee_amounts(
+    fee_amount: u64,
+    protocol_fee_rate: u16,
+    founders_fee_rate: u16,
+    current_liquidity: u64,
+    current_protocol_fee: u64,
+    current_founders_fee: u64,
+    current_fee_growth: u64,
+) -> Result<(u64, u64, u64)> {
+    let mut next_protocol_fee = current_protocol_fee;
+    let mut next_founders_fee = current_founders_fee;
+    let mut remaining_fee = fee_amount;
+    let mut next_fee_growth = current_fee_growth;
+    let step_protocol_fee = calculate_sub_fee(fee_amount, protocol_fee_rate)?;
+    let step_founders_fee = calculate_sub_fee(fee_amount, founders_fee_rate)?;
+    next_protocol_fee += step_protocol_fee;
+    next_founders_fee += step_founders_fee;
+    remaining_fee -= next_protocol_fee + next_founders_fee;
+
+    if current_liquidity > 0 {
+        next_fee_growth = next_fee_growth.wrapping_add(remaining_fee);
+    }
+    Ok((next_protocol_fee, next_founders_fee, next_fee_growth))
+}
+
 pub struct NewTick {
     pub liquidity_net: i64,
     pub liquidity_gross: u64,
@@ -244,6 +372,7 @@ impl TickArray {
         Ok(())
     }
 
+    // Get the maximum tick index in the array
     pub fn get_max_tick_index(&self, tick_spacing: u16) -> i32 {
         self.start_tick_index + tick_spacing as i32 * NUM_TICKS_IN_TICK_ARRAY
     }
@@ -256,9 +385,20 @@ impl TickArray {
         tick_index >= lower_tick_index && tick_index <= upper_tick_index
     }
 
+    /// Is last tick
+    /// Checks if the given tick index is the last/upper tick in the
+    /// array
+    pub fn is_last_tick(&self, tick_index: i32, tick_spacing: u16) -> Result<bool> {
+        let tick_location = self.get_tick_location(tick_index, tick_spacing)?;
+        Ok(tick_location == NUM_TICKS_IN_TICK_ARRAY)
+    }
+
     /// Get the index [0,64] in the tick array where the
     /// tick is located
     pub fn get_tick_location(&self, tick_index: i32, tick_spacing: u16) -> Result<i32> {
+        if tick_index < self.start_tick_index {
+            return Err(SureError::InvalidTick.into());
+        }
         let tick_diff = tick_index - self.start_tick_index;
 
         if tick_diff % tick_spacing as i32 != 0 {
@@ -275,7 +415,12 @@ impl TickArray {
         Ok(tick_location)
     }
 
-    pub fn find_next_conditional_tick(
+    /// Find the next conditional tick index
+    ///
+    /// Returns:
+    /// - Some if tick_index is located
+    /// - None of the tick_index is out of bounds
+    pub fn find_next_conditional_tick_index(
         &self,
         tick_index: i32,
         tick_spacing: u16,
@@ -286,55 +431,68 @@ impl TickArray {
             return Err(SureError::InvalidTick.into());
         }
 
-        // tick_index location in tick array
-        let mut tick_array_loc = self.get_tick_location(tick_index, tick_spacing)?;
+        // Find the location of the tick_index in the array [0,64]
+        let mut tick_index_location = self.get_tick_location(tick_index, tick_spacing)?;
 
         if !a_to_b {
-            tick_array_loc += 1;
+            tick_index_location += 1;
         }
 
-        while tick_array_loc >= 0 && tick_array_loc < NUM_TICKS_IN_TICK_ARRAY {
-            let current_tick = self.ticks[tick_array_loc as usize];
+        // Move through the tick array
+        while tick_index_location >= 0 && tick_index_location < NUM_TICKS_IN_TICK_ARRAY {
+            let current_tick = self.ticks[tick_index_location as usize];
+            // if condition is met return the tick_index
             if condition(&current_tick) {
                 return Ok(Some(
-                    (tick_array_loc * tick_spacing as i32) + self.start_tick_index,
+                    (tick_index_location * tick_spacing as i32) + self.start_tick_index,
                 ));
             }
-            tick_array_loc = if a_to_b {
-                tick_array_loc - 1
+            // If tick moves a -> b, move tick_index_location one step to right
+            tick_index_location = if a_to_b {
+                tick_index_location + 1
             } else {
-                tick_array_loc + 1
+                tick_index_location - 1
             }
         }
 
         Ok(None)
     }
 
-    /// Find the next intialized tick
-    /// in the tick array.
-    pub fn find_next_initialized_tick(
+    /// Find the next intialized tick index
+    pub fn find_next_initialized_tick_index(
         &self,
         tick_index: i32,
         tick_spacing: u16,
         a_to_b: bool,
     ) -> Result<Option<i32>> {
-        self.find_next_conditional_tick(tick_index, tick_spacing, a_to_b, |tick: &Tick| {
+        self.find_next_conditional_tick_index(tick_index, tick_spacing, a_to_b, |tick: &Tick| {
             tick.is_initialized()
         })
     }
 
-    /// Find the next initialized tick
-    /// in the tick array based on the
+    /// Find the next available tick
+    ///
+    /// In the tick array based on the
     /// amount of free/available liquidity
-    pub fn find_next_available_tick(
+    pub fn find_next_available_tick_index(
         &self,
         tick_index: i32,
         tick_spacing: u16,
         a_to_b: bool,
     ) -> Result<Option<i32>> {
-        self.find_next_conditional_tick(tick_index, tick_spacing, a_to_b, |tick: &Tick| {
+        self.find_next_conditional_tick_index(tick_index, tick_spacing, a_to_b, |tick: &Tick| {
             tick.is_available_liquidity()
         })
+    }
+
+    /// Get next tick index
+    pub fn get_next_tick_index(
+        &self,
+        tick_index: i32,
+        tick_spacing: u16,
+        a_to_b: bool,
+    ) -> Result<Option<i32>> {
+        self.find_next_conditional_tick_index(tick_index, tick_spacing, a_to_b, |tick: &Tick| true)
     }
 
     pub fn get_tick(&mut self, tick_index: i32, tick_spacing: u16) -> Result<&Tick> {
@@ -379,6 +537,10 @@ impl<'info> TickArrayPool<'info> {
 
     /// Find the next tick with free/available liquidity that contains
     /// available liquidity
+    ///
+    /// Returns: (next_tick_array,next_tick_index)
+    /// - next_tick_array in [0,2]
+    /// - next_tick_index in [-221_818,221_818]
     pub fn find_next_free_tick_index(
         &self,
         current_tick_index: i32,
@@ -387,36 +549,49 @@ impl<'info> TickArrayPool<'info> {
         current_array_index: usize,
     ) -> Result<(usize, i32)> {
         let tick_array_width_in_ticks = NUM_TICKS_IN_TICK_ARRAY * tick_spacing as i32;
-        let mut tick_index_point = current_tick_index;
-        let mut tick_array_point = current_array_index;
+        let mut next_tick_index = current_tick_index;
+        let mut next_tick_array_index = current_array_index;
 
         loop {
-            let tick_array = match self.arrays.get(tick_array_point) {
+            let tick_array = match self.arrays.get(next_tick_array_index) {
                 Some(array) => array,
                 None => return Err(SureError::InvalidTickArrayIndexInTickArrayPool.into()),
             };
 
             let tick_index =
-                tick_array.find_next_available_tick(tick_index_point, tick_spacing, false)?;
+                tick_array.find_next_available_tick_index(next_tick_index, tick_spacing, true)?;
 
             match tick_index {
-                Some(tick_index) => return Ok((tick_array_point, tick_index)),
+                Some(tick_index) => return Ok((next_tick_array_index, tick_index)),
                 None => {
-                    // If last tick array
-                    if tick_array_point + 1 != self.arrays.len() {
+                    // None when the tick_index is not found in the tick array
+
+                    // if the last tick array
+                    if next_tick_array_index + 1 != self.arrays.len() {
                         return Ok((
-                            tick_array_point,
+                            next_tick_array_index,
                             tick_array.get_max_tick_index(tick_spacing),
                         ));
                     }
 
-                    tick_index_point = if a_to_b {
-                        tick_array.start_tick_index - 1
+                    // Check if we are at the boundaries of the tick_index interval
+                    if !a_to_b && tick_array.start_tick_index <= MIN_TICK_INDEX {
+                        return Ok((next_tick_array_index, MIN_TICK_INDEX));
+                    } else if a_to_b
+                        && tick_array.get_max_tick_index(tick_spacing) >= MAX_TICK_INDEX
+                    {
+                        return Ok((next_tick_array_index, MAX_TICK_INDEX));
+                    }
+
+                    // If we are at the boundary of the
+                    // tick array
+                    next_tick_index = if a_to_b {
+                        tick_array.start_tick_index + tick_array_width_in_ticks + 1
                     } else {
-                        tick_array.start_tick_index + tick_array_width_in_ticks - 1
+                        tick_array.start_tick_index - 1
                     };
 
-                    tick_array_point += 1;
+                    next_tick_array_index += 1;
                 }
             }
         }

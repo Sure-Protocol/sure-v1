@@ -1,16 +1,11 @@
-use crate::helpers::sToken::deposit_into_vault;
+use crate::common::liquidity::{calculate_token_0_delta, calculate_token_1_delta};
+use crate::common::token_tx::deposit_into_vault;
+use crate::common::{self, account, errors::SureError, liquidity};
 use crate::states::*;
-use crate::utils::liquidity::{calculate_token_0_delta, calculate_token_1_delta};
-use crate::utils::{self, account, errors::SureError, liquidity};
 use anchor_spl::token::{self};
 
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    mint,
-    token::{mint_to, transfer, Mint, MintTo, Token, TokenAccount, Transfer},
-};
+use anchor_spl::token::{mint_to, transfer, Mint, MintTo, Token, TokenAccount, Transfer};
 use mpl_token_metadata::instruction::{create_metadata_accounts_v2, update_metadata_accounts_v2};
 use mpl_token_metadata::state::Creator;
 
