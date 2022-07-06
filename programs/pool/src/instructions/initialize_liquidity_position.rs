@@ -1,12 +1,12 @@
-use crate::helpers::sToken;
+use crate::common::{seeds::*, token_tx::create_liquidity_position_with_metadata};
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
-use sure_nft_update_authority::ID as SURE_NFT_UPDATE_AUTH;
+pub use sure_nft_update_authority::ID as SURE_NFT_UPDATE_AUTH;
 mod sure_nft_update_authority {
     use super::*;
-    declare_id!("");
+    declare_id!("rYhoVCsVF8dahDpAYUZ9sDygLbhoVgRcczMxnQhWWjg");
 }
 
 #[derive(Accounts)]
@@ -32,7 +32,7 @@ pub struct InitializeLiquidityPosition<'info> {
     /// liquidity position
     #[account(
         init,
-        space = Mint::LEN,
+        payer = liquidity_provider,
         mint::authority = pool,
         mint::decimals = 0,
     )]
@@ -74,15 +74,20 @@ pub struct InitializeLiquidityPosition<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<LiquidityPosition>, tick_upper: i32, tick_lower: i32) -> Result<()> {
+pub fn handler(
+    ctx: Context<InitializeLiquidityPosition>,
+    tick_upper: i32,
+    tick_lower: i32,
+) -> Result<()> {
     let pool = &ctx.accounts.pool;
     let position_mint = &ctx.accounts.position_mint;
-
+    let liquidity_position = &ctx.accounts.liquidity_position;
+    let position_mint = &ctx.accounts.position_mint;
     // Initialize liquidity position
-    liquidity::LiquidityPosition.initialize(pool, tick_upper, tick_lower, position_mint)?;
+    liquidity_position.initialize(pool, tick_upper, tick_lower, position_mint.key())?;
 
     // Mint Liquidity Position NFT
-    sToken::create_liquidity_position_with_metadata(
+    create_liquidity_position_with_metadata(
         &ctx.accounts.metadata_account,
         &ctx.accounts.metadata_program,
         &ctx.accounts.metadata_update_authority,

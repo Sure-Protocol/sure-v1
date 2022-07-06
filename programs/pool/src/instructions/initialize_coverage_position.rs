@@ -1,8 +1,9 @@
-use crate::helpers::sToken::create_coverage_position_with_metadata;
-use crate::states::{CoverageContract, Pool};
-use crate::utils::seeds::*;
+use super::initialize_liquidity_position::SURE_NFT_UPDATE_AUTH;
+use crate::common::{seeds::SURE_DOMAIN, token_tx::create_coverage_position_with_metadata};
+use crate::states::{CoveragePosition, Pool};
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, TokenAccount};
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{self, Mint, Token, TokenAccount};
 
 /// Initialize coverage position
 ///
@@ -24,7 +25,7 @@ pub struct InitializeCoveragePosition<'info> {
     /// Position mint
     #[account(
         init,
-        space = Mint::LEN,
+        payer = user,
         mint::authority = pool,
         mint::decimals = 0
     )]
@@ -43,13 +44,13 @@ pub struct InitializeCoveragePosition<'info> {
         init,
         payer = user,
         seeds = [
-            SURE_POOL,
+            SURE_DOMAIN.as_bytes(),
             position_mint.key().as_ref(),
-        ]
+        ],
         space = 8 + CoveragePosition::SPACE,
         bump,
     )]
-    pub coverage_position: Account<'info, CoveragePosition>,
+    pub coverage_position: AccountLoader<'info, CoveragePosition>,
 
     /// Token program to mint new NFT position
     #[account(address = token::ID)]
@@ -77,11 +78,15 @@ pub struct InitializeCoveragePosition<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handler(ctx: Context<InitializeCoveragePosition>) -> Result<()> {
+pub fn handler(ctx: Context<InitializeCoveragePosition>, start_tick_index: i32) -> Result<()> {
     let position_owner = &ctx.accounts.user;
-    let coverage_position = &ctx.accounts.coverage_position;
+    let coverage_position = &ctx.accounts.coverage_position.load_init()?;
 
-    coverage_position.initialize(position_owner, ctx.accounts.position_mint)?;
+    coverage_position.initialize(
+        position_owner,
+        ctx.accounts.position_mint.key(),
+        start_tick_index,
+    )?;
 
     create_coverage_position_with_metadata(
         &ctx.accounts.metadata_account,
@@ -95,11 +100,9 @@ pub fn handler(ctx: Context<InitializeCoveragePosition>) -> Result<()> {
         &ctx.accounts.rent,
     )?;
 
-    emit!(
-        InitializeCoveragePositionEvent{
-            coverage_contract.key()
-        }
-    );
+    emit!(InitializeCoveragePositionEvent {
+        coverage_contract: ctx.accounts.coverage_position.key()
+    });
 
     Ok(())
 }

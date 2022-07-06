@@ -64,13 +64,13 @@ pub struct IncreaseLiquidityPosition<'info> {
 
     /// Pool Vault A to deposit into
     #[account(mut,
-        constraint = vault_a.key() == pool.pool_vault_0
+        constraint = vault_a.key() == pool.token_vault_0
     )]
     pub vault_a: Account<'info, TokenAccount>,
 
     /// Pool Vault A to deposit into
     #[account(mut,
-        constraint = vault_b.key() == pool.pool_vault_1
+        constraint = vault_b.key() == pool.token_vault_1
     )]
     pub vault_b: Account<'info, TokenAccount>,
 
@@ -129,7 +129,7 @@ pub fn handler(
         tick_array_upper.get_tick(liquidity_position.tick_index_upper, pool.tick_spacing)?;
 
     // Calculate the updated liquidity
-    let next_pool_liquidity = pool.next_pool_liquidity(liquidity_position, liquidity_delta)?;
+    let next_pool_liquidity = pool.get_next_liquidity(liquidity_position, liquidity_delta)?;
 
     // Update lower tick
     tick_lower.update_tick(

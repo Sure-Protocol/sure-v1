@@ -99,25 +99,35 @@ impl Tick {
     ///     - Founder fee
     ///
     /// Returns:
-    pub fn buy_coverage(&self, tick_index: i32, coverage_amount: u64, fee_rate: u16) -> Result<()> {
+    ///     - fee_amount: the amount to be used to pay fees
+    ///     - amount_in: the amount to pay into vault 0
+    ///     - amount_out: the amount going out of vault 1
+    ///
+    /// <checkpoint>
+    /// TODO: rewrite to use amount in and amount out
+    pub fn update_coverage(
+        &self,
+        tick_index: i32,
+        coverage_amount: u64,
+        coverage_delta: u64,
+        fee_rate: u16,
+        increase: bool,
+    ) -> Result<(u64, u64, u64)> {
         let available_liquidity = self.get_available_liquidity();
-        // calculate the coverage for the given tick
-        let delta = if coverage_amount >= available_liquidity {
-            available_liquidity
-        } else {
-            coverage_amount
-        };
 
         // calculate premium
         let sqrt_price_x32 = get_sqrt_ratio_at_tick(tick_index)?;
-        let premium = calculate_premium_amount(sqrt_price_x32, coverage_amount)?;
+        let premium = calculate_premium_amount(sqrt_price_x32, coverage_delta)?;
 
         // calculate base fee amount of amount
-        let fee_amount = coverage_amount
+        let fee_amount = coverage_delta
             .wrapping_mul(fee_rate as u64)
             .wrapping_div(MAX_100th_BP - fee_rate as u64);
 
-        Ok(())
+        let amount_in = coverage_amount;
+        let amount_out = coverage_amount.wrapping_sub(coverage_delta);
+
+        Ok((fee_amount, amount_in, amount_out))
     }
 
     /// Update tick on Buy
@@ -292,7 +302,7 @@ pub fn calculate_sub_fee(amount: u64, fee_rate: u16) -> Result<u64> {
 /// calculate the
 ///     - protocol fee
 ///     - founders fee
-pub fn calculate_fee_amounts(
+pub fn calculate_fees(
     fee_amount: u64,
     protocol_fee_rate: u16,
     founders_fee_rate: u16,
@@ -389,30 +399,8 @@ impl TickArray {
     /// Checks if the given tick index is the last/upper tick in the
     /// array
     pub fn is_last_tick(&self, tick_index: i32, tick_spacing: u16) -> Result<bool> {
-        let tick_location = self.get_tick_location(tick_index, tick_spacing)?;
+        let tick_location = get_tick_location(self.start_tick_index, tick_index, tick_spacing)?;
         Ok(tick_location == NUM_TICKS_IN_TICK_ARRAY)
-    }
-
-    /// Get the index [0,64] in the tick array where the
-    /// tick is located
-    pub fn get_tick_location(&self, tick_index: i32, tick_spacing: u16) -> Result<i32> {
-        if tick_index < self.start_tick_index {
-            return Err(SureError::InvalidTick.into());
-        }
-        let tick_diff = tick_index - self.start_tick_index;
-
-        if tick_diff % tick_spacing as i32 != 0 {
-            return Err(SureError::InvalidTick.into());
-        }
-
-        if tick_spacing == 0 {
-            return Err(SureError::InvalidTickSpacing.into());
-        }
-        let tick_location = tick_diff / tick_spacing as i32;
-        if tick_location < 0 || tick_location >= NUM_TICKS_IN_TICK_ARRAY {
-            return Err(SureError::InvalidTick.into());
-        }
-        Ok(tick_location)
     }
 
     /// Find the next conditional tick index
@@ -432,8 +420,10 @@ impl TickArray {
         }
 
         // Find the location of the tick_index in the array [0,64]
-        let mut tick_index_location = self.get_tick_location(tick_index, tick_spacing)?;
+        let mut tick_index_location =
+            get_tick_location(self.start_tick_index, tick_index, tick_spacing)?;
 
+        // if b to a then search to right
         if !a_to_b {
             tick_index_location += 1;
         }
@@ -447,11 +437,13 @@ impl TickArray {
                     (tick_index_location * tick_spacing as i32) + self.start_tick_index,
                 ));
             }
-            // If tick moves a -> b, move tick_index_location one step to right
+            // price = b/a, a_to_b = true -> new_price = (b-e1)/(a+e0) < a/b = price.
+            // price moves left when swapping a to b
+            // a*price = b
             tick_index_location = if a_to_b {
-                tick_index_location + 1
-            } else {
                 tick_index_location - 1
+            } else {
+                tick_index_location + 1
             }
         }
 
@@ -502,9 +494,31 @@ impl TickArray {
             return Err(SureError::InvalidTick.into());
         }
 
-        let tick_location = self.get_tick_location(tick_index, tick_spacing)?;
+        let tick_location = get_tick_location(self.start_tick_index, tick_index, tick_spacing)?;
         Ok(&self.ticks[tick_location as usize])
     }
+}
+
+/// Get the index [0,64] in the tick array where the
+/// tick is located
+pub fn get_tick_location(start_tick_index: i32, tick_index: i32, tick_spacing: u16) -> Result<i32> {
+    if tick_index < start_tick_index {
+        return Err(SureError::InvalidTick.into());
+    }
+    let tick_diff = tick_index - start_tick_index;
+
+    if tick_diff % tick_spacing as i32 != 0 {
+        return Err(SureError::InvalidTick.into());
+    }
+
+    if tick_spacing == 0 {
+        return Err(SureError::InvalidTickSpacing.into());
+    }
+    let tick_location = tick_diff / tick_spacing as i32;
+    if tick_location < 0 || tick_location >= NUM_TICKS_IN_TICK_ARRAY {
+        return Err(SureError::InvalidTick.into());
+    }
+    Ok(tick_location)
 }
 
 /// Tick Array Pool
@@ -535,6 +549,24 @@ impl<'info> TickArrayPool<'info> {
         }
     }
 
+    /// Max tick index
+    ///
+    /// Find the max tick index in the array
+    pub fn max_tick_index(&self, tick_spacing: u16) -> Result<i32> {
+        let len_array = self.arrays.len();
+        let last_array = self.arrays.get(len_array - 1).unwrap();
+        Ok(last_array.get_max_tick_index(tick_spacing))
+    }
+
+    /// Max sqrt price
+    ///
+    /// Calculate the max price in the array
+    /// return: sqrt_price: 32.32
+    pub fn max_sqrt_price_x32(&self, tick_spacing: u16) -> Result<u64> {
+        let tick_index = self.max_tick_index(tick_spacing)?;
+        get_sqrt_ratio_at_tick(tick_index)
+    }
+
     /// Find the next tick with free/available liquidity that contains
     /// available liquidity
     ///
@@ -559,7 +591,7 @@ impl<'info> TickArrayPool<'info> {
             };
 
             let tick_index =
-                tick_array.find_next_available_tick_index(next_tick_index, tick_spacing, true)?;
+                tick_array.find_next_available_tick_index(next_tick_index, tick_spacing, a_to_b)?;
 
             match tick_index {
                 Some(tick_index) => return Ok((next_tick_array_index, tick_index)),

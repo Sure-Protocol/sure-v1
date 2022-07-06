@@ -117,6 +117,9 @@ pub enum SureError {
     #[msg("Q32.32 Substraction error")]
     SubtractionQ3232Error,
 
+    #[msg("Q32.32 Addition overflow")]
+    AdditionQ3232OverflowError,
+
     #[msg("U64 overflow")]
     OverflowU64,
 }
