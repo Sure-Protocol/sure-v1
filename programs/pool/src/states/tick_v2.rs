@@ -88,7 +88,7 @@ impl Tick {
         self.liquidity_gross + liquidity_net_abs - self.liquidity_locked
     }
 
-    /// Buy Coverage
+    /// Calculate coverage delta
     ///
     /// Coverage is bought from each tick.
     /// Calculate
@@ -101,114 +101,118 @@ impl Tick {
     /// Returns:
     ///     - fee_amount: the amount to be used to pay fees
     ///     - amount_in: the amount to pay into vault 0
-    ///     - amount_out: the amount going out of vault 1
+    ///     - amount_out: the amount to withdraw from vault 1
     ///
     /// <checkpoint>
     /// TODO: rewrite to use amount in and amount out
-    pub fn update_coverage(
+    pub fn calculate_coverage_delta(
         &self,
         tick_index: i32,
-        coverage_amount: u64,
-        coverage_delta: u64,
+        coverage_delta: u64,         // the change in coverage > 0
+        current_covered_amount: u64, // Current covered amount
         fee_rate: u16,
+        current_start_ts: i64,
+        expiry_ts: i64,
         increase: bool,
     ) -> Result<(u64, u64, u64)> {
         let available_liquidity = self.get_available_liquidity();
 
         // calculate premium
         let sqrt_price_x32 = get_sqrt_ratio_at_tick(tick_index)?;
-        let premium = calculate_premium_amount(sqrt_price_x32, coverage_delta)?;
+
+        let remaining_premium =
+            calculate_premium(sqrt_price_x32, current_covered_amount, expiry_ts)?;
+        // calculates premium
+        let (increase_premium, premium_delta) =
+            calculate_premium_diff(remaining_premium, sqrt_price_x32, coverage_delta, expiry_ts)?;
 
         // calculate base fee amount of amount
         let fee_amount = coverage_delta
             .wrapping_mul(fee_rate as u64)
             .wrapping_div(MAX_100th_BP - fee_rate as u64);
 
-        let amount_in = coverage_amount;
-        let amount_out = coverage_amount.wrapping_sub(coverage_delta);
+        let (amount_in, amount_out) = if increase_premium {
+            (premium_delta, 0)
+        } else {
+            (0, premium_delta)
+        };
 
         Ok((fee_amount, amount_in, amount_out))
     }
 
-    /// Update tick on Buy
-    ///
-    /// update tick position when it is used to buy from
-    /// buy operations includes
-    ///     - insurance
-    ///     - swap
-    ///     - lending
-    pub fn update_tick_on_buy(
-        &mut self,
-        a_to_b: bool,
-        liquidity: u64,
+    /// Calculate Coverage update
+    pub fn calculate_coverage_update( &self,
+        increase_coverage: bool,
+        current_liquidity: u64,
+        coverage_tick_delta: u64,
         fee_growth_global_0_x32: u64,
         fee_growth_global_1_x32: u64,
-    ) -> Result<(u64)> {
+    ) -> Result<(TickUpdate,u64)> {
+        let liquidity_locked = if increase_coverage {
+            self.liquidity_locked.checked_add(coverage_tick_delta).ok_or(SureError::AdditionQ3232OverflowError)?
+        }else{
+            self.liquidity_locked.checked_sub(coverage_tick_delta).ok_or(SureError::SubtractionQ3232Error)?
+        };
+
+        let fee_growth_outside_0_x32 =
+            fee_growth_global_0_x32.wrapping_sub(self.fee_growth_outside_0_x32);
+        let fee_growth_outside_1_x32 =
+            fee_growth_global_1_x32.wrapping_sub(self.fee_growth_outside_1_x32);
+        let next_liquidity = current_liquidity;
+        
+        Ok((TickUpdate{
+            initialized: true,
+            liquidity_net: self.liquidity_net,
+            liquidity_gross: self.liquidity_gross,
+            liquidity_locked: liquidity_locked,
+            fee_growth_outside_0: fee_growth_outside_0_x32,
+            fee_growth_outside_1: fee_growth_global_1_x32,
+        },next_liquidity))
+    }  
+    
+
+    pub fn calculate_swap_update(
+        &self,
+        a_to_b: bool,
+        current_liquidity: u64,
+        fee_growth_global_0_x32: u64,
+        fee_growth_global_1_x32: u64,
+    ) -> Result<(TickUpdate,u64)>{
         let liquidity_net: i64 = if a_to_b {
             -self.liquidity_net
         } else {
             self.liquidity_net
         };
 
-        self.fee_growth_outside_0_x32 =
+        let fee_growth_outside_0_x32 =
             fee_growth_global_0_x32.wrapping_sub(self.fee_growth_outside_0_x32);
-        self.fee_growth_outside_1_x32 =
+        let fee_growth_outside_1_x32 =
             fee_growth_global_1_x32.wrapping_sub(self.fee_growth_outside_1_x32);
-        let next_liquidity = add_liquidity_delta(liquidity, liquidity_net)?;
-        Ok(next_liquidity)
+        let next_liquidity = add_liquidity_delta(current_liquidity, liquidity_net)?;
+        
+        Ok((TickUpdate{
+            initialized: true,
+            liquidity_net: liquidity_net,
+            liquidity_gross: self.liquidity_gross,
+            liquidity_locked: self.liquidity_locked,
+            fee_growth_outside_0: fee_growth_outside_0_x32,
+            fee_growth_outside_1: fee_growth_global_1_x32,
+        },next_liquidity))
     }
 
+ 
     /// Update Tick
     ///
     /// update the tick liquidity is added or subtracted
     pub fn update_tick(
         &mut self,
-        tick_index: i32,
-        tick_current_index: i32,
-        fee_growth_global_0_x32: u64,
-        fee_growth_global_1_x32: u64,
-        liquidity_delta: i64,
-        is_upper_tick: bool,
+       tick_update:TickUpdate,
     ) -> Result<()> {
-        if liquidity_delta == 0 {
-            return Ok(());
-        }
-
-        let liquidity_gross = calculate_new_liquidity(self.liquidity_gross, liquidity_delta)?;
-        if liquidity_gross == 0 {
-            return Ok(());
-        }
-
-        // tick is uninitialized
-        let (fee_growth_outside_0_x32, fee_growth_outside_1_x32) = if self.liquidity_gross == 0 {
-            if tick_current_index >= tick_index {
-                (fee_growth_global_0_x32, fee_growth_global_1_x32)
-            } else {
-                (0, 0)
-            }
-        } else {
-            (self.fee_growth_outside_0_x32, self.fee_growth_outside_1_x32)
-        };
-
-        // Calculate the net liquidity
-        let liquidity_net = if is_upper_tick {
-            self.liquidity_net
-                .checked_sub(liquidity_delta)
-                .ok_or(SureError::LiquidityOverflow)?
-        } else {
-            self.liquidity_net
-                .checked_add(liquidity_delta)
-                .ok_or(SureError::LiquidityOverflow)?
-        };
-
-        let liquidity_locked = 0;
-        self.update(&NewTick {
-            liquidity_net,
-            liquidity_gross,
-            liquidity_locked,
-            fee_growth_outside_0_x32,
-            fee_growth_outside_1_x32,
-        });
+        self.liquidity_net = tick_update.liquidity_net;
+        self.liquidity_gross = tick_update.liquidity_gross;
+        self.liquidity_locked = tick_update.liquidity_locked;
+        self.fee_growth_outside_0_x32 = tick_update.fee_growth_outside_0;
+        self.fee_growth_outside_1_x32 = tick_update.fee_growth_outside_1;
 
         Ok(())
     }
@@ -382,6 +386,7 @@ impl TickArray {
         Ok(())
     }
 
+
     // Get the maximum tick index in the array
     pub fn get_max_tick_index(&self, tick_spacing: u16) -> i32 {
         self.start_tick_index + tick_spacing as i32 * NUM_TICKS_IN_TICK_ARRAY
@@ -487,7 +492,7 @@ impl TickArray {
         self.find_next_conditional_tick_index(tick_index, tick_spacing, a_to_b, |tick: &Tick| true)
     }
 
-    pub fn get_tick(&mut self, tick_index: i32, tick_spacing: u16) -> Result<&Tick> {
+    pub fn get_tick(&self, tick_index: i32, tick_spacing: u16) -> Result<&Tick> {
         if !self.validate_tick_index(tick_index, tick_spacing)
             || !Tick::is_valid_tick(tick_index, tick_spacing)
         {
@@ -497,6 +502,30 @@ impl TickArray {
         let tick_location = get_tick_location(self.start_tick_index, tick_index, tick_spacing)?;
         Ok(&self.ticks[tick_location as usize])
     }
+
+
+    pub fn update_tick(&mut self,   tick_index: i32,
+        tick_spacing: u16, tick_update: TickUpdate) -> Result<()>{
+        if !self.validate_tick_index(tick_index, tick_spacing)
+        || !Tick::is_valid_tick(tick_index, tick_spacing)
+    {
+        return Err(SureError::InvalidTick.into());
+    }
+    let tick_location = get_tick_location(self.start_tick_index, tick_index, tick_spacing)?;
+
+    self.ticks.get_mut(tick_location as usize).unwrap().update_tick(tick_update)?;
+    Ok(())
+
+    }
+}
+
+pub struct TickUpdate{
+    pub initialized: bool,
+    pub liquidity_net: i64,
+    pub liquidity_gross: u64,
+    pub liquidity_locked: u64,
+    pub fee_growth_outside_0: u64,
+    pub fee_growth_outside_1: u64,
 }
 
 /// Get the index [0,64] in the tick array where the
@@ -535,7 +564,7 @@ impl<'info> TickArrayPool<'info> {
         ta1: Option<RefMut<'info, TickArray>>,
         ta2: Option<RefMut<'info, TickArray>>,
     ) -> Self {
-        let tick_array_pool = Vec::with_capacity(3);
+        let mut tick_array_pool = Vec::with_capacity(3);
         tick_array_pool.push(ta0);
         if ta1.is_some() {
             tick_array_pool.push(ta1.unwrap());
@@ -566,6 +595,8 @@ impl<'info> TickArrayPool<'info> {
         let tick_index = self.max_tick_index(tick_spacing)?;
         get_sqrt_ratio_at_tick(tick_index)
     }
+
+  
 
     /// Find the next tick with free/available liquidity that contains
     /// available liquidity

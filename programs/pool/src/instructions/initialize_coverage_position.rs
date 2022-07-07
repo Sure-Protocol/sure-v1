@@ -82,7 +82,9 @@ pub fn handler(ctx: Context<InitializeCoveragePosition>, start_tick_index: i32) 
     let position_owner = &ctx.accounts.user;
     let coverage_position = &ctx.accounts.coverage_position.load_init()?;
 
+    let coverage_position_bump = *ctx.bumps.get("coverage_position").unwrap();
     coverage_position.initialize(
+        coverage_position_bump,
         position_owner,
         ctx.accounts.position_mint.key(),
         start_tick_index,

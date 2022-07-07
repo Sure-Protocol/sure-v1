@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use crate::states::{tick_v2::{TickArray,TickArrayPool},Pool,CoveragePosition};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{TokenAccount,Mint,Token,ID};
@@ -32,9 +34,9 @@ pub struct IncreaseCoveragePosition<'info> {
     /// Coverage Position
     #[account(
         mut, 
-        constraint = coverage_position.position_mint == position_mint.key()
+        constraint = coverage_position.load()?.position_mint == position_mint.key()
     )]
-    pub coverage_position: Box<Account<'info, CoveragePosition>>,
+    pub coverage_position: AccountLoader<'info, CoveragePosition>,
 
     /// Coverage position owner token account
     #[account(
@@ -88,24 +90,30 @@ pub struct IncreaseCoveragePosition<'info> {
 /// 
 /// Premium is paid into seperate premium vault.  
 /// The premium can be collected at any time 
-pub fn handler(ctx: Context<IncreaseCoveragePosition>,coverage_amount: u64,expiry_ts: i64) -> Result<()>{
-    let pool = &ctx.accounts.pool;
+/// 
+/// * parameters
+/// - coverage_amount: the amount to decrease the position with
+/// - expiry_ts: the expiration of the contract
+/// - is_target_amount: is coverage_amount the targetted coverage amount 
+///                     or the amount to reduce the position with 
+pub fn handler(ctx: Context<IncreaseCoveragePosition>,coverage_amount: u64,expiry_ts: i64,is_target_amount: bool) -> Result<()>{
+    let pool = ctx.accounts.pool.as_mut();
     let coverage_buyer = &ctx.accounts.owner;
     let premium_vault = &ctx.accounts.token_vault_1;
     let coverage_buyer_account = &ctx.accounts.token_owner_account_0;
-    let coverage_position = &ctx.accounts.coverage_position;
+    let mut coverage_position = ctx.accounts.coverage_position.load_mut()?;
 
 
     // Validate the coverage position
     account::validate_token_account_ownership(&ctx.accounts.position_token_account, &ctx.accounts.owner)?;
 
-    let mut tick_array_pool = TickArrayPool::new(ctx.accounts.tick_array_0.load_mut().unwrap(), ctx.accounts.tick_array_1.load_mut().ok(), ctx.accounts.tick_array_2.load_mut().ok());
+    let tick_array_pool = TickArrayPool::new(ctx.accounts.tick_array_0.load_mut().unwrap(), ctx.accounts.tick_array_1.load_mut().ok(), ctx.accounts.tick_array_2.load_mut().ok());
     
     // Calculate the coverage 
-    let coverage_result = pool.update_coverage(tick_array_pool, coverage_amount,false)?;
+    let coverage_result = pool.update_coverage(tick_array_pool,coverage_position,coverage_amount,expiry_ts,false,false)?;
 
     // update pool
-    pool.update_after_coverage_change(coverage_result)?;
+    pool.update_after_coverage_change(coverage_result.borrow())?;
 
     // ---
     // deposit premium and fees into vault 
@@ -114,7 +122,6 @@ pub fn handler(ctx: Context<IncreaseCoveragePosition>,coverage_amount: u64,expir
 
     // Update coverage position
     coverage_position.update_from_coverage_update(coverage_result, expiry_ts);
-
 
     Ok(())
 

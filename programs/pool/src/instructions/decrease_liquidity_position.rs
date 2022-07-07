@@ -81,8 +81,8 @@ pub fn handler(
     token_min_a: u64,
     token_min_b: u64,
 ) -> Result<()> {
-    let pool = &ctx.accounts.pool;
-    let liquidity_position = &ctx.accounts.liquidity_position;
+    let pool = ctx.accounts.pool.as_mut();
+    let liquidity_position = ctx.accounts.liquidity_position.as_mut();
     if liquidity_amount == 0 {
         return Err(SureError::LiquidityHaveToBeGreaterThan0.into());
     }

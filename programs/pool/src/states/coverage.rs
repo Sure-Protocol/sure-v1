@@ -1,9 +1,8 @@
-use std::mem::size_of;
-
 ///! Insurance contract representing the proof
 ///! that a user has insurance
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
+use std::mem::size_of;
 
 use crate::common::errors::SureError;
 use crate::common::tick_math::get_sqrt_ratio_at_tick;
@@ -52,6 +51,9 @@ impl CoveragePositions {
 #[account(zero_copy)]
 #[repr(packed)]
 pub struct CoveragePosition {
+    // bump seed
+    pub bump: u8,
+
     /// Pool insured against
     pub pool: Pubkey,
 
@@ -60,6 +62,9 @@ pub struct CoveragePosition {
 
     /// Contract expiry
     pub expiry_ts: i64, // 8 byte
+
+    /// Contract start time
+    pub start_ts: i64, //8 byte
 
     /// Contract Amount
     pub covered_amount: u64, // 8 byte
@@ -75,20 +80,26 @@ pub struct CoveragePosition {
 
     /// Coverage amount at Ticks
     pub coverage_amount_ticks: [u64; NUM_TICKS_IN_COVERAGE_POSITION_usize], // 8*64*3 = 1_536 bytes
+
+    /// is active
+    pub is_active: bool,
 }
 
 impl Default for CoveragePosition {
     #[inline]
     fn default() -> Self {
         CoveragePosition {
+            bump: 0,
             pool: Pubkey::default(),
             position_mint: Pubkey::default(),
             expiry_ts: 0,
+            start_ts: 0,
             covered_amount: 0,
             owner: Pubkey::default(),
             start_tick_index: 0,
             last_covered_tick_index: 0,
             coverage_amount_ticks: [0; NUM_TICKS_IN_COVERAGE_POSITION_usize],
+            is_active: false,
         }
     }
 }
@@ -103,6 +114,7 @@ impl CoveragePosition {
 
     pub fn initialize(
         &mut self,
+        bump: u8,
         position_owner: &Signer,
         position_mint: Pubkey,
         start_tick_index: i32,
@@ -110,11 +122,13 @@ impl CoveragePosition {
         let clock = Clock::get()?;
         let timestamp_now = clock.unix_timestamp;
 
+        self.bump = bump;
         self.expiry_ts = timestamp_now;
         self.covered_amount = 0;
         self.position_mint = position_mint;
         self.owner = position_owner.key();
         self.start_tick_index = start_tick_index;
+        self.is_active = false;
         Ok(())
     }
 
@@ -155,6 +169,20 @@ impl CoveragePosition {
         }
     }
 
+    /// Set start time for contract
+    pub fn update_start_time(&mut self) -> Result<()> {
+        if self.covered_amount == 0 {
+            self.is_active = false;
+            self.start_ts = 0;
+        }
+
+        let time = Clock::get()?;
+        let timestamp = time.unix_timestamp;
+        self.start_ts = timestamp;
+        self.is_active = true;
+        Ok(())
+    }
+
     /// Update coverage position
     ///
     /// update based on change at tick
@@ -165,10 +193,11 @@ impl CoveragePosition {
         &mut self,
         tick_index: i32,
         tick_spacing: u16,
-        amount_in: u64,
-        a_to_b: bool,
+        coverage_delta: u64,
+        expiry_ts: i64,
+        increase: bool,
     ) -> Result<()> {
-        if self.is_tick_index_out_of_bounds(tick_index, tick_spacing, a_to_b) {
+        if self.is_tick_index_out_of_bounds(tick_index, tick_spacing, increase) {
             return Err(SureError::TickOutOfRange.into());
         }
 
@@ -178,9 +207,55 @@ impl CoveragePosition {
         }
 
         let tick_location = get_tick_location(self.start_tick_index, tick_index, tick_spacing)?;
-        self.coverage_amount_ticks[tick_location as usize] += amount_in;
 
+        // update the coverage amount at the tick
+        if increase {
+            self.covered_amount = self
+                .covered_amount
+                .checked_add(coverage_delta)
+                .ok_or(SureError::AdditionQ3232OverflowError)?;
+            self.coverage_amount_ticks[tick_location as usize] = self.coverage_amount_ticks
+                [tick_location as usize]
+                .checked_add(coverage_delta)
+                .ok_or(SureError::AdditionQ3232OverflowError)?;
+        } else {
+            self.covered_amount = self
+                .covered_amount
+                .checked_sub(coverage_delta)
+                .ok_or(SureError::SubtractionQ3232Error)?;
+
+            self.coverage_amount_ticks[tick_location as usize] = self.coverage_amount_ticks
+                [tick_location as usize]
+                .checked_sub(coverage_delta)
+                .ok_or(SureError::AdditionQ3232OverflowError)?;
+        }
+
+        // update the last tick active tick index
+        if self.coverage_amount_ticks[tick_location as usize] > 0 {
+            self.last_covered_tick_index = self.last_covered_tick_index.max(tick_index);
+        } else {
+            self.last_covered_tick_index = self.get_last_coverage_position()?;
+        }
+
+        self.expiry_ts = expiry_ts;
+
+        // check if the contract is active
+        self.update_start_time()?;
         Ok(())
+    }
+
+    /// Get the last covered tick
+    ///
+    /// Find first non-empty position in the reversed
+    /// coverage amount array.
+    ///
+    /// Return 192 - last_nonempty_reversed_position
+    pub fn get_last_coverage_position(&self) -> Result<i32> {
+        let mut rev_coverage_amounts = self.coverage_amount_ticks;
+        rev_coverage_amounts.reverse();
+        let last_position = NUM_TICKS_IN_COVERAGE_POSITION_usize
+            - rev_coverage_amounts.iter().position(|&a| a != 0).unwrap();
+        Ok(last_position as i32)
     }
 
     /// Check if the provided tick_index is beyond the bounds

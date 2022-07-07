@@ -1,6 +1,6 @@
-use std::cell::RefMut;
+use std::{cell::RefMut, borrow::Borrow};
 
-use super::fee::FeePackage;
+use super::{fee::FeePackage, tick_v2::TickUpdate};
 use crate::common::{
     errors::SureError, liquidity::calculate_new_liquidity, seeds::*, tick_math::*,
 };
@@ -59,7 +59,7 @@ impl ProductPool {
 #[account]
 pub struct Pool {
     /// bump
-    pub bump: u8, // 1 byte
+    pub bump_array: [u8;1], // 1 byte
 
     /// ProductId
     pub productId: u8,
@@ -72,6 +72,7 @@ pub struct Pool {
 
     /// space between each tick in basis point
     pub tick_spacing: u16,
+    pub tick_spacing_seed: [u8;2],
 
     /// fee rate for each transaction in pool
     // hundreth of a basis point i.e. fee_rate = 1 = 0.01 bp = 0.00001%
@@ -128,8 +129,8 @@ impl Pool {
             &SURE_TOKEN_POOL_SEED.as_bytes() as &[u8],
             self.token_mint_0.as_ref(),
             self.token_mint_1.as_ref(),
-            self.tick_spacing.to_le_bytes().as_ref(),
-            &[self.bump],
+            self.tick_spacing_seed.as_ref(),
+            self.bump_array.as_ref(),
         ]
     }
 
@@ -147,11 +148,13 @@ impl Pool {
         pool_vault_0: Pubkey,
         pool_vault_1: Pubkey,
     ) -> Result<()> {
-        self.bump = bump;
+        self.bump_array = bump.to_le_bytes();
+
         self.productId = productId;
         self.name = name;
         self.founder = founder;
         self.tick_spacing = tick_spacing;
+        self.tick_spacing_seed = tick_spacing.to_le_bytes();
         fee_package.validate_fee_rates()?;
 
         self.fee_rate = fee_package.fee_rate;
@@ -242,7 +245,7 @@ impl Pool {
     /// Update the pool after a coverage change
     pub fn update_after_coverage_change(
         &mut self,
-        buy_coverage_result: BuyCoverageResult,
+        buy_coverage_result: &BuyCoverageResult,
     ) -> Result<()> {
         self.current_tick_index = buy_coverage_result.next_tick_index;
         self.sqrt_price_x32 = buy_coverage_result.next_sqrt_price;
@@ -278,9 +281,11 @@ impl Pool {
     pub fn update_coverage(
         &mut self,
         tick_array_pool: TickArrayPool,
-        coverage_position: RefMut<CoveragePosition>,
+        mut coverage_position: RefMut<CoveragePosition>,
         coverage_amount_delta: u64,
+        expiry_ts: i64,
         increase_coverage: bool,
+        is_target_amount: bool,
     ) -> Result<BuyCoverageResult> {
         // If we are reducing the coverage position
         // we are actually moving downwards from
@@ -291,7 +296,7 @@ impl Pool {
         }
 
         let mut coverage_amount_remaining = coverage_amount_delta; // given in u64
-        let mut coverage_amount = 0; // amount that is covered
+        let mut coverage_amount: u64 = 0; // amount that is covered
         let mut coverage_premium: u64 = 0; // premium to be deposited
 
         let mut current_liquidity = self.liquidity; // u64 given in token 0
@@ -317,8 +322,6 @@ impl Pool {
 
         // Fee rates
         let fee_rate = self.fee_rate;
-        let protocol_fee = self.protocol_fee_rate;
-        let founders_rate = self.founders_fee_rate;
 
         // while the coverage amount remaining is greater
         // than 0 and there is more liquidity
@@ -344,34 +347,53 @@ impl Pool {
 
             //
             let current_tick_array = tick_array_pool.arrays.get(tick_array_index).unwrap();
-            let current_tick = current_tick_array.get_tick(next_tick_index, self.tick_spacing)?;
+            let mut current_tick = current_tick_array.get_tick(next_tick_index, self.tick_spacing)?;
 
-            /// calculate tick change
+            // calculate tick change
+            let current_covered_amount =
+                coverage_position.get_coverage_at_tick_index(next_tick_index, self.tick_spacing)?;
             let coverage_tick_delta = if increase_coverage {
                 current_tick
                     .get_available_liquidity()
                     .min(coverage_amount_remaining)
             } else {
-                coverage_position.get_coverage_at_tick_index(next_tick_index, self.tick_spacing)?
+                current_covered_amount.min(coverage_amount_remaining)
             };
 
-            let (fee_amount, amount_in, amount_out) = current_tick.update_coverage(
+            // Calculate the fee and the in and out amounts
+            let (fee_amount, amount_in, amount_out) = current_tick.calculate_coverage_delta(
                 next_tick_index,
-                coverage_amount,
+                coverage_tick_delta,
+                current_covered_amount,
                 fee_rate,
+                coverage_position.expiry_ts,
+                expiry_ts,
                 increase_coverage,
             )?;
 
-            coverage_amount_remaining = coverage_amount_remaining
-                .checked_sub(amount_in)
-                .ok_or(SureError::OverflowU64)?;
-            coverage_amount = coverage_amount
-                .checked_add(amount_out)
-                .ok_or(SureError::OverflowU64)?;
+            // calculate remaining coverage
+            if increase_coverage {
+                coverage_amount_remaining = coverage_amount_remaining
+                    .checked_sub(coverage_tick_delta)
+                    .ok_or(SureError::OverflowU64)?;
+                coverage_amount = coverage_amount
+                    .checked_add(coverage_tick_delta)
+                    .ok_or(SureError::OverflowU64)?;
+            } else {
+                coverage_amount_remaining = coverage_amount_remaining
+                    .checked_sub(coverage_tick_delta)
+                    .ok_or(SureError::OverflowU64)?;
+                coverage_amount = coverage_amount
+                    .checked_sub(coverage_tick_delta)
+                    .ok_or(SureError::OverflowU64)?;
+            }
 
             // calculate premium based on current price
-            let premium = calculate_premium_amount(current_sqrt_price, coverage_amount)?;
-            coverage_premium += premium;
+            coverage_premium += if increase_coverage {
+                amount_in
+            } else {
+                amount_out
+            };
 
             // Calculate fees
             let (next_protocol_fee, next_founders_fee, next_fee_growth) = calculate_fees(
@@ -388,11 +410,13 @@ impl Pool {
             current_fee_growth = next_fee_growth;
 
             // Update tick
-            let next_liquidity = current_tick.update_tick_on_buy(
-                true,
-                current_liquidity,
-                current_fee_growth,
-                self.fee_growth_1_x32,
+            let (fee_growth_0,fee_growth_1) = (current_fee_growth,self.fee_growth_1_x32);
+          
+            let (tick_update,next_liquidity) = current_tick.calculate_coverage_update(increase_coverage, current_liquidity, coverage_tick_delta,fee_growth_0, fee_growth_1)?;
+            current_tick_array.update_tick(
+                next_tick_index,
+                self.tick_spacing,
+                tick_update
             )?;
             current_liquidity = next_liquidity;
 
@@ -400,8 +424,9 @@ impl Pool {
             coverage_position.update_coverage_at_tick(
                 next_tick_index,
                 self.tick_spacing,
-                amount_in,
-                a_to_b,
+                coverage_tick_delta,
+                expiry_ts,
+                increase_coverage,
             )?;
 
             // if current tick is the last tick in the

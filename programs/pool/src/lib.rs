@@ -13,17 +13,6 @@ pub mod sure_pool {
 
     use super::*;
 
-    /// Initialize Policy Holder
-    ///
-    /// Prepare a new user for buying insurance
-    ///
-    /// # Arguments
-    ///
-    /// * ctx - initialize the manager
-    ///
-    pub fn initialize_customer(ctx: Context<InitializeCustomer>) -> Result<()> {
-        instructions::initialize_customer::handler(ctx)
-    }
     /// Initialize Token Pool
     ///
     /// Initialize
@@ -36,39 +25,83 @@ pub mod sure_pool {
     /// # Arguments
     /// * ctx:
     ///
-    pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()> {
-        instructions::initialize_pool::handler(ctx)
+    pub fn initialize_pool(
+        ctx: Context<InitializePool>,
+        productId: u8,
+        tick_spacing: u16,
+        sqrt_price_x32: u64,
+        name: String,
+    ) -> Result<()> {
+        instructions::initialize_pool::handler(ctx, productId, tick_spacing, sqrt_price_x32, name)
     }
 
-    /// Deposit liquidity into pool
-    /// Let any user deposit tokens into the vault associated
-    /// with the given pool
+    /// Initialize Tick Array
     ///
-    /// # Argument
+    /// ### Arguments
+    /// - start_tick_index<i32>: index in [-221 818,221 818]
+    pub fn initialize_tick_array(
+        ctx: Context<InitializeTickArray>,
+        start_tick_index: i32,
+    ) -> Result<()> {
+        instructions::initialize_tick_array::handler(ctx, start_tick_index)
+    }
+
+    /// Initialize Liquidity Positon
+    ///
+    /// initializes a liquidity position
+    ///
+    /// ### Arguments
+    /// - tick_index_upper<i32>: the upper tick index in the position
+    /// - tick_index_lower<i32>: the lower tick index in the position
+    pub fn initialize_liquidity_position(
+        ctx: Context<InitializeLiquidityPosition>,
+        tick_index_upper: i32,
+        tick_index_lower: i32,
+    ) -> Result<()> {
+        instructions::initialize_liquidity_position::handler(
+            ctx,
+            tick_index_upper,
+            tick_index_lower,
+        )
+    }
+
+    /// Initialize Coverage Position
+    ///
+    /// Creates a new coverage position
+    ///
+    /// ### Arguments
+    /// - start_tick_index<i32>: the tick index to start the contract at. The upper bound
+    ///                          is start_tick_index + 64*3*tick_spacing
+    pub fn initialize_coverage_position(
+        ctx: Context<InitializeCoveragePosition>,
+        start_tick_index: i32,
+    ) -> Result<()> {
+        instructions::initialize_coverage_position::handler(ctx, start_tick_index)
+    }
+
+    /// Increase Liquidity Position
+    ///
+    /// Lets a user update the liquidity position with more
+    /// liquidity.
+    ///
+    /// The product id of the pool determines the interpretation of the arguments
+    ///
+    /// ### Arguments
     /// * ctx:
-    /// * tick (bp): Tick to provide liquidity at
-    /// * amount: Amount of liquidity to place at given tick
-    /// * liquidity_position_id: should be an id that is currently not in the tick pool
+    /// * amount<u64>: the amount of liquidity to add to the position. Denominated in token 0
+    /// * max_token_0: the max amount of token 0 to input
+    /// * min_token_0: the min amount of token 0 to input
     pub fn increase_liquidity_position(
         ctx: Context<IncreaseLiquidityPosition>,
-        tick: u16,
-        tick_pos: u64,
         amount: u64,
+        max_token_0: u64,
+        min_token_0: u64,
     ) -> Result<()> {
-        instructions::increase_liquidity_position::handler(ctx, tick, tick_pos, amount)
+        instructions::increase_liquidity_position::handler(ctx, amount, max_token_0, min_token_0)
     }
 
-    /// Update Rewards
+    /// Decrease Liquidity Position
     ///
-    /// Crank for updating the rewards for each liquidity position in the
-    /// tick liquidity
-    ///
-    /// # Arguments
-    /// * ctx:
-    ///
-    //pub fn update_rewards_in_tick(ctx: )
-
-    /// Redeem liquidity
     /// A holder can redeem liquidity that is not in use.
     /// position is used can redeem the unused liquidity.
     ///
@@ -78,94 +111,17 @@ pub mod sure_pool {
     /// # Arguments
     /// * ctx
     ///
-    pub fn decrease_liquidity_position(ctx: Context<DecreaseLiquidityPosition>) -> Result<()> {
-        instructions::decrease_liquidity_position::handler(ctx)
-    }
-
-    /// --- Initialize: User Pool Insurance Contract ---
-    ///
-    /// Creates a new insurance contract for a user for the given pool
-    ///
-    /// Initializes
-    ///     - insurance_pool_contract_bitmap: accumulative insurance contract information
-    ///     - insurance_pool_contract_info:   keeps tracks of ticks used by the user insurance contract
-    ///
-    /// # Arguments
-    /// * ctx
-    ///
-    pub fn initialize_pool_contract(ctx: Context<InitializePoolContract>) -> Result<()> {
-        instructions::initialize_pool_contract::handler(ctx)
-    }
-
-    /// --- Initialize Insurance Contract ---
-    ///
-    ///  Let a user create an insurance contract with a tick account
-    /// in a Sure pool.
-    ///
-    /// Initializes:
-    ///     - insurance_tick_contract: holds information about the insurance for a user at the given tick
-    ///
-    /// # Arguments
-    /// * ctx: Contains the pool, insurance contract and signer
-    ///
-    pub fn initialize_pool_tick_contract(ctx: Context<InitializePoolTickContract>) -> Result<()> {
-        instructions::initialize_pool_tick_contract::handler(ctx)
-    }
-
-    /// --- Update Insurance Tick Contract ---
-    ///
-    /// Updates the insurance contract for the given tick and the pool contract information
-    /// and bitmap.
-    ///
-    /// Initializes:
-    ///     <nothing>
-    ///
-    /// TODO: Allow for unlocking of insured amount
-    ///
-    /// # Arguments
-    /// * ctx
-    /// * new_insured_amount_on_tick: Final insurance amount for tick
-    /// * new_expiry_ts: expiry of the contract in timestamp
-    ///
-    pub fn update_insurance_tick_contract(
-        ctx: Context<UpdatePoolTickContract>,
-        new_insured_amount_on_tick: u64,
-        new_expiry_ts: i64,
+    pub fn decrease_liquidity_position(
+        ctx: Context<DecreaseLiquidityPosition>,
+        liquidity_amount: u64,
+        token_min_a: u64,
+        token_min_b: u64,
     ) -> Result<()> {
-        instructions::update_pool_tick_contract::handler(
+        instructions::decrease_liquidity_position::handler(
             ctx,
-            new_insured_amount_on_tick,
-            new_expiry_ts,
+            liquidity_amount,
+            token_min_a,
+            token_min_b,
         )
-    }
-
-    /// --- Initialize Tick Account ---
-    ///
-    ///
-    /// Initializes:
-    ///     - tick_account: holds info about the liquidity for the given tick
-    ///
-    ///  # Argument
-    /// * ctx:
-    ///
-    pub fn initialize_pool_liquidity_tick(
-        ctx: Context<InitializePoolTickLiquidity>,
-        _pool: Pubkey,
-        _token: Pubkey,
-        tick_bp: u16,
-    ) -> Result<()> {
-        instructions::initialize_tick::handler(ctx, tick_bp)
-    }
-
-    /// --- Close Tick Account ---
-    ///
-    /// Closes tick account if there is no more liquidity in the account
-    /// and transfers the rent back
-    ///
-    /// # Arguments
-    /// * ctx
-    ///
-    pub fn close_pool_liquidity_tick(ctx: Context<ClosePoolLiquidityTick>) -> Result<()> {
-        instructions::close_pool_tick_liquidity::handler(ctx)
     }
 }
