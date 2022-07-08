@@ -17,7 +17,7 @@ use super::{
 #[account]
 pub struct ProductPool {
     // Product
-    pub productId: u8, // 1
+    pub product_id: u8, // 1
 
     /// Pools in the ProductPool
     pub pools: Vec<Pubkey>, // 4 + 32*64, 64 pools for each product
@@ -27,8 +27,8 @@ impl ProductPool {
     const MAX_POOLS: usize = 64;
     pub const SPACE: usize = 1 + 4 + 32 * 64;
 
-    pub fn initialize(&mut self, productId: u8) -> Result<()> {
-        self.productId = productId;
+    pub fn initialize(&mut self, product_id: u8) -> Result<()> {
+        self.product_id = product_id;
         self.pools = Vec::new();
         Ok(())
     }
