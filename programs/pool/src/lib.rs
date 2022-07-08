@@ -1,6 +1,7 @@
 pub mod common;
 pub mod instructions;
 pub mod states;
+pub mod factory;
 use crate::states::*;
 use anchor_lang::prelude::*;
 

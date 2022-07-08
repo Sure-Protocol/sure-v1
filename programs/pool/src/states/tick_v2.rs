@@ -88,6 +88,57 @@ impl Tick {
         self.liquidity_gross + liquidity_net_abs - self.liquidity_locked
     }
 
+    pub fn calculate_next_liquidity_update(&self,
+    tick_index: i32,tick_current_index: i32,fee_growth_global_0_x32: u64,fee_growth_global_1_x32: u64,liquidity_delta: i64,is_upper_tick: bool) -> Result<TickUpdate>{
+        if liquidity_delta == 0 {
+            return Ok(TickUpdate::from(self))
+        }
+
+        // add new liquidity to gross 
+        let next_liquidity_gross = add_liquidity_delta(self.liquidity_gross,liquidity_delta)?;
+
+        // 
+        if next_liquidity_gross == 0{
+            return Ok(TickUpdate::default())
+        }
+
+        let (next_fee_growth_outside_0,next_fee_growth_outside_1) = if self.liquidity_gross == 0{
+
+            if tick_current_index >= tick_index {
+                (
+                    fee_growth_global_0_x32,
+                    fee_growth_global_1_x32
+                )
+            }else{
+                (0,0)
+            }
+        }else{
+            (
+                self.fee_growth_outside_0_x32,
+                self.fee_growth_outside_1_x32
+            )
+        };
+
+        let next_liquidity_net = if is_upper_tick {
+            // at the upper tick the liquidity_net is negative
+            // for when b_to_a swaps
+            self.liquidity_net.checked_sub(liquidity_delta).ok_or(SureError::SubtractionQ3232Error)?
+        }else{
+
+            self.liquidity_net.checked_add(liquidity_delta).ok_or(SureError::AdditionQ3232OverflowError)?
+        };  
+
+        Ok(TickUpdate{
+            initialized: true,
+            liquidity_net: next_liquidity_net,
+            liquidity_gross: next_liquidity_gross,
+            liquidity_locked: self.liquidity_locked,
+            fee_growth_outside_0: next_fee_growth_outside_0,
+            fee_growth_outside_1: next_fee_growth_outside_1,
+        })
+
+    }
+
     /// Calculate coverage delta
     ///
     /// Coverage is bought from each tick.
@@ -206,7 +257,7 @@ impl Tick {
     /// update the tick liquidity is added or subtracted
     pub fn update_tick(
         &mut self,
-       tick_update:TickUpdate,
+       tick_update:&TickUpdate,
     ) -> Result<()> {
         self.liquidity_net = tick_update.liquidity_net;
         self.liquidity_gross = tick_update.liquidity_gross;
@@ -216,6 +267,8 @@ impl Tick {
 
         Ok(())
     }
+
+    
 
     /// Calculate the next fee growth within the
     /// range (lower,upper)
@@ -505,7 +558,7 @@ impl TickArray {
 
 
     pub fn update_tick(&mut self,   tick_index: i32,
-        tick_spacing: u16, tick_update: TickUpdate) -> Result<()>{
+        tick_spacing: u16, tick_update: &TickUpdate) -> Result<()>{
         if !self.validate_tick_index(tick_index, tick_spacing)
         || !Tick::is_valid_tick(tick_index, tick_spacing)
     {
@@ -519,6 +572,7 @@ impl TickArray {
     }
 }
 
+#[derive(Default, Debug, PartialEq)]
 pub struct TickUpdate{
     pub initialized: bool,
     pub liquidity_net: i64,
@@ -526,6 +580,13 @@ pub struct TickUpdate{
     pub liquidity_locked: u64,
     pub fee_growth_outside_0: u64,
     pub fee_growth_outside_1: u64,
+}
+
+impl TickUpdate{
+
+    pub fn from(tick: &Tick) -> Self{
+        TickUpdate { initialized:tick.is_initialized(), liquidity_net: tick.liquidity_net, liquidity_gross: tick.liquidity_gross, liquidity_locked: tick.liquidity_locked, fee_growth_outside_0: tick.fee_growth_outside_0_x32, fee_growth_outside_1: tick.fee_growth_outside_1_x32 }
+    }
 }
 
 /// Get the index [0,64] in the tick array where the
@@ -555,7 +616,7 @@ pub fn get_tick_location(start_tick_index: i32, tick_index: i32, tick_spacing: u
 /// Used for combining tick arrays and perform
 /// operations on top of each
 pub struct TickArrayPool<'info> {
-    pub arrays: Vec<RefMut<'info, TickArray>>,
+    arrays: Vec<RefMut<'info, TickArray>>,
 }
 
 impl<'info> TickArrayPool<'info> {
@@ -596,7 +657,21 @@ impl<'info> TickArrayPool<'info> {
         get_sqrt_ratio_at_tick(tick_index)
     }
 
-  
+
+    /// Get tick
+    /// 
+    /// get the tick in the sequence 
+    pub fn get_tick(&mut self,array_index:usize,tick_index:i32,tick_spacing:u16) -> Result<&Tick>{
+        let array = self.arrays.get_mut(array_index).unwrap();
+        array.get_tick(tick_index, tick_spacing)
+    }
+
+    /// Is Last tick in array
+    /// 
+    pub fn is_last_tick_index_in_array(&mut self,array_index:usize,tick_index: i32,tick_spacing: u16) -> Result<bool>{
+        let array = self.arrays.get_mut(array_index).unwrap();
+        array.is_last_tick(tick_index, tick_spacing)
+    }
 
     /// Find the next tick with free/available liquidity that contains
     /// available liquidity
@@ -659,4 +734,11 @@ impl<'info> TickArrayPool<'info> {
             }
         }
     }
+
+    pub fn update_tick(&mut self,
+    array_index:usize,tick_index: i32,
+tick_spacing: u16,tick_update: &TickUpdate) -> Result<()>{
+    let tick_array = self.arrays.get_mut(array_index).unwrap();
+    tick_array.update_tick(tick_index, tick_spacing, tick_update)
+}
 }

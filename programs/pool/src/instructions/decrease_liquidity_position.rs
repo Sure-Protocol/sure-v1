@@ -1,9 +1,11 @@
+use crate::common::account::validate_token_account_ownership;
 use crate::common::token_tx::withdraw_from_vault;
 use crate::common::{
     account,
     errors::SureError,
     liquidity::{calculate_token_0_delta, calculate_token_1_delta, validate_liquidity_amount},
 };
+use crate::factory::liquidity::*;
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token;
@@ -81,97 +83,48 @@ pub fn handler(
     token_min_a: u64,
     token_min_b: u64,
 ) -> Result<()> {
-    let pool = ctx.accounts.pool.as_mut();
-    let liquidity_position = ctx.accounts.liquidity_position.as_mut();
-    if liquidity_amount == 0 {
-        return Err(SureError::LiquidityHaveToBeGreaterThan0.into());
-    }
-
     // Check that the liquidity provider owns the
     // the liquidity position nft account
-    account::validate_token_account_ownership(
+    validate_token_account_ownership(
         &ctx.accounts.position_token_account,
         &ctx.accounts.liquidity_provider,
     )?;
 
-    let productId = pool.productId;
-
-    let liquidity_delta = validate_liquidity_amount(liquidity_amount, false)?;
-
-    // Calculate Tick changes
-    // Get Tick accounts
-    let tick_array_lower = &ctx.accounts.tick_array_lower.load()?;
-    let tick_lower =
-        tick_array_lower.get_tick(liquidity_position.tick_index_lower, pool.tick_spacing)?;
-    let tick_array_upper = &ctx.accounts.tick_array_upper.load()?;
-    let tick_upper =
-        tick_array_upper.get_tick(liquidity_position.tick_index_upper, pool.tick_spacing)?;
-
-    // Calculate the updated liquidity
-    let next_pool_liquidity = pool.get_next_liquidity(liquidity_position, liquidity_delta)?;
-
-    // Update lower tick
-    tick_lower.update_tick(
-        liquidity_position.tick_index_lower,
-        pool.get_current_tick_index()?,
-        pool.fee_growth_0_x32,
-        pool.fee_growth_1_x32,
-        liquidity_delta,
+    let updated_liquidity_state = build_new_liquidity_state(
+        ctx.accounts.liquidity_position.as_ref(),
+        ctx.accounts.pool.as_ref(),
+        &ctx.accounts.position_token_account,
+        &ctx.accounts.tick_array_lower,
+        &ctx.accounts.tick_array_upper,
+        liquidity_amount,
         false,
     )?;
-    // Update upper tick
-    tick_upper.update_tick(
-        liquidity_position.tick_index_upper,
-        pool.get_current_tick_index()?,
-        pool.fee_growth_0_x32,
-        pool.fee_growth_1_x32,
-        liquidity_delta,
-        true,
+
+    update_liquidity(
+        &mut ctx.accounts.pool,
+        &mut ctx.accounts.liquidity_position,
+        &ctx.accounts.tick_array_lower,
+        &ctx.accounts.tick_array_upper,
+        &updated_liquidity_state,
     )?;
 
-    // Calculate the growth in fees
-    let (fee_growth_inside_0, fee_growth_inside_1) = tick_lower.calculate_next_fee_growth(
-        liquidity_position.tick_index_lower,
-        tick_upper,
-        liquidity_position.tick_index_upper,
-        pool.get_current_tick_index()?,
-        pool.fee_growth_0_x32,
-        pool.fee_growth_1_x32,
-    )?;
-
-    // update liquidity position
-    liquidity_position.update(liquidity_delta, fee_growth_inside_0, fee_growth_inside_1)?;
-    // Update Pool liquidity
-    pool.update_liquidity(next_pool_liquidity)?;
-
-    let token_0_delta = calculate_token_0_delta(
-        liquidity_delta,
-        &liquidity_position,
-        pool.current_tick_index,
-    )?;
-
-    let token_1_delta = calculate_token_1_delta(
-        liquidity_delta,
-        &liquidity_position,
-        pool.current_tick_index,
-    )?;
-
-    // Deposit tokens 0 into vault
+    // Withdraw from vault to LP
     withdraw_from_vault(
-        &pool,
+        &ctx.accounts.pool,
         &ctx.accounts.vault_a,
         &ctx.accounts.origin_account_a,
         &ctx.accounts.token_program,
-        liquidity_amount,
+        updated_liquidity_state.token_0_delta,
     )?;
 
-    // Deposit token 1 into vault
+    // Withdraw from vault to LP
     withdraw_from_vault(
-        &pool,
+        &ctx.accounts.pool,
         &ctx.accounts.vault_b,
         &ctx.accounts.origin_account_b,
         &ctx.accounts.token_program,
-        liquidity_amount,
+        updated_liquidity_state.token_1_delta,
     )?;
+
     Ok(())
 }

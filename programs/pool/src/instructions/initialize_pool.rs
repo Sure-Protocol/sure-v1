@@ -85,7 +85,7 @@ pub fn handler(
     name: String,
 ) -> Result<()> {
     let pool = &mut ctx.accounts.pool;
-    let fee_package = ctx.accounts.fee_package.into_inner();
+    let fee_package = ctx.accounts.fee_package.as_ref();
     let token_mint_a = ctx.accounts.token_mint_a.key();
     let token_mint_b = ctx.accounts.token_mint_b.key();
     let pool_vault_a = ctx.accounts.pool_vault_a.key();

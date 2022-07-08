@@ -80,7 +80,7 @@ pub struct InitializeCoveragePosition<'info> {
 
 pub fn handler(ctx: Context<InitializeCoveragePosition>, start_tick_index: i32) -> Result<()> {
     let position_owner = &ctx.accounts.user;
-    let coverage_position = &ctx.accounts.coverage_position.load_init()?;
+    let mut coverage_position = ctx.accounts.coverage_position.load_init()?;
 
     let coverage_position_bump = *ctx.bumps.get("coverage_position").unwrap();
     coverage_position.initialize(

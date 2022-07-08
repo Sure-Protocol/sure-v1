@@ -141,7 +141,7 @@ impl Pool {
         name: String,
         founder: Pubkey,
         tick_spacing: u16,
-        fee_package: FeePackage,
+        fee_package: &Account<FeePackage>,
         sqrt_price_x32: u64,
         token_mint_0: Pubkey,
         token_mint_1: Pubkey,
@@ -280,7 +280,7 @@ impl Pool {
     /// If increase_coverage = true then increase coverage
     pub fn update_coverage(
         &mut self,
-        tick_array_pool: TickArrayPool,
+        mut tick_array_pool: TickArrayPool,
         mut coverage_position: RefMut<CoveragePosition>,
         coverage_amount_delta: u64,
         expiry_ts: i64,
@@ -335,7 +335,7 @@ impl Pool {
         {
             // find the next tick index with enough liquidity
             // if increase_coverage move left -> right
-            let (tick_array_index, next_tick_index) = tick_array_pool.find_next_free_tick_index(
+            let (next_array_index, next_tick_index) = tick_array_pool.find_next_free_tick_index(
                 current_tick_index,
                 self.tick_spacing,
                 !increase_coverage,
@@ -346,8 +346,7 @@ impl Pool {
             let next_sqrt_price_x32 = get_sqrt_ratio_at_tick(next_tick_index)?;
 
             //
-            let current_tick_array = tick_array_pool.arrays.get(tick_array_index).unwrap();
-            let mut current_tick = current_tick_array.get_tick(next_tick_index, self.tick_spacing)?;
+            let current_tick = tick_array_pool.get_tick(next_array_index, next_tick_index, self.tick_spacing)?;
 
             // calculate tick change
             let current_covered_amount =
@@ -413,11 +412,8 @@ impl Pool {
             let (fee_growth_0,fee_growth_1) = (current_fee_growth,self.fee_growth_1_x32);
           
             let (tick_update,next_liquidity) = current_tick.calculate_coverage_update(increase_coverage, current_liquidity, coverage_tick_delta,fee_growth_0, fee_growth_1)?;
-            current_tick_array.update_tick(
-                next_tick_index,
-                self.tick_spacing,
-                tick_update
-            )?;
+            tick_array_pool.update_tick(next_array_index, next_tick_index, self.tick_spacing, &tick_update)?;
+            
             current_liquidity = next_liquidity;
 
             // Update coverage position
@@ -429,13 +425,9 @@ impl Pool {
                 increase_coverage,
             )?;
 
-            // if current tick is the last tick in the
-            // tick array iterate to the next tick array.
-            let tick_array = tick_array_pool.arrays[current_array_index];
-
             // Calculate sub fees
             let last_tick_index_in_array =
-                tick_array.is_last_tick(current_tick_index, self.tick_spacing)?;
+                tick_array_pool.is_last_tick_index_in_array(next_array_index,next_tick_index,self.tick_spacing)?;
             current_array_index = if last_tick_index_in_array {
                 current_array_index + 1
             } else {

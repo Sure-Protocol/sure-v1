@@ -101,7 +101,7 @@ pub fn handler(ctx: Context<IncreaseCoveragePosition>,coverage_amount: u64,expir
     let coverage_buyer = &ctx.accounts.owner;
     let premium_vault = &ctx.accounts.token_vault_1;
     let coverage_buyer_account = &ctx.accounts.token_owner_account_0;
-    let mut coverage_position = ctx.accounts.coverage_position.load_mut()?;
+    let coverage_position = ctx.accounts.coverage_position.load_mut()?;
 
 
     // Validate the coverage position
@@ -120,8 +120,6 @@ pub fn handler(ctx: Context<IncreaseCoveragePosition>,coverage_amount: u64,expir
     let premium_plus_cost = coverage_result.get_total_cost_of_coverage()?;
     deposit_into_vault(coverage_buyer,premium_vault,coverage_buyer_account,&ctx.accounts.token_program, premium_plus_cost)?;    
 
-    // Update coverage position
-    coverage_position.update_from_coverage_update(coverage_result, expiry_ts);
 
     Ok(())
 

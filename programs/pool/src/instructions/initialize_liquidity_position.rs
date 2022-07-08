@@ -81,7 +81,7 @@ pub fn handler(
 ) -> Result<()> {
     let pool = &ctx.accounts.pool;
     let position_mint = &ctx.accounts.position_mint;
-    let liquidity_position = &ctx.accounts.liquidity_position;
+    let liquidity_position = ctx.accounts.liquidity_position.as_mut();
     let position_mint = &ctx.accounts.position_mint;
     // Initialize liquidity position
     liquidity_position.initialize(pool, tick_upper, tick_lower, position_mint.key())?;
