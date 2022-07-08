@@ -33,8 +33,10 @@ export const SurePoolsProvider: React.FunctionComponent<Props> = ({
 	useEffect(() => {
 		(async () => {
 			if (sureSdk !== undefined) {
+				setIsLoading(true);
 				const pools = await sureSdk.pool.getTokenPoolsInformationV2();
 				setSurePools(pools);
+				setIsLoading(false);
 			}
 		})();
 	}, [sureSdk, wallet]);

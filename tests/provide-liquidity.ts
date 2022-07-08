@@ -170,7 +170,7 @@ describe('Provide Liquidity', () => {
 			)
 		);
 	});
-	it('Estimate insurance price', async () => {
+	it('Estimate coverage price, buy insurance and get an overview of positions', async () => {
 		// Estimate insurance price
 		const buyAmount = 99;
 		const dateNow = new SureDate();
@@ -195,5 +195,8 @@ describe('Provide Liquidity', () => {
 			buyAmount,
 			contractExpiryInSeconds
 		);
+
+		// Get an overview of positions 
 	});
+		
 });
