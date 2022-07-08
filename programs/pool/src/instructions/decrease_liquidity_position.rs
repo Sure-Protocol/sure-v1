@@ -1,15 +1,16 @@
-use crate::common::account::validate_token_account_ownership;
 use crate::common::token_tx::withdraw_from_vault;
 use crate::common::{
     account,
     errors::SureError,
     liquidity::{calculate_token_0_delta, calculate_token_1_delta, validate_liquidity_amount},
 };
-use crate::factory::liquidity::*;
+use crate::common::{
+    account::validate_token_account_ownership, liquidity::*, product::*, seeds::*,
+};
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token;
-use anchor_spl::token::{transfer, Token, TokenAccount, Transfer};
+use anchor_spl::token::{Token, TokenAccount};
 use vipers::*;
 /// Redeem liquidity
 /// Allow holder of NFT to redeem liquidity from pool
@@ -33,7 +34,16 @@ pub struct DecreaseLiquidityPosition<'info> {
     pub position_token_account: Box<Account<'info, TokenAccount>>,
 
     /// Token pool account which holds overview
-    #[account(mut)]
+    #[account(mut,
+        seeds = [
+            SURE_TOKEN_POOL_SEED.as_bytes(),
+            pool.productId.to_le_bytes().as_ref(),
+            pool.token_mint_0.key().as_ref(),
+            pool.token_mint_1.key().as_ref(),
+            pool.tick_spacing.to_le_bytes().as_ref()
+        ],
+        bump = pool.bump_array[0]
+    )]
     pub pool: Box<Account<'info, Pool>>,
 
     /// Associated token acount for tokens of type A
@@ -77,6 +87,11 @@ impl<'info> Validate<'info> for DecreaseLiquidityPosition<'info> {
     }
 }
 
+/// Decrease Liquidity
+///
+/// decrease the liquidity in the pool, upper tick and lower tick
+///
+///
 pub fn handler(
     ctx: Context<DecreaseLiquidityPosition>,
     liquidity_amount: u64,
@@ -90,13 +105,15 @@ pub fn handler(
         &ctx.accounts.liquidity_provider,
     )?;
 
+    let product_type = ProductType::get_product_type(ctx.accounts.pool.productId)?;
+
     let updated_liquidity_state = build_new_liquidity_state(
         ctx.accounts.liquidity_position.as_ref(),
         ctx.accounts.pool.as_ref(),
-        &ctx.accounts.position_token_account,
         &ctx.accounts.tick_array_lower,
         &ctx.accounts.tick_array_upper,
         liquidity_amount,
+        &product_type,
         false,
     )?;
 

@@ -1,5 +1,5 @@
-use crate::states::*;
 use crate::common::seeds::*;
+use crate::states::*;
 use anchor_lang::{prelude::*, solana_program::instruction};
 use anchor_spl::{
     mint,
@@ -11,7 +11,7 @@ use vipers::*;
 /// creates the associated pool vault
 /// based on token mint
 #[derive(Accounts)]
-#[instruction( productId: u8,tick_spacing: u16)]
+#[instruction( product_id: u8,tick_spacing: u16)]
 pub struct InitializePool<'info> {
     // Signer of the creation
     #[account(mut)]
@@ -24,7 +24,7 @@ pub struct InitializePool<'info> {
         payer = creator,
         seeds = [
             SURE_TOKEN_POOL_SEED.as_bytes(),
-            productId.to_le_bytes().as_ref(),
+            product_id.to_le_bytes().as_ref(),
             token_mint_a.key().as_ref(),
             token_mint_b.key().as_ref(),
             tick_spacing.to_le_bytes().as_ref()
@@ -77,9 +77,14 @@ impl<'info> Validate<'info> for InitializePool<'info> {
     }
 }
 
+/// Initialize Sure Marketplace
+///
+/// product_id:
+///  - 1. Smart Contract Insurance
+///
 pub fn handler(
     ctx: Context<InitializePool>,
-    productId: u8,
+    product_id: u8,
     tick_spacing: u16,
     sqrt_price_x32: u64,
     name: String,
@@ -98,7 +103,7 @@ pub fn handler(
     // Update pool with new tokenPool entry
     pool.initialize(
         bump,
-        productId,
+        product_id,
         name,
         founder,
         tick_spacing,

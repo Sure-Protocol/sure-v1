@@ -1,14 +1,11 @@
-use crate::common::{seeds::*, token_tx::create_liquidity_position_with_metadata};
+use crate::common::{
+    access_control::SURE_NFT_UPDATE_AUTH, seeds::*,
+    token_tx::create_liquidity_position_with_metadata,
+};
 use crate::states::*;
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
-pub use sure_nft_update_authority::ID as SURE_NFT_UPDATE_AUTH;
-mod sure_nft_update_authority {
-    use super::*;
-    declare_id!("rYhoVCsVF8dahDpAYUZ9sDygLbhoVgRcczMxnQhWWjg");
-}
-
 #[derive(Accounts)]
 pub struct InitializeLiquidityPosition<'info> {
     #[account(mut)]

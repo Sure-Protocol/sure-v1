@@ -1,5 +1,7 @@
-use super::initialize_liquidity_position::SURE_NFT_UPDATE_AUTH;
-use crate::common::{seeds::SURE_DOMAIN, token_tx::create_coverage_position_with_metadata};
+use crate::common::{
+    access_control::SURE_NFT_UPDATE_AUTH, seeds::SURE_DOMAIN,
+    token_tx::create_coverage_position_with_metadata,
+};
 use crate::states::{CoveragePosition, Pool};
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;

@@ -122,6 +122,9 @@ pub enum SureError {
 
     #[msg("U64 overflow")]
     OverflowU64,
+
+    #[msg("Invalid product type id")]
+    InvalidProductTypeId,
 }
 
 impl From<TryFromIntError> for SureError {

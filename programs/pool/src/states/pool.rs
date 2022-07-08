@@ -1,4 +1,4 @@
-use std::{cell::RefMut, borrow::Borrow};
+use std::{borrow::Borrow, cell::RefMut};
 
 use super::{fee::FeePackage, tick_v2::TickUpdate};
 use crate::common::{
@@ -59,7 +59,7 @@ impl ProductPool {
 #[account]
 pub struct Pool {
     /// bump
-    pub bump_array: [u8;1], // 1 byte
+    pub bump_array: [u8; 1], // 1 byte
 
     /// ProductId
     pub productId: u8,
@@ -72,7 +72,7 @@ pub struct Pool {
 
     /// space between each tick in basis point
     pub tick_spacing: u16,
-    pub tick_spacing_seed: [u8;2],
+    pub tick_spacing_seed: [u8; 2],
 
     /// fee rate for each transaction in pool
     // hundreth of a basis point i.e. fee_rate = 1 = 0.01 bp = 0.00001%
@@ -346,7 +346,8 @@ impl Pool {
             let next_sqrt_price_x32 = get_sqrt_ratio_at_tick(next_tick_index)?;
 
             //
-            let current_tick = tick_array_pool.get_tick(next_array_index, next_tick_index, self.tick_spacing)?;
+            let current_tick =
+                tick_array_pool.get_tick(next_array_index, next_tick_index, self.tick_spacing)?;
 
             // calculate tick change
             let current_covered_amount =
@@ -409,11 +410,22 @@ impl Pool {
             current_fee_growth = next_fee_growth;
 
             // Update tick
-            let (fee_growth_0,fee_growth_1) = (current_fee_growth,self.fee_growth_1_x32);
-          
-            let (tick_update,next_liquidity) = current_tick.calculate_coverage_update(increase_coverage, current_liquidity, coverage_tick_delta,fee_growth_0, fee_growth_1)?;
-            tick_array_pool.update_tick(next_array_index, next_tick_index, self.tick_spacing, &tick_update)?;
-            
+            let (fee_growth_0, fee_growth_1) = (current_fee_growth, self.fee_growth_1_x32);
+
+            let (tick_update, next_liquidity) = current_tick.calculate_coverage_update(
+                increase_coverage,
+                current_liquidity,
+                coverage_tick_delta,
+                fee_growth_0,
+                fee_growth_1,
+            )?;
+            tick_array_pool.update_tick(
+                next_array_index,
+                next_tick_index,
+                self.tick_spacing,
+                &tick_update,
+            )?;
+
             current_liquidity = next_liquidity;
 
             // Update coverage position
@@ -426,8 +438,11 @@ impl Pool {
             )?;
 
             // Calculate sub fees
-            let last_tick_index_in_array =
-                tick_array_pool.is_last_tick_index_in_array(next_array_index,next_tick_index,self.tick_spacing)?;
+            let last_tick_index_in_array = tick_array_pool.is_last_tick_index_in_array(
+                next_array_index,
+                next_tick_index,
+                self.tick_spacing,
+            )?;
             current_array_index = if last_tick_index_in_array {
                 current_array_index + 1
             } else {

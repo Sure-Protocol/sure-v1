@@ -1,9 +1,13 @@
-use crate::common::account::validate_token_account_ownership;
 use crate::common::liquidity::{calculate_token_0_delta, calculate_token_1_delta};
 use crate::common::token_tx::deposit_into_vault;
-use crate::common::{self, account, errors::SureError, liquidity};
-use crate::factory::liquidity::{build_new_liquidity_state, update_liquidity};
-use crate::factory::*;
+use crate::common::{
+    self, account,
+    errors::SureError,
+    liquidity::{build_new_liquidity_state, update_liquidity},
+};
+use crate::common::{
+    account::validate_token_account_ownership, liquidity::*, product::*, seeds::*,
+};
 use crate::states::*;
 use anchor_spl::token::{self};
 
@@ -37,6 +41,7 @@ pub struct IncreaseLiquidityPosition<'info> {
     pub liquidity_provider: Signer<'info>,
 
     /// Liquidity position
+    /// TODO: check bump seed
     #[account(mut,has_one = pool)]
     pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
 
@@ -50,7 +55,16 @@ pub struct IncreaseLiquidityPosition<'info> {
     pub position_token_account: Box<Account<'info, TokenAccount>>,
 
     /// Token pool account which holds overview
-    #[account(mut)]
+    #[account(mut,
+        seeds = [
+            SURE_TOKEN_POOL_SEED.as_bytes(),
+            pool.productId.to_le_bytes().as_ref(),
+            pool.token_mint_0.key().as_ref(),
+            pool.token_mint_1.key().as_ref(),
+            pool.tick_spacing.to_le_bytes().as_ref()
+        ],
+        bump = pool.bump_array[0]
+    )]
     pub pool: Box<Account<'info, Pool>>,
 
     /// Associated token acount for tokens of type A
@@ -112,13 +126,15 @@ pub fn handler(
         &ctx.accounts.liquidity_provider,
     )?;
 
+    let product_type = ProductType::get_product_type(ctx.accounts.pool.productId)?;
+
     let updated_liquidity_state = build_new_liquidity_state(
         ctx.accounts.liquidity_position.as_ref(),
         ctx.accounts.pool.as_ref(),
-        &ctx.accounts.position_token_account,
         &ctx.accounts.tick_array_lower,
         &ctx.accounts.tick_array_upper,
         liquidity_amount,
+        &product_type,
         true,
     )?;
 
