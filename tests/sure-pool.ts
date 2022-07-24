@@ -9,6 +9,7 @@ import {
 	createAssociatedTokenAccount,
 	getMint,
 	Mint,
+	getOrCreateAssociatedTokenAccount,
 } from '@solana/spl-token';
 
 import { Program } from '@project-serum/anchor';
@@ -21,6 +22,7 @@ import {
 	TokenAmount,
 } from '@solana/web3.js';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
+import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 const { SystemProgram } = anchor.web3;
 
 /// =============== Variables ==================
@@ -154,5 +156,23 @@ describe('Initialize Sure Pool', () => {
 			liquidityProvidertokenMintATA.amount.toString(),
 			tranferAmount.toString()
 		);
+	});
+	it('Launch a pool', async () => {
+		// create fee package
+		const feeRate = 100;
+		const protocolFeeRate = 50;
+		const foundersFeeRate = 50;
+		const [feePackagePDA, _] = findProgramAddressSync(
+			[anchor.utils.bytes.utf8.encode('sure-liquidity-vault')],
+			program.programId
+		);
+		program.methods
+			.initializeFeePackage(feeRate, protocolFeeRate, foundersFeeRate)
+			.accounts({
+				owner: wallet.publicKey,
+				feePackage: feePackagePDA,
+				systemProgram: SystemProgram.programId,
+			})
+			.rpc();
 	});
 });
