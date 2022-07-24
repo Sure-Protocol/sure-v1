@@ -7,5 +7,7 @@ pub mod tick_v2;
 pub use coverage::*;
 pub use fee::*;
 pub use liquidity::*;
-pub use pool::*;
+
 pub use tick_v2::*;
+
+pub use pool::*;

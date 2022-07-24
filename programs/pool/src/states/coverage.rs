@@ -12,10 +12,8 @@ use super::pool::BuyCoverageResult;
 use super::tick_v2::get_tick_location;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-const SURE_TIME_LOCK_IN_SECONDS: u64 = solana_program::clock::SECONDS_PER_DAY;
 /// Max number of ticks to buy over
-const NUM_TICKS_IN_COVERAGE_POSITION_usize: usize = 64 * 3;
-const NUM_TICKS_IN_COVERAGE_POSITION: i32 = 64;
+const NUM_TICKS_IN_COVERAGE_POSITION_USIZE: usize = 192;
 
 /// TickCoveragePosition keeps information
 /// about the coverage position at a given tick
@@ -79,7 +77,7 @@ pub struct CoveragePosition {
     pub last_covered_tick_index: i32,
 
     /// Coverage amount at Ticks
-    pub coverage_amount_ticks: [u64; NUM_TICKS_IN_COVERAGE_POSITION_usize], // 8*64*3 = 1_536 bytes
+    pub coverage_amount_ticks: [u64; NUM_TICKS_IN_COVERAGE_POSITION_USIZE], // 8*64*3 = 1_536 bytes
 
     /// is active
     pub is_active: bool,
@@ -98,19 +96,14 @@ impl Default for CoveragePosition {
             owner: Pubkey::default(),
             start_tick_index: 0,
             last_covered_tick_index: 0,
-            coverage_amount_ticks: [0; NUM_TICKS_IN_COVERAGE_POSITION_usize],
+            coverage_amount_ticks: [0; NUM_TICKS_IN_COVERAGE_POSITION_USIZE],
             is_active: false,
         }
     }
 }
 
 impl CoveragePosition {
-    pub const SPACE: usize = 32
-        + 32
-        + 8
-        + 8
-        + 32
-        + NUM_TICKS_IN_COVERAGE_POSITION_usize * size_of::<TickCoveragePosition>();
+    pub const SPACE: usize = 32 + 32 + 8 + 8 + 32 + NUM_TICKS_IN_COVERAGE_POSITION_USIZE * 8;
 
     pub fn initialize(
         &mut self,
@@ -145,7 +138,7 @@ impl CoveragePosition {
         self.covered_amount = coverage_result.get_coverage_amount();
     }
     pub fn get_max_tick_index(&self, tick_spacing: u16) -> i32 {
-        self.start_tick_index + NUM_TICKS_IN_COVERAGE_POSITION * tick_spacing as i32
+        self.start_tick_index + NUM_TICKS_IN_COVERAGE_POSITION_USIZE as i32 * tick_spacing as i32
     }
 
     pub fn get_lowest_sqrt_price_x32(&self) -> Result<u64> {
@@ -253,7 +246,7 @@ impl CoveragePosition {
     pub fn get_last_coverage_position(&self) -> Result<i32> {
         let mut rev_coverage_amounts = self.coverage_amount_ticks;
         rev_coverage_amounts.reverse();
-        let last_position = NUM_TICKS_IN_COVERAGE_POSITION_usize
+        let last_position = NUM_TICKS_IN_COVERAGE_POSITION_USIZE
             - rev_coverage_amounts.iter().position(|&a| a != 0).unwrap();
         Ok(last_position as i32)
     }

@@ -6,7 +6,7 @@ pub struct FeePackage {
     pub bump: u8, // 1 byte
 
     // Owner of fee package
-    pub owner: Pubkey, //
+    pub owner: Pubkey, //32
 
     /// Total fee the protocol will charge per tx as
     /// 100th of a basis point i.e 0.0001%
@@ -26,7 +26,7 @@ impl FeePackage {
     pub const MAX_PROTOCOL_FEE_RATE_BP: u16 = 3_200;
     pub const MAX_FOUNDERS_FEE_RATE_BP: u16 = 1_000;
     pub const MIN_LIQUIDITY_PROVIDER_FEE_RATE_BP: u16 = 1_000;
-    pub const SIZE: usize = 1 + 2 + 2 + 2;
+    pub const SIZE: usize = 1 + 32 + 2 + 2 + 2;
 
     pub fn initialize<'info>(
         &mut self,
@@ -68,4 +68,9 @@ impl FeePackage {
 
         Ok(())
     }
+}
+
+#[cfg(tess)]
+mod fee_state_test {
+    use super::*;
 }

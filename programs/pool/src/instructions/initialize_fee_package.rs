@@ -1,5 +1,5 @@
 use crate::common::seeds::*;
-use crate::states::fee::{self, FeePackage};
+use crate::states::fee::FeePackage;
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -13,7 +13,8 @@ pub struct InitializeFeePackage<'info> {
         seeds = [
             SURE_DOMAIN.as_bytes(),
         ],
-        space=8 + FeePackage::SIZE,bump
+        space=8 + 39,
+        bump
     )]
     pub fee_package: Box<Account<'info, FeePackage>>,
 

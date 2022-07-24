@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 
 use instructions::*;
 
-declare_id!("D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM");
+declare_id!("H3wzzotu9iKXasuxW6jTaRDgk9ovpp8zwYc2gCsPHt9w");
 
 #[program]
 pub mod sure_pool {

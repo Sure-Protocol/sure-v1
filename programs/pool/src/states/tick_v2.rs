@@ -10,8 +10,8 @@ use std::mem::size_of;
 
 pub const NUM_TICKS_IN_TICK_ARRAY: i32 = 64;
 pub const NUM_TICKS_IN_TICK_ARRAY_USIZE: usize = 64;
-pub const MAX_PROTOCOL_FEE: u64 = 10_000;
-pub const MAX_100th_BP: u64 = 1_000_000;
+pub const MAX_PROTOCOL_FEE: usize = 10_000;
+pub const MAX_100th_BP: usize = 1_000_000;
 
 // _____________ v2 _________________
 // Instead of recording 256 ticks in each tick array
@@ -23,7 +23,7 @@ pub const MAX_100th_BP: u64 = 1_000_000;
 // TickArray as it will be around 10kb.
 
 /// Tick
-#[account(zero_copy)]
+#[zero_copy]
 #[repr(packed)]
 #[derive(Default, Debug, PartialEq)]
 pub struct Tick {
@@ -188,7 +188,7 @@ impl Tick {
         // calculate base fee amount of amount
         let fee_amount = coverage_delta
             .wrapping_mul(fee_rate as u64)
-            .wrapping_div(MAX_100th_BP - fee_rate as u64);
+            .wrapping_div(MAX_100th_BP as u64 - fee_rate as u64);
 
         let (amount_in, amount_out) = if increase_premium {
             (premium_delta, 0)
@@ -359,7 +359,7 @@ pub fn calculate_sub_fee(amount: u64, fee_rate: u16) -> Result<u64> {
         return amount
             .checked_mul(fee_rate as u64)
             .ok_or(SureError::MultiplictationQ3232Overflow)?
-            .checked_div(MAX_PROTOCOL_FEE)
+            .checked_div(MAX_PROTOCOL_FEE as u64)
             .ok_or(SureError::DivisionQ3232Error.into());
     }
     Ok(0)
@@ -440,7 +440,7 @@ impl Default for TickArray {
 }
 
 impl TickArray {
-    pub const SIZE: usize = 4 + NUM_TICKS_IN_TICK_ARRAY_USIZE * size_of::<Tick>() + 32;
+    pub const SIZE: usize = 4 + 64 * 40 + 32;
 
     pub fn initialize(&mut self, pool: &Account<Pool>, start_tick_index: i32) -> Result<()> {
         if !Tick::is_valid_tick(start_tick_index, pool.tick_spacing) {
