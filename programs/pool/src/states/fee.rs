@@ -35,11 +35,10 @@ impl FeePackage {
         protocol_fee_rate: u16,
         founders_fee_rate: u16,
     ) -> Result<()> {
-        self.validate_fee_rates()?;
-
         // Validate owner
 
         self.update_fee_package(fee_rate, protocol_fee_rate, founders_fee_rate);
+        self.validate_fee_rates()?;
         self.owner = owner.key.clone();
 
         Ok(())
@@ -61,8 +60,10 @@ impl FeePackage {
             return Err(SureError::MaxFeeRateExceeded.into());
         }
 
-        // 1/(x+y) <= 1 <=> x+y >= 1
-        if self.protocol_fee_rate + self.founders_fee_rate >= 1 {
+        // 1/x + 1/y <= 1 <=> (x+y) <= xy
+        if self.protocol_fee_rate + self.founders_fee_rate
+            > self.protocol_fee_rate * self.founders_fee_rate
+        {
             return Err(SureError::InvalidSubFeeRates.into());
         }
 

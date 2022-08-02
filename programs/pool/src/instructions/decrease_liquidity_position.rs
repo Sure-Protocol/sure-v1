@@ -37,7 +37,7 @@ pub struct DecreaseLiquidityPosition<'info> {
     #[account(mut,
         seeds = [
             SURE_TOKEN_POOL_SEED.as_bytes(),
-            pool.productId.to_le_bytes().as_ref(),
+            pool.product_id.to_le_bytes().as_ref(),
             pool.token_mint_0.key().as_ref(),
             pool.token_mint_1.key().as_ref(),
             pool.tick_spacing.to_le_bytes().as_ref()
@@ -105,7 +105,7 @@ pub fn handler(
         &ctx.accounts.liquidity_provider,
     )?;
 
-    let product_type = ProductType::get_product_type(ctx.accounts.pool.productId)?;
+    let product_type = ProductType::get_product_type(ctx.accounts.pool.product_id)?;
 
     let updated_liquidity_state = build_new_liquidity_state(
         ctx.accounts.liquidity_position.as_ref(),

@@ -38,6 +38,10 @@ let liqudityProviderWallet: anchor.web3.Keypair;
 let walletATAPubkey: PublicKey;
 let liquidityProviderWalletATA: PublicKey;
 
+/// Token mints
+let tokenMint0: PublicKey;
+let tokenMint1: PublicKey;
+
 let vault0: PublicKey;
 
 // PDAs
@@ -80,6 +84,22 @@ describe('Initialize Sure Pool', () => {
 		// Create a random mint for testing
 		// TODO: The mint should have the same pubkey as USDC
 		tokenMint = await createMint(
+			connection,
+			minterWallet,
+			minterWallet.publicKey,
+			minterWallet.publicKey,
+			8
+		);
+
+		tokenMint0 = await createMint(
+			connection,
+			minterWallet,
+			minterWallet.publicKey,
+			minterWallet.publicKey,
+			8
+		);
+
+		tokenMint1 = await createMint(
 			connection,
 			minterWallet,
 			minterWallet.publicKey,
@@ -162,11 +182,20 @@ describe('Initialize Sure Pool', () => {
 		const feeRate = 100;
 		const protocolFeeRate = 50;
 		const foundersFeeRate = 50;
+		const productId = 1;
+		const tickSpacing = 20;
+		const initialSqrtPrice = new anchor.BN(Math.sqrt(25));
+		const initialSqrtPriceX32 = initialSqrtPrice.mul(
+			new anchor.BN(2).pow(new anchor.BN(32))
+		);
+		console.log('initialSqrtPriceX32: ', initialSqrtPriceX32.toString());
+
 		const [feePackagePDA, _] = findProgramAddressSync(
-			[anchor.utils.bytes.utf8.encode('sure-liquidity-vault')],
+			[anchor.utils.bytes.utf8.encode('sure-pool')],
 			program.programId
 		);
-		program.methods
+		// initialize fee package
+		const txId = await program.methods
 			.initializeFeePackage(feeRate, protocolFeeRate, foundersFeeRate)
 			.accounts({
 				owner: wallet.publicKey,
@@ -174,5 +203,61 @@ describe('Initialize Sure Pool', () => {
 				systemProgram: SystemProgram.programId,
 			})
 			.rpc();
+
+		// Lowest
+		let tokenMintA = tokenMint0;
+		let tokenMintB = tokenMint1;
+		if (Buffer.compare(tokenMintB.toBuffer(), tokenMintA.toBuffer()) < 0) {
+			tokenMintA = tokenMint1;
+			tokenMintB = tokenMint0;
+		}
+
+		//pool PDA
+		const [poolPDA, _poolPDABump] = findProgramAddressSync(
+			[
+				Buffer.from('sure-pool'),
+				new anchor.BN(productId).toBuffer('le', 1),
+				tokenMintA.toBytes(),
+				tokenMintB.toBytes(),
+				new anchor.BN(tickSpacing).toBuffer('le', 2),
+			],
+			program.programId
+		);
+
+		// Token vault 0 PDA
+		const [tokenVaultAPDA, _tokenVaultXBump] = findProgramAddressSync(
+			[Buffer.from('sure-pool'), poolPDA.toBytes(), tokenMintA.toBytes()],
+			program.programId
+		);
+		// Token vault 1 PDA
+		const [tokenVaultBPDA, _tokenVaultYBump] = findProgramAddressSync(
+			[Buffer.from('sure-pool'), poolPDA.toBytes(), tokenMintB.toBytes()],
+			program.programId
+		);
+
+		try {
+			const initPoolTxId = await program.methods
+				.initializePool(productId, tickSpacing, initialSqrtPriceX32, 'my pool')
+				.accounts({
+					creator: wallet.publicKey,
+					pool: poolPDA,
+					tokenMintA: tokenMintA,
+					tokenMintB: tokenMintB,
+					poolVaultA: tokenVaultAPDA,
+					poolVaultB: tokenVaultBPDA,
+					feePackage: feePackagePDA,
+					rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+					tokenProgram: TOKEN_PROGRAM_ID,
+					systemProgram: SystemProgram.programId,
+				})
+
+				.rpc();
+		} catch (err) {
+			console.log('Error: ', err);
+		}
+
+		// get info on pool
+		const pool = await program.account.pool.fetch(poolPDA);
+		assert.equal(pool.sqrtPriceX32.toString(), initialSqrtPriceX32.toString());
 	});
 });

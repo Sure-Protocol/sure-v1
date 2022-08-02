@@ -1,7 +1,7 @@
 [package]
 name = "sure-pool"
 version = "0.0.2"
-description = "Pool smart contract for Sure insurance pools"
+descrip2on = "Pool smart contract for Sure insurance pools"
 edition = "2021"
 license = "AGPL-3.0-only"
 keywords = ["solana", "anchor", "blockchain"]

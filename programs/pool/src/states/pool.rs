@@ -62,29 +62,29 @@ pub struct Pool {
     pub bump_array: [u8; 1], // 1 byte
 
     /// ProductId
-    pub productId: u8,
+    pub product_id: u8, // 1
 
     /// Name of pool
     pub name: String, // 4 + 200 bytes
 
     /// Founder of pool
-    pub founder: Pubkey,
+    pub founder: Pubkey, // 32 bytes
 
     /// space between each tick in basis point
-    pub tick_spacing: u16,
-    pub tick_spacing_seed: [u8; 2],
+    pub tick_spacing: u16, // 2 bytes
+    pub tick_spacing_seed: [u8; 2], // 2*1 = 2 bytes
 
     /// fee rate for each transaction in pool
     // hundreth of a basis point i.e. fee_rate = 1 = 0.01 bp = 0.00001%
-    pub fee_rate: u16,
+    pub fee_rate: u16, //2 bytes
 
     /// Protocol fee of transaction
     /// (1/x)% of fee_rate
-    pub protocol_fee_rate: u16,
+    pub protocol_fee_rate: u16, // 2 bytes
 
     /// Founder fee of transaction
     /// (1/x)% of fee_rate
-    pub founders_fee_rate: u16,
+    pub founders_fee_rate: u16, // 2 bytes
 
     /// Liquidity in Pool
     pub liquidity: u64, // 8 bytes
@@ -92,22 +92,22 @@ pub struct Pool {
     /// The current market price as
     /// use Q32.32 - 32 bytes at each
     /// side of decimal point
-    pub sqrt_price_x32: u64, // 16bytes
+    pub sqrt_price_x32: u64, // 8 bytes
 
     /// Current tick index corrensponding to sqrt price
-    pub current_tick_index: i32,
+    pub current_tick_index: i32, // 4 bytes
 
     /// Tokens in vault 0 that is owed to the sure
-    pub protocol_fees_owed_0: u64,
-    pub founders_fees_owed_0: u64,
+    pub protocol_fees_owed_0: u64, // 8 bytes
+    pub founders_fees_owed_0: u64, // 8 bytes
     /// total fees in vault a collected per unit of liquidity
-    pub fee_growth_0_x32: u64,
+    pub fee_growth_0_x32: u64, // 8 bytes
 
     /// Tokens in vault 0 that is owed to the sure
-    pub protocol_fees_owed_1: u64,
-    pub founders_fees_owed_1: u64,
+    pub protocol_fees_owed_1: u64, // 8 bytes
+    pub founders_fees_owed_1: u64, // 8 bytes
     /// total fees collected in vault b per unit of liquidity
-    pub fee_growth_1_x32: u64,
+    pub fee_growth_1_x32: u64, // 8 bytes
 
     /// Token mint A of pool
     pub token_mint_0: Pubkey, // 32 bytes
@@ -122,7 +122,29 @@ pub struct Pool {
 }
 
 impl Pool {
-    pub const SPACE: usize = 1 + 32 + 32 + 8 + 8 + 4 + 200;
+    pub const SPACE: usize = 1
+        + 1
+        + (4 + 200)
+        + 32
+        + 2
+        + 2
+        + 2
+        + 2
+        + 2
+        + 8
+        + 8
+        + 4
+        + 8
+        + 8
+        + 8
+        + 8
+        + 8
+        + 8
+        + 32
+        + 32
+        + 32
+        + 32
+        + 8;
 
     pub fn seeds(&self) -> [&[u8]; 5] {
         [
@@ -137,7 +159,7 @@ impl Pool {
     pub fn initialize(
         &mut self,
         bump: u8,
-        productId: u8,
+        product_id: u8,
         name: String,
         founder: Pubkey,
         tick_spacing: u16,
@@ -150,7 +172,7 @@ impl Pool {
     ) -> Result<()> {
         self.bump_array = bump.to_le_bytes();
 
-        self.productId = productId;
+        self.product_id = product_id;
         self.name = name;
         self.founder = founder;
         self.tick_spacing = tick_spacing;
@@ -171,6 +193,7 @@ impl Pool {
         self.token_mint_1 = token_mint_1;
         self.token_vault_0 = pool_vault_0;
         self.token_vault_1 = pool_vault_1;
+        self.used_liquidity = 0;
 
         Ok(())
     }

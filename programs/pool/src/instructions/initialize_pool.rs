@@ -1,5 +1,5 @@
-use crate::common::seeds::*;
-use crate::states::*;
+use crate::common::seeds::SURE_DOMAIN;
+use crate::states::{FeePackage, Pool};
 use anchor_lang::{prelude::*, solana_program::instruction};
 use anchor_spl::{
     mint,
@@ -11,7 +11,7 @@ use vipers::*;
 /// creates the associated pool vault
 /// based on token mint
 #[derive(Accounts)]
-#[instruction( product_id: u8,tick_spacing: u16)]
+#[instruction(product_id: u8,tick_spacing: u16)]
 pub struct InitializePool<'info> {
     // Signer of the creation
     #[account(mut)]
@@ -23,7 +23,7 @@ pub struct InitializePool<'info> {
         space = 8 + Pool::SPACE,
         payer = creator,
         seeds = [
-            SURE_TOKEN_POOL_SEED.as_bytes(),
+            SURE_DOMAIN.as_bytes(),
             product_id.to_le_bytes().as_ref(),
             token_mint_a.key().as_ref(),
             token_mint_b.key().as_ref(),
@@ -35,14 +35,22 @@ pub struct InitializePool<'info> {
 
     /// Token Mint for Vault A
     /// This is the main pool
+    #[account(constraint = token_mint_a.is_initialized)]
     pub token_mint_a: Account<'info, Mint>,
     /// Token Mint for Vault B
+    #[account(constraint = token_mint_b.is_initialized)]
     pub token_mint_b: Account<'info, Mint>,
 
     // Pool Vault used to hold tokens from token_mint
     #[account(
         init,
         payer = creator,
+        seeds = [ 
+            SURE_DOMAIN.as_bytes(), 
+            pool.key().as_ref(), 
+            token_mint_a.key().as_ref()
+        ],
+        bump,
         token::mint = token_mint_a,
         token::authority = pool,
     )]
@@ -51,11 +59,16 @@ pub struct InitializePool<'info> {
     #[account(
         init,
         payer = creator,
+        seeds = [ 
+            SURE_DOMAIN.as_bytes(), 
+            pool.key().as_ref(), 
+            token_mint_b.key().as_ref()
+        ],
+        bump,
         token::mint = token_mint_b,
         token::authority = pool,
     )]
     pub pool_vault_b: Box<Account<'info, TokenAccount>>,
-
     /// Package specifies which fees should apply
     /// to the pool
     pub fee_package: Box<Account<'info, FeePackage>>,
@@ -97,8 +110,7 @@ pub fn handler(
     let pool_vault_b = ctx.accounts.pool_vault_b.key();
     let founder = ctx.accounts.creator.key();
     // Initialize Token Pool
-    let bump = *ctx.bumps.get("token_pool").unwrap();
-    pool.used_liquidity = 0;
+    let bump = *ctx.bumps.get("pool").unwrap();
 
     // Update pool with new tokenPool entry
     pool.initialize(

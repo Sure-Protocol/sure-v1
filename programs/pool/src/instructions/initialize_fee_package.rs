@@ -13,7 +13,7 @@ pub struct InitializeFeePackage<'info> {
         seeds = [
             SURE_DOMAIN.as_bytes(),
         ],
-        space=8 + 39,
+        space=8 + FeePackage::SIZE,
         bump
     )]
     pub fee_package: Box<Account<'info, FeePackage>>,
