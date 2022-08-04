@@ -2,12 +2,8 @@ use std::borrow::Borrow;
 
 use super::increase_coverage_position::*;
 use crate::common::{account, token_tx::deposit_into_vault};
-use crate::states::{
-    tick_v2::{TickArray, TickArrayPool},
-    CoveragePosition, Pool,
-};
+use crate::states::tick_v2::TickArrayPool;
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, Token, TokenAccount, ID};
 
 /// Decrease Coverage Position handler
 ///
@@ -26,7 +22,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount, ID};
 ///                     or the amount to reduce the position with
 pub fn handler(
     ctx: Context<ChangeCoveragePosition>,
-    coverage_amount: u64,
+    coverage_amount: u128,
     expiry_ts: i64,
     is_target_amount: bool,
 ) -> Result<()> {

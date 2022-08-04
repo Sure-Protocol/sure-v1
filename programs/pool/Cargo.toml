@@ -20,6 +20,7 @@ default = []
 [dependencies]
 anchor-lang = "0.25.0"
 anchor-spl = "0.25.0"
+primitive-types = "0.11.1"
 uint = "=0.9.1"
 vipers = "2.0.4"
 mpl-token-metadata = {version ="1.2.7", features = ["no-entrypoint"] }

@@ -12,6 +12,8 @@ import {
 	getOrCreateAssociatedTokenAccount,
 } from '@solana/spl-token';
 
+import { priceToTickIndex } from '@orca-so/whirlpool-sdk';
+
 import { Program } from '@project-serum/anchor';
 
 import { SurePool } from '../target/types/sure_pool';
@@ -48,6 +50,14 @@ let vault0: PublicKey;
 let protcolToInsure0: anchor.web3.Keypair;
 
 /// ============== TESTS ===========================
+
+const toX32 = (num: anchor.BN): anchor.BN => {
+	return num.mul(new anchor.BN(2).pow(new anchor.BN(32)));
+};
+
+const fromX32 = (num: anchor.BN): anchor.BN => {
+	return num.div(new anchor.BN(2).pow(new anchor.BN(32)));
+};
 
 describe('Initialize Sure Pool', () => {
 	const provider = anchor.AnchorProvider.env();
@@ -185,10 +195,7 @@ describe('Initialize Sure Pool', () => {
 		const productId = 1;
 		const tickSpacing = 20;
 		const initialSqrtPrice = new anchor.BN(Math.sqrt(25));
-		const initialSqrtPriceX32 = initialSqrtPrice.mul(
-			new anchor.BN(2).pow(new anchor.BN(32))
-		);
-		console.log('initialSqrtPriceX32: ', initialSqrtPriceX32.toString());
+		const initialSqrtPriceX32 = toX32(initialSqrtPrice);
 
 		const [feePackagePDA, _] = findProgramAddressSync(
 			[anchor.utils.bytes.utf8.encode('sure-pool')],
@@ -259,5 +266,10 @@ describe('Initialize Sure Pool', () => {
 		// get info on pool
 		const pool = await program.account.pool.fetch(poolPDA);
 		assert.equal(pool.sqrtPriceX32.toString(), initialSqrtPriceX32.toString());
+
+		// Initialize Tick array for pool
+		const startSqrtPrice = new anchor.BN(Math.sqrt(4));
+		const startSqrtPricex32 = toX32(startSqrtPrice);
 	});
+	it('');
 });

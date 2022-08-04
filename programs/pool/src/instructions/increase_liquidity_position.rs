@@ -1,13 +1,7 @@
+use crate::common::liquidity::{build_new_liquidity_state, update_liquidity};
 use crate::common::liquidity::{calculate_token_0_delta, calculate_token_1_delta};
 use crate::common::token_tx::deposit_into_vault;
-use crate::common::{
-    self, account,
-    errors::SureError,
-    liquidity::{build_new_liquidity_state, update_liquidity},
-};
-use crate::common::{
-    account::validate_token_account_ownership, liquidity::*, product::*, seeds::*,
-};
+use crate::common::{account::validate_token_account_ownership, product::*, seeds::*};
 use crate::states::*;
 use anchor_spl::token::{self};
 
@@ -115,9 +109,9 @@ pub struct IncreaseLiquidityPosition<'info> {
 /// If it is a
 pub fn handler(
     ctx: Context<IncreaseLiquidityPosition>,
-    liquidity_amount: u64, // Amount of liquidity in token a
-    max_token_a: u64,      // Max amount of token a that can be deposited
-    min_token_b: u64,      // Max amount of token b that can be deposited
+    liquidity_amount: u128, // Amount of liquidity in token a
+    max_token_a: u64,       // Max amount of token a that can be deposited
+    min_token_b: u64,       // Max amount of token b that can be deposited
 ) -> Result<()> {
     // Check that the liquidity provider owns the
     // the liquidity position nft account
@@ -169,5 +163,5 @@ pub fn handler(
 #[event]
 pub struct NewLiquidityPosition {
     pub tick: u16,
-    pub liquidity: u64,
+    pub liquidity: u128,
 }

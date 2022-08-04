@@ -99,7 +99,7 @@ pub fn handler(
     ctx: Context<InitializePool>,
     product_id: u8,
     tick_spacing: u16,
-    sqrt_price_x32: u64,
+    sqrt_price_x64: u128,
     name: String,
 ) -> Result<()> {
     let pool = &mut ctx.accounts.pool;
@@ -120,7 +120,7 @@ pub fn handler(
         founder,
         tick_spacing,
         fee_package,
-        sqrt_price_x32,
+        sqrt_price_x64,
         token_mint_a,
         token_mint_b,
         pool_vault_a,

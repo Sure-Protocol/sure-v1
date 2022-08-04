@@ -92,7 +92,7 @@ pub struct ChangeCoveragePosition<'info> {
 /// The premium can be collected at any time
 pub fn handler(
     ctx: Context<ChangeCoveragePosition>,
-    coverage_amount: u64,
+    coverage_amount: u128,
     expiry_ts: i64,
     is_target_amount: bool,
 ) -> Result<()> {

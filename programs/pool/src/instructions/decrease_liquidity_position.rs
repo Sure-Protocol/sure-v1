@@ -94,7 +94,7 @@ impl<'info> Validate<'info> for DecreaseLiquidityPosition<'info> {
 ///
 pub fn handler(
     ctx: Context<DecreaseLiquidityPosition>,
-    liquidity_amount: u64,
+    liquidity_amount: u128,
     token_min_a: u64,
     token_min_b: u64,
 ) -> Result<()> {

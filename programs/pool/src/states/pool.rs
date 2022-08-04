@@ -87,27 +87,27 @@ pub struct Pool {
     pub founders_fee_rate: u16, // 2 bytes
 
     /// Liquidity in Pool
-    pub liquidity: u64, // 8 bytes
+    pub liquidity: u128, // 8 bytes
 
     /// The current market price as
     /// use Q32.32 - 32 bytes at each
     /// side of decimal point
-    pub sqrt_price_x32: u64, // 8 bytes
+    pub sqrt_price_x64: u128, // 8 bytes
 
     /// Current tick index corrensponding to sqrt price
     pub current_tick_index: i32, // 4 bytes
 
     /// Tokens in vault 0 that is owed to the sure
-    pub protocol_fees_owed_0: u64, // 8 bytes
-    pub founders_fees_owed_0: u64, // 8 bytes
+    pub protocol_fees_owed_0: u128, // 8 bytes
+    pub founders_fees_owed_0: u128, // 8 bytes
     /// total fees in vault a collected per unit of liquidity
-    pub fee_growth_0_x32: u64, // 8 bytes
+    pub fee_growth_0_x64: u128, // 8 bytes
 
     /// Tokens in vault 0 that is owed to the sure
-    pub protocol_fees_owed_1: u64, // 8 bytes
-    pub founders_fees_owed_1: u64, // 8 bytes
+    pub protocol_fees_owed_1: u128, // 8 bytes
+    pub founders_fees_owed_1: u128, // 8 bytes
     /// total fees collected in vault b per unit of liquidity
-    pub fee_growth_1_x32: u64, // 8 bytes
+    pub fee_growth_1_x64: u128, // 8 bytes
 
     /// Token mint A of pool
     pub token_mint_0: Pubkey, // 32 bytes
@@ -118,7 +118,7 @@ pub struct Pool {
     pub token_vault_1: Pubkey, //32 bytes
 
     /// Used liquidity
-    pub used_liquidity: u64, // 8 bytes
+    pub used_liquidity: u128, // 8 bytes
 }
 
 impl Pool {
@@ -164,7 +164,7 @@ impl Pool {
         founder: Pubkey,
         tick_spacing: u16,
         fee_package: &Account<FeePackage>,
-        sqrt_price_x32: u64,
+        sqrt_price_x64: u128,
         token_mint_0: Pubkey,
         token_mint_1: Pubkey,
         pool_vault_0: Pubkey,
@@ -184,8 +184,8 @@ impl Pool {
         self.founders_fee_rate = fee_package.founders_fee_rate;
 
         self.liquidity = 0;
-        self.current_tick_index = get_tick_at_sqrt_ratio(sqrt_price_x32)?;
-        self.sqrt_price_x32 = sqrt_price_x32;
+        self.current_tick_index = get_tick_at_sqrt_ratio(sqrt_price_x64)?;
+        self.sqrt_price_x64 = sqrt_price_x64;
         if token_mint_0.ge(&token_mint_1) {
             return Err(SureError::WrongTokenMintOrder.into());
         }
@@ -202,26 +202,26 @@ impl Pool {
     /// Should happen on each tx
     pub fn update_post_transaction(
         &mut self,
-        liquidity: u64,
+        liquidity: u128,
         tick: i32,
-        fee_growth: u64,
-        protocol_fee: u64,
+        fee_growth: u128,
+        protocol_fee: u128,
         is_fee_in_a: bool,
     ) -> Result<()> {
         self.liquidity = liquidity;
-        self.sqrt_price_x32 = get_sqrt_ratio_at_tick(tick)?;
+        self.sqrt_price_x64 = get_sqrt_ratio_at_tick(tick)?;
         if is_fee_in_a {
-            self.fee_growth_0_x32 = fee_growth;
+            self.fee_growth_0_x64 = fee_growth;
             self.protocol_fees_owed_0 += protocol_fee;
         } else {
-            self.fee_growth_1_x32 = fee_growth;
+            self.fee_growth_1_x64 = fee_growth;
             self.protocol_fees_owed_1 += protocol_fee;
         }
 
         Ok(())
     }
 
-    pub fn update_liquidity(&mut self, liquidity: u64) -> Result<()> {
+    pub fn update_liquidity(&mut self, liquidity: u128) -> Result<()> {
         self.liquidity = liquidity;
         Ok(())
     }
@@ -229,7 +229,7 @@ impl Pool {
     /// Get the current tick index from the
     /// current sqrt price
     pub fn get_current_tick_index(&self) -> Result<i32> {
-        get_tick_at_sqrt_ratio(self.sqrt_price_x32)
+        get_tick_at_sqrt_ratio(self.sqrt_price_x64)
     }
 
     /// Update the fee package
@@ -257,7 +257,7 @@ impl Pool {
     /// Get next liquidity
     /// If the current tick in the pool is in the position
     /// then calculate the next liquidity
-    pub fn get_next_liquidity(&self, position: &LiquidityPosition, delta: i64) -> Result<u64> {
+    pub fn get_next_liquidity(&self, position: &LiquidityPosition, delta: i128) -> Result<u128> {
         if self.is_position_in_range(position)? {
             calculate_new_liquidity(self.liquidity, delta)
         } else {
@@ -271,9 +271,9 @@ impl Pool {
         buy_coverage_result: &BuyCoverageResult,
     ) -> Result<()> {
         self.current_tick_index = buy_coverage_result.next_tick_index;
-        self.sqrt_price_x32 = buy_coverage_result.next_sqrt_price;
+        self.sqrt_price_x64 = buy_coverage_result.next_sqrt_price;
         self.liquidity = self.liquidity;
-        self.fee_growth_0_x32 = buy_coverage_result.fee_growth;
+        self.fee_growth_0_x64 = buy_coverage_result.fee_growth;
         self.protocol_fees_owed_0 += buy_coverage_result.protocol_fee;
         self.founders_fees_owed_0 += buy_coverage_result.founders_fee;
 
@@ -305,7 +305,7 @@ impl Pool {
         &mut self,
         mut tick_array_pool: TickArrayPool,
         mut coverage_position: RefMut<CoveragePosition>,
-        coverage_amount_delta: u64,
+        coverage_amount_delta: u128,
         expiry_ts: i64,
         increase_coverage: bool,
         is_target_amount: bool,
@@ -319,11 +319,11 @@ impl Pool {
         }
 
         let mut coverage_amount_remaining = coverage_amount_delta; // given in u64
-        let mut coverage_amount: u64 = 0; // amount that is covered
-        let mut coverage_premium: u64 = 0; // premium to be deposited
+        let mut coverage_amount: u128 = 0; // amount that is covered
+        let mut coverage_premium: u128 = 0; // premium to be deposited
 
         let mut current_liquidity = self.liquidity; // u64 given in token 0
-        let mut current_fee_growth = self.fee_growth_0_x32; //Q32.32
+        let mut current_fee_growth = self.fee_growth_0_x64; //Q64.64
                                                             // If increase coverage start at the current price, which is the global min
         let mut current_tick_index = if increase_coverage {
             self.current_tick_index
@@ -332,8 +332,8 @@ impl Pool {
         }; // runs from -221_818 to 221_818
 
         let mut current_array_index: usize = 0; // which array in the tick array pool
-        let mut current_protocol_fee: u64 = 0; // Q32.32 to represent the fee
-        let mut current_founders_fee: u64 = 0; // Q32.32
+        let mut current_protocol_fee: u128 = 0; // Q32.32 to represent the fee
+        let mut current_founders_fee: u128 = 0; // Q32.32
         let mut current_sqrt_price = get_sqrt_ratio_at_tick(current_tick_index)?;
         // set the sqrt price limit at either the max of the tick array
         // or the minimum of the coverage position
@@ -433,7 +433,7 @@ impl Pool {
             current_fee_growth = next_fee_growth;
 
             // Update tick
-            let (fee_growth_0, fee_growth_1) = (current_fee_growth, self.fee_growth_1_x32);
+            let (fee_growth_0, fee_growth_1) = (current_fee_growth, self.fee_growth_1_x64);
 
             let (tick_update, next_liquidity) = current_tick.calculate_coverage_update(
                 increase_coverage,
@@ -489,24 +489,26 @@ impl Pool {
 }
 
 pub struct BuyCoverageResult {
-    liquidity: u64,
-    coverage_amount: u64,
-    premium: u64,
-    fee_growth: u64,
-    protocol_fee: u64,
-    founders_fee: u64,
-    next_sqrt_price: u64,
+    liquidity: u128,
+    coverage_amount: u128,
+    premium: u128,
+    fee_growth: u128,
+    protocol_fee: u128,
+    founders_fee: u128,
+    next_sqrt_price: u128,
     next_tick_index: i32,
 }
 
 impl BuyCoverageResult {
+    // TODO: check if cost of updated coverage can be u64 without shifting and casting
     pub fn get_total_cost_of_coverage(&self) -> Result<u64> {
         self.premium
             .checked_add(self.fee_growth)
+            .map(|x| (x >> 64) as u64)
             .ok_or(SureError::AdditionQ3232OverflowError.into())
     }
 
-    pub fn get_coverage_amount(&self) -> u64 {
+    pub fn get_coverage_amount(&self) -> u128 {
         self.coverage_amount
     }
 }

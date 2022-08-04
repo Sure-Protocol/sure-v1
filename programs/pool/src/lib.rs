@@ -62,7 +62,7 @@ pub mod sure_pool {
         ctx: Context<InitializePool>,
         product_id: u8,
         tick_spacing: u16,
-        sqrt_price_x32: u64,
+        sqrt_price_x32: u128,
         name: String,
     ) -> Result<()> {
         instructions::initialize_pool::handler(ctx, product_id, tick_spacing, sqrt_price_x32, name)
@@ -125,7 +125,7 @@ pub mod sure_pool {
     /// * min_token_0: the min amount of token 0 to input
     pub fn increase_liquidity_position(
         ctx: Context<IncreaseLiquidityPosition>,
-        amount: u64,
+        amount: u128,
         max_token_0: u64,
         min_token_0: u64,
     ) -> Result<()> {
@@ -145,7 +145,7 @@ pub mod sure_pool {
     ///
     pub fn decrease_liquidity_position(
         ctx: Context<DecreaseLiquidityPosition>,
-        liquidity_amount: u64,
+        liquidity_amount: u128,
         token_min_a: u64,
         token_min_b: u64,
     ) -> Result<()> {
@@ -172,7 +172,7 @@ pub mod sure_pool {
     /// * is_target_amount: is coverage_amount the final coverage after instruction
     pub fn increase_coverage_position(
         ctx: Context<ChangeCoveragePosition>,
-        coverage_amount: u64,
+        coverage_amount: u128,
         expiry_ts: i64,
         is_target_amount: bool,
     ) -> Result<()> {
@@ -195,7 +195,7 @@ pub mod sure_pool {
     /// * is_target_amount: is coverage_amount the final coverage after instruction
     pub fn decrease_coverage_position(
         ctx: Context<ChangeCoveragePosition>,
-        coverage_amount: u64,
+        coverage_amount: u128,
         expiry_ts: i64,
         is_target_amount: bool,
     ) -> Result<()> {

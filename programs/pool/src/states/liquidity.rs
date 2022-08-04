@@ -14,7 +14,7 @@ use super::{pool::Pool, tick_v2::Tick};
 #[derive(Default)]
 pub struct LiquidityPosition {
     /// The amount of liquidity provided in lamports
-    pub liquidity: u64, // 8 bytes
+    pub liquidity: u128, // 8 bytes
 
     /// Liquidity Pool
     pub pool: Pubkey, // 32 bytes
@@ -31,16 +31,16 @@ pub struct LiquidityPosition {
     pub tick_index_lower: i32,
 
     /// Checkpoint last fee in vault a
-    pub fee_checkpoint_in_0_last_x32: u64,
+    pub fee_checkpoint_in_0_last_x64: u128,
 
     /// Checkpoint last fee in vault b
-    pub fee_checkpoint_in_1_last_x32: u64,
+    pub fee_checkpoint_in_1_last_x64: u128,
 
     /// Non collected fees from vault a
-    pub fee_owed_in_0: u64,
+    pub fee_owed_in_0: u128,
 
     /// Non collected fees from vault b
-    pub fee_owed_in_1: u64,
+    pub fee_owed_in_1: u128,
 }
 
 impl LiquidityPosition {
@@ -74,23 +74,23 @@ impl LiquidityPosition {
     /// or the user wants to collect the fees
     pub fn update(
         &mut self,
-        liquidity_delta: i64,
-        fee_growth_inside_0: u64,
-        fee_growth_inside_1: u64,
+        liquidity_delta: i128,
+        fee_growth_inside_0: u128,
+        fee_growth_inside_1: u128,
     ) -> Result<()> {
         let fee_change_per_unit_0 = fee_growth_inside_0
-            .checked_sub(self.fee_checkpoint_in_0_last_x32)
+            .checked_sub(self.fee_checkpoint_in_0_last_x64)
             .ok_or(SureError::InvalidFeeGrowthSubtraction)?;
 
         let fee_change_per_unit_1 = fee_growth_inside_1
-            .checked_sub(self.fee_checkpoint_in_1_last_x32)
+            .checked_sub(self.fee_checkpoint_in_1_last_x64)
             .ok_or(SureError::InvalidFeeGrowthSubtraction)?;
 
         let fee_change_total_0 = mul_round_down_Q3232(self.liquidity, fee_change_per_unit_0)?;
         let fee_change_total_1 = mul_round_down_Q3232(self.liquidity, fee_change_per_unit_1)?;
 
-        self.fee_checkpoint_in_0_last_x32 = fee_growth_inside_0;
-        self.fee_checkpoint_in_1_last_x32 = fee_growth_inside_1;
+        self.fee_checkpoint_in_0_last_x64 = fee_growth_inside_0;
+        self.fee_checkpoint_in_1_last_x64 = fee_growth_inside_1;
 
         self.fee_owed_in_0 = self.fee_owed_in_0.wrapping_add(fee_change_total_0);
         self.fee_owed_in_1 = self.fee_owed_in_1.wrapping_add(fee_change_total_1);

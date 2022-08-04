@@ -4,45 +4,45 @@ use super::*;
 use crate::states::{liquidity::LiquidityPosition, Pool, TickArray, TickUpdate};
 use anchor_lang::prelude::*;
 
-pub fn validate_liquidity_amount(liquidity_amount: u64, increase: bool) -> Result<i64> {
-    if liquidity_amount > i64::MAX as u64 {
+pub fn validate_liquidity_amount(liquidity_amount: u128, increase: bool) -> Result<i128> {
+    if liquidity_amount > i128::MAX as u128 {
         return Err(SureError::LiquidityTooLarge.into());
     }
     Ok(if increase {
-        liquidity_amount as i64
+        liquidity_amount as i128
     } else {
-        -(liquidity_amount as i64)
+        -(liquidity_amount as i128)
     })
 }
 
 /// Calculate/update new liquidity based on delta
 ///
 /// Formula = delta > 0 : liquidity + delta ? liquidity - abs(delta)
-pub fn calculate_new_liquidity(liquidity: u64, delta: i64) -> Result<u64> {
+pub fn calculate_new_liquidity(liquidity: u128, delta: i128) -> Result<u128> {
     if delta == 0 {
         return Ok(liquidity);
     }
 
     if delta > 0 {
         liquidity
-            .checked_add(delta as u64)
+            .checked_add(delta as u128)
             .ok_or(SureError::LiquidityOverflow.into())
     } else {
         liquidity
-            .checked_sub(delta.abs() as u64)
+            .checked_sub(delta.abs() as u128)
             .ok_or(SureError::LiquidityUnderflow.into())
     }
 }
 
 pub struct UpdatedLiquidityState {
-    liquidity_delta: i64,
-    next_liquidity: u64,
+    liquidity_delta: i128,
+    next_liquidity: u128,
     tick_lower_update: TickUpdate,
     tick_upper_update: TickUpdate,
     pub token_0_delta: u64,
     pub token_1_delta: u64,
-    fee_growth_inside_0_x32: u64,
-    fee_growth_inside_1_x32: u64,
+    fee_growth_inside_0_x64: u128,
+    fee_growth_inside_1_x64: u128,
 }
 
 /// Build new liquidity state
@@ -55,7 +55,7 @@ pub fn build_new_liquidity_state<'info>(
     pool: &Account<'info, Pool>,
     tick_array_lower: &AccountLoader<'info, TickArray>,
     tick_array_upper: &AccountLoader<'info, TickArray>,
-    amount_delta: u64,
+    amount_delta: u128,
     productType: &ProductType,
     is_increasing: bool,
 ) -> Result<UpdatedLiquidityState> {
@@ -80,8 +80,8 @@ pub fn build_new_liquidity_state<'info>(
     let tick_lower_update = tick_lower.calculate_next_liquidity_update(
         position.tick_index_lower,
         pool.current_tick_index,
-        pool.fee_growth_0_x32,
-        pool.fee_growth_1_x32,
+        pool.fee_growth_0_x64,
+        pool.fee_growth_1_x64,
         liquidity_delta,
         productType,
         false,
@@ -91,21 +91,21 @@ pub fn build_new_liquidity_state<'info>(
     let tick_upper_update = tick_upper.calculate_next_liquidity_update(
         position.tick_index_upper,
         pool.current_tick_index,
-        pool.fee_growth_0_x32,
-        pool.fee_growth_1_x32,
+        pool.fee_growth_0_x64,
+        pool.fee_growth_1_x64,
         liquidity_delta,
         productType,
         true,
     )?;
 
     // Calculate the growth in fees
-    let (fee_growth_inside_0_x32, fee_growth_inside_1_x32) = tick_lower.calculate_next_fee_growth(
+    let (fee_growth_inside_0_x64, fee_growth_inside_1_x64) = tick_lower.calculate_next_fee_growth(
         position.tick_index_lower,
         tick_upper,
         position.tick_index_upper,
         pool.get_current_tick_index()?,
-        pool.fee_growth_0_x32,
-        pool.fee_growth_1_x32,
+        pool.fee_growth_0_x64,
+        pool.fee_growth_1_x64,
     )?;
 
     let token_0_delta = calculate_token_0_delta(
@@ -129,8 +129,8 @@ pub fn build_new_liquidity_state<'info>(
         tick_upper_update,
         token_0_delta,
         token_1_delta,
-        fee_growth_inside_0_x32,
-        fee_growth_inside_1_x32,
+        fee_growth_inside_0_x64,
+        fee_growth_inside_1_x64,
     })
 }
 
@@ -144,8 +144,8 @@ pub fn update_liquidity<'info>(
     // update liquidity position
     position.update(
         state.liquidity_delta,
-        state.fee_growth_inside_0_x32,
-        state.fee_growth_inside_1_x32,
+        state.fee_growth_inside_0_x64,
+        state.fee_growth_inside_1_x64,
     )?;
     // Update Pool liquidity
     pool.update_liquidity(state.next_liquidity)?;
@@ -169,7 +169,7 @@ pub fn update_liquidity<'info>(
 /// This is based on formula 6.29 in Uniswap v3
 /// white paper
 pub fn calculate_token_0_delta(
-    liquidity_delta: i64,
+    liquidity_delta: i128,
     liquidity_position: &LiquidityPosition,
     current_tick_index: i32,
     productType: &ProductType,
@@ -178,7 +178,7 @@ pub fn calculate_token_0_delta(
     let tick_index_upper = liquidity_position.tick_index_upper;
     let sqrt_price_0 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_lower)?;
     let sqrt_price_1 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_upper)?;
-    let liquidity_delta_u = liquidity_delta as u64;
+    let liquidity_delta_u = liquidity_delta as u128;
 
     let current_sqrt_price = get_sqrt_ratio_at_tick(current_tick_index)?;
 
@@ -210,7 +210,7 @@ pub fn calculate_token_0_delta(
 ///
 /// TODO: upgrade U32.32 math
 pub fn calculate_token_1_delta(
-    liquidity_delta: i64,
+    liquidity_delta: i128,
     liquidity_position: &LiquidityPosition,
     current_tick_index: i32,
     product_type: &ProductType,
@@ -218,7 +218,7 @@ pub fn calculate_token_1_delta(
     let tick_index_lower = liquidity_position.tick_index_lower;
     let tick_index_upper = liquidity_position.tick_index_upper;
 
-    let liquidity_delta_u = liquidity_delta as u64;
+    let liquidity_delta_u = liquidity_delta as u128;
 
     let sqrt_price_0 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_lower)?;
     let sqrt_price_1 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_upper)?;
@@ -237,10 +237,10 @@ pub fn calculate_token_1_delta(
     }
 
     let token_delta = if current_tick_index < tick_index_lower {
-        let sqrt_price_lower_reciprocal = (1 as u64)
+        let sqrt_price_lower_reciprocal = (1 as u128)
             .checked_div(sqrt_price_lower)
             .ok_or(SureError::DivisionQ3232Error)?;
-        let sqrt_price_upper_reciprocal = (1 as u64)
+        let sqrt_price_upper_reciprocal = (1 as u128)
             .checked_div(sqrt_price_upper)
             .ok_or(SureError::DivisionQ3232Error)?;
         let sqrt_price_sub = sqrt_price_lower_reciprocal
@@ -253,11 +253,11 @@ pub fn calculate_token_1_delta(
     } else if current_tick_index >= tick_index_upper {
         Ok(0)
     } else {
-        let sqrt_price_upper_reciprocal = (1 as u64)
+        let sqrt_price_upper_reciprocal = (1 as u128)
             .checked_div(sqrt_price_upper)
             .ok_or(SureError::DivisionQ3232Error)?;
 
-        let sqrt_price_reciprocal = (1 as u64)
+        let sqrt_price_reciprocal = (1 as u128)
             .checked_div(current_sqrt_price)
             .ok_or(SureError::MultiplictationQ3232Overflow)?;
         let sqrt_price_sub = sqrt_price_reciprocal

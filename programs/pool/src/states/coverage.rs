@@ -1,16 +1,12 @@
 ///! Insurance contract representing the proof
 ///! that a user has insurance
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program;
-use std::mem::size_of;
 
 use crate::common::errors::SureError;
 use crate::common::tick_math::get_sqrt_ratio_at_tick;
-use crate::common::token_tx::deposit_into_vault;
 
 use super::pool::BuyCoverageResult;
 use super::tick_v2::get_tick_location;
-use anchor_spl::token::{Mint, Token, TokenAccount};
 
 /// Max number of ticks to buy over
 const NUM_TICKS_IN_COVERAGE_POSITION_USIZE: usize = 192;
@@ -65,7 +61,7 @@ pub struct CoveragePosition {
     pub start_ts: i64, //8 byte
 
     /// Contract Amount
-    pub covered_amount: u64, // 8 byte
+    pub covered_amount: u128, // 8 byte
 
     /// Owner of contract
     pub owner: Pubkey, // 32 byte
@@ -77,7 +73,7 @@ pub struct CoveragePosition {
     pub last_covered_tick_index: i32,
 
     /// Coverage amount at Ticks
-    pub coverage_amount_ticks: [u64; NUM_TICKS_IN_COVERAGE_POSITION_USIZE], // 8*64*3 = 1_536 bytes
+    pub coverage_amount_ticks: [u128; NUM_TICKS_IN_COVERAGE_POSITION_USIZE], // 8*64*3 = 1_536 bytes
 
     /// is active
     pub is_active: bool,
@@ -141,7 +137,7 @@ impl CoveragePosition {
         self.start_tick_index + NUM_TICKS_IN_COVERAGE_POSITION_USIZE as i32 * tick_spacing as i32
     }
 
-    pub fn get_lowest_sqrt_price_x32(&self) -> Result<u64> {
+    pub fn get_lowest_sqrt_price_x32(&self) -> Result<u128> {
         get_sqrt_ratio_at_tick(self.start_tick_index)
     }
 
@@ -154,7 +150,7 @@ impl CoveragePosition {
         )
     }
 
-    pub fn get_coverage_at_tick_index(&self, tick_index: i32, tick_spacing: u16) -> Result<u64> {
+    pub fn get_coverage_at_tick_index(&self, tick_index: i32, tick_spacing: u16) -> Result<u128> {
         let loc = get_tick_location(self.start_tick_index, tick_index, tick_spacing)?;
         match self.coverage_amount_ticks.get(loc as usize) {
             Some(amount) => Ok(*amount),
@@ -186,7 +182,7 @@ impl CoveragePosition {
         &mut self,
         tick_index: i32,
         tick_spacing: u16,
-        coverage_delta: u64,
+        coverage_delta: u128,
         expiry_ts: i64,
         increase: bool,
     ) -> Result<()> {
