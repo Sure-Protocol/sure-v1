@@ -146,7 +146,7 @@ pub fn handler(
         &ctx.accounts.vault_a,
         &ctx.accounts.origin_account_a,
         &ctx.accounts.token_program,
-        liquidity_amount,
+        updated_liquidity_state.token_0_delta,
     )?;
 
     // Deposit token 1 into vault
@@ -155,7 +155,7 @@ pub fn handler(
         &ctx.accounts.vault_b,
         &ctx.accounts.origin_account_b,
         &ctx.accounts.token_program,
-        liquidity_amount,
+        updated_liquidity_state.token_1_delta,
     )?;
     Ok(())
 }

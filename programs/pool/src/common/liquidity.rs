@@ -1,8 +1,11 @@
+use std::ops::Shr;
+
 use super::errors::SureError;
 use super::tick_math::get_sqrt_ratio_at_tick;
 use super::*;
 use crate::states::{liquidity::LiquidityPosition, Pool, TickArray, TickUpdate};
 use anchor_lang::prelude::*;
+use primitive_types::U256;
 
 pub fn validate_liquidity_amount(liquidity_amount: u128, increase: bool) -> Result<i128> {
     if liquidity_amount > i128::MAX as u128 {
@@ -168,6 +171,7 @@ pub fn update_liquidity<'info>(
 ///
 /// This is based on formula 6.29 in Uniswap v3
 /// white paper
+/// TODO: Simply calculations and check if U256 is necessary
 pub fn calculate_token_0_delta(
     liquidity_delta: i128,
     liquidity_position: &LiquidityPosition,
@@ -178,7 +182,7 @@ pub fn calculate_token_0_delta(
     let tick_index_upper = liquidity_position.tick_index_upper;
     let sqrt_price_0 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_lower)?;
     let sqrt_price_1 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_upper)?;
-    let liquidity_delta_u = liquidity_delta as u128;
+    let liquidity_delta_u = U256::from(liquidity_delta);
 
     let current_sqrt_price = get_sqrt_ratio_at_tick(current_tick_index)?;
 
@@ -191,24 +195,35 @@ pub fn calculate_token_0_delta(
     if current_tick_index < tick_index_lower {
         Ok(0)
     } else if current_tick_index >= tick_index_upper {
-        let sqrt_diff = sqrt_price_upper - sqrt_price_lower;
+        let sqrt_diff = U256::from(sqrt_price_upper - sqrt_price_lower);
         // TODO: calculations should be done in U64.64 and the result should be 64
         let token_change = liquidity_delta_u
             .checked_mul(sqrt_diff)
-            .ok_or(SureError::MultiplictationQ3232Overflow)?;
-        Ok(token_change)
+            .ok_or(SureError::MultiplictationQ3232Overflow)?
+            .shr(192 as u8)
+            .as_u128();
+        if token_change > u64::MAX as u128 {
+            return Err(SureError::OverflowU64.into());
+        }
+        Ok(token_change as u64)
     } else {
-        let sqrt_diff = current_sqrt_price - sqrt_price_lower;
+        let sqrt_diff = U256::from(current_sqrt_price - sqrt_price_lower);
         let token_change = liquidity_delta_u
             .checked_mul(sqrt_diff)
-            .ok_or(SureError::MultiplictationQ3232Overflow)?;
-        Ok(token_change)
+            .ok_or(SureError::MultiplictationQ3232Overflow)?
+            .shr(192 as u8)
+            .as_u128();
+        if token_change > u64::MAX as u128 {
+            return Err(SureError::OverflowU64.into());
+        }
+
+        Ok(token_change as u64)
     }
 }
 
 /// Calculate token 1 change
 ///
-/// TODO: upgrade U32.32 math
+/// TODO: Simply calculations and check if U256 is necessary
 pub fn calculate_token_1_delta(
     liquidity_delta: i128,
     liquidity_position: &LiquidityPosition,
@@ -218,16 +233,16 @@ pub fn calculate_token_1_delta(
     let tick_index_lower = liquidity_position.tick_index_lower;
     let tick_index_upper = liquidity_position.tick_index_upper;
 
-    let liquidity_delta_u = liquidity_delta as u128;
+    let liquidity_delta_u = U256::from(liquidity_delta);
 
     let sqrt_price_0 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_lower)?;
     let sqrt_price_1 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_upper)?;
 
-    let current_sqrt_price = get_sqrt_ratio_at_tick(current_tick_index)?;
+    let current_sqrt_price = U256::from(get_sqrt_ratio_at_tick(current_tick_index)?);
     let (sqrt_price_lower, sqrt_price_upper) = if sqrt_price_1 > sqrt_price_0 {
-        (sqrt_price_0, sqrt_price_1)
+        (U256::from(sqrt_price_0), U256::from(sqrt_price_1))
     } else {
-        (sqrt_price_1, sqrt_price_0)
+        (U256::from(sqrt_price_1), U256::from(sqrt_price_0))
     };
 
     // If the product is smart contract coverage
@@ -237,27 +252,35 @@ pub fn calculate_token_1_delta(
     }
 
     let token_delta = if current_tick_index < tick_index_lower {
-        let sqrt_price_lower_reciprocal = (1 as u128)
+        let sqrt_price_lower_reciprocal = U256::from(1 as u8)
             .checked_div(sqrt_price_lower)
             .ok_or(SureError::DivisionQ3232Error)?;
-        let sqrt_price_upper_reciprocal = (1 as u128)
-            .checked_div(sqrt_price_upper)
-            .ok_or(SureError::DivisionQ3232Error)?;
-        let sqrt_price_sub = sqrt_price_lower_reciprocal
-            .checked_sub(sqrt_price_upper_reciprocal)
-            .ok_or(SureError::SubtractionQ3232Error)?;
-        let res = liquidity_delta_u
-            .checked_mul(sqrt_price_sub)
-            .ok_or(SureError::MultiplictationQ3232Overflow)?;
-        Ok(res)
-    } else if current_tick_index >= tick_index_upper {
-        Ok(0)
-    } else {
-        let sqrt_price_upper_reciprocal = (1 as u128)
+
+        let sqrt_price_upper_reciprocal = U256::from(1 as u8)
             .checked_div(sqrt_price_upper)
             .ok_or(SureError::DivisionQ3232Error)?;
 
-        let sqrt_price_reciprocal = (1 as u128)
+        let sqrt_price_sub = sqrt_price_lower_reciprocal
+            .checked_sub(sqrt_price_upper_reciprocal)
+            .ok_or(SureError::SubtractionQ3232Error)?;
+
+        let res = liquidity_delta_u
+            .checked_mul(sqrt_price_sub)
+            .ok_or(SureError::MultiplictationQ3232Overflow)?
+            .as_u128();
+        if res > u64::MAX as u128 {
+            return Err(SureError::OverflowU64.into());
+        }
+
+        Ok(res as u64)
+    } else if current_tick_index >= tick_index_upper {
+        Ok(0)
+    } else {
+        let sqrt_price_upper_reciprocal = U256::from(1 as u8)
+            .checked_div(sqrt_price_upper)
+            .ok_or(SureError::DivisionQ3232Error)?;
+
+        let sqrt_price_reciprocal = U256::from(1 as u8)
             .checked_div(current_sqrt_price)
             .ok_or(SureError::MultiplictationQ3232Overflow)?;
         let sqrt_price_sub = sqrt_price_reciprocal
@@ -265,8 +288,12 @@ pub fn calculate_token_1_delta(
             .ok_or(SureError::SubtractionQ3232Error)?;
         let res = liquidity_delta_u
             .checked_mul(sqrt_price_sub)
-            .ok_or(SureError::MultiplictationQ3232Overflow)?;
-        Ok(res)
+            .ok_or(SureError::MultiplictationQ3232Overflow)?
+            .as_u128();
+        if res > u64::MAX as u128 {
+            return Err(SureError::OverflowU64.into());
+        }
+        Ok(res as u64)
     };
 
     token_delta
