@@ -1,8 +1,8 @@
 use std::ops::Shr;
 
+use super::uint::U256;
 use crate::common::errors::SureError;
 use anchor_lang::prelude::*;
-use primitive_types::U256;
 /// the minimum tick i is calculated as
 /// i_min = ln(p_min)/ln(1.0001)
 /// where

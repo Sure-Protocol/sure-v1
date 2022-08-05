@@ -25,6 +25,7 @@ import {
 } from '@solana/web3.js';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
+import Decimal from 'decimal.js';
 const { SystemProgram } = anchor.web3;
 
 /// =============== Variables ==================
@@ -270,6 +271,12 @@ describe('Initialize Sure Pool', () => {
 		// Initialize Tick array for pool
 		const startSqrtPrice = new anchor.BN(Math.sqrt(4));
 		const startSqrtPricex32 = toX32(startSqrtPrice);
+		const tickIndex = priceToTickIndex(
+			new Decimal(4),
+			tokenMintAccount.decimals,
+			tokenMintAccount.decimals
+		);
+		console.log('tick index: ', tickIndex);
 	});
 	it('');
 });

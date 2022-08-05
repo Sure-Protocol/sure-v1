@@ -2,10 +2,10 @@ use std::ops::Shr;
 
 use super::errors::SureError;
 use super::tick_math::get_sqrt_ratio_at_tick;
+use super::uint::U256;
 use super::*;
 use crate::states::{liquidity::LiquidityPosition, Pool, TickArray, TickUpdate};
 use anchor_lang::prelude::*;
-use primitive_types::U256;
 
 pub fn validate_liquidity_amount(liquidity_amount: u128, increase: bool) -> Result<i128> {
     if liquidity_amount > i128::MAX as u128 {
