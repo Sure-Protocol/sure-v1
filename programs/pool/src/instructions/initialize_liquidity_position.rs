@@ -17,7 +17,7 @@ pub struct InitializeLiquidityPosition<'info> {
         init,
         payer = liquidity_provider,
         seeds = [
-            SURE_LIQUIDITY_POSITION.as_bytes(),
+            SURE_DOMAIN.as_bytes(),
             position_mint.key().as_ref()
         ],
         space = 8 + LiquidityPosition::SPACE,

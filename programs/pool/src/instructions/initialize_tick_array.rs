@@ -23,11 +23,11 @@ pub struct InitializeTickArray<'info> {
     #[account(
         init,
         seeds = [
-            SURE_BITMAP.as_bytes(),
+            SURE_DOMAIN.as_bytes(),
             pool.token_mint_0.as_ref(),
             pool.token_mint_1.as_ref(),
-            &pool.fee_rate.to_be_bytes(),
-            &start_tick_index.to_be_bytes()
+            &pool.fee_rate.to_le_bytes(),
+            &start_tick_index.to_le_bytes()
         ],
         bump,
         payer=creator,

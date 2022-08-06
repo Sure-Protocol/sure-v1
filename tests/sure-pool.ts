@@ -14,7 +14,7 @@ import {
 
 import { priceToTickIndex } from '@orca-so/whirlpool-sdk';
 
-import { Program } from '@project-serum/anchor';
+import { Program, ProgramErrorStack } from '@project-serum/anchor';
 
 import { SurePool } from '../target/types/sure_pool';
 import {
@@ -26,6 +26,8 @@ import {
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 import Decimal from 'decimal.js';
+import { MetadataAccount } from '@metaplex-foundation/js-next';
+import { MethodsBuilder } from '@project-serum/anchor/dist/cjs/program/namespace/methods';
 const { SystemProgram } = anchor.web3;
 
 /// =============== Variables ==================
@@ -47,6 +49,9 @@ let tokenMint1: PublicKey;
 
 let vault0: PublicKey;
 
+// global test vars
+let tickSpacing = 20;
+
 // PDAs
 let protcolToInsure0: anchor.web3.Keypair;
 
@@ -58,6 +63,25 @@ const toX64 = (num: anchor.BN): anchor.BN => {
 
 const fromX64 = (num: anchor.BN): anchor.BN => {
 	return num.div(new anchor.BN(2).pow(new anchor.BN(64)));
+};
+
+const getPoolPDA = (
+	productId: number,
+	tokenMintA: PublicKey,
+	tokenMintB: PublicKey,
+	tickSpacing: number
+): PublicKey => {
+	const [poolPDA, _poolPDABump] = findProgramAddressSync(
+		[
+			Buffer.from('sure-pool'),
+			new anchor.BN(productId).toBuffer('le', 1),
+			tokenMintA.toBytes(),
+			tokenMintB.toBytes(),
+			new anchor.BN(tickSpacing).toBuffer('le', 2),
+		],
+		program.programId
+	);
+	return poolPDA;
 };
 
 describe('Initialize Sure Pool', () => {
@@ -194,7 +218,6 @@ describe('Initialize Sure Pool', () => {
 		const protocolFeeRate = 50;
 		const foundersFeeRate = 50;
 		const productId = 1;
-		const tickSpacing = 20;
 		const initialSqrtPrice = new anchor.BN(Math.sqrt(25));
 		const initialSqrtPriceX64 = toX64(initialSqrtPrice);
 
@@ -269,13 +292,51 @@ describe('Initialize Sure Pool', () => {
 		assert.equal(pool.sqrtPriceX64.toString(), initialSqrtPriceX64.toString());
 
 		// Initialize Tick array for pool
-		const startSqrtPrice = new anchor.BN(Math.sqrt(4));
 		const tickIndex = priceToTickIndex(
 			new Decimal(4),
 			tokenMintAccount.decimals,
 			tokenMintAccount.decimals
 		);
 		console.log('tick index: ', tickIndex);
+		const pool_data = await program.account.pool.fetch(poolPDA);
+		const [tickArrayPDA, _tickArrayBump] = findProgramAddressSync(
+			[
+				Buffer.from('sure-pool'),
+				tokenMintA.toBytes(),
+				tokenMintB.toBytes(),
+				new anchor.BN(pool_data.feeRate).toBuffer('le', 2),
+				new anchor.BN(tickIndex).toBuffer('le', 2),
+			],
+			program.programId
+		);
+		const initTickArrayIx = await program.methods
+			.initializeTickArray(tickIndex)
+			.accounts({
+				creator: wallet.publicKey,
+				pool: poolPDA,
+				tickArray: tickArrayPDA,
+				systemProgram: SystemProgram.programId,
+			});
+
+		console.log('initTickArrayIx: ', initTickArrayIx);
 	});
-	it('');
+	it('Supply liquidity to Pool', async () => {
+		const tickIndexLower = priceToTickIndex(
+			new Decimal(4),
+			tokenMintAccount.decimals,
+			tokenMintAccount.decimals
+		);
+		const tickIndexUpper = priceToTickIndex(
+			new Decimal(4),
+			tokenMintAccount.decimals,
+			tokenMintAccount.decimals
+		);
+		const poolPDA = getPoolPDA(1, tokenMint0, tokenMint1, tickSpacing);
+		// await program.methods
+		// 	.initializeLiquidityPosition(tickIndexLower, tickIndexUpper)
+		// 	.accounts({
+		// 		liquidityProvider: wallet.publicKey,
+		// 		pool: poolPDA,
+		// 	});
+	});
 });
