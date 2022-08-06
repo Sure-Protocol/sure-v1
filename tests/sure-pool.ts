@@ -52,12 +52,12 @@ let protcolToInsure0: anchor.web3.Keypair;
 
 /// ============== TESTS ===========================
 
-const toX32 = (num: anchor.BN): anchor.BN => {
-	return num.mul(new anchor.BN(2).pow(new anchor.BN(32)));
+const toX64 = (num: anchor.BN): anchor.BN => {
+	return num.mul(new anchor.BN(2).pow(new anchor.BN(64)));
 };
 
-const fromX32 = (num: anchor.BN): anchor.BN => {
-	return num.div(new anchor.BN(2).pow(new anchor.BN(32)));
+const fromX64 = (num: anchor.BN): anchor.BN => {
+	return num.div(new anchor.BN(2).pow(new anchor.BN(64)));
 };
 
 describe('Initialize Sure Pool', () => {
@@ -196,7 +196,7 @@ describe('Initialize Sure Pool', () => {
 		const productId = 1;
 		const tickSpacing = 20;
 		const initialSqrtPrice = new anchor.BN(Math.sqrt(25));
-		const initialSqrtPriceX32 = toX32(initialSqrtPrice);
+		const initialSqrtPriceX64 = toX64(initialSqrtPrice);
 
 		const [feePackagePDA, _] = findProgramAddressSync(
 			[anchor.utils.bytes.utf8.encode('sure-pool')],
@@ -245,7 +245,7 @@ describe('Initialize Sure Pool', () => {
 
 		try {
 			const initPoolTxId = await program.methods
-				.initializePool(productId, tickSpacing, initialSqrtPriceX32, 'my pool')
+				.initializePool(productId, tickSpacing, initialSqrtPriceX64, 'my pool')
 				.accounts({
 					creator: wallet.publicKey,
 					pool: poolPDA,
@@ -266,11 +266,10 @@ describe('Initialize Sure Pool', () => {
 
 		// get info on pool
 		const pool = await program.account.pool.fetch(poolPDA);
-		assert.equal(pool.sqrtPriceX32.toString(), initialSqrtPriceX32.toString());
+		assert.equal(pool.sqrtPriceX64.toString(), initialSqrtPriceX64.toString());
 
 		// Initialize Tick array for pool
 		const startSqrtPrice = new anchor.BN(Math.sqrt(4));
-		const startSqrtPricex32 = toX32(startSqrtPrice);
 		const tickIndex = priceToTickIndex(
 			new Decimal(4),
 			tokenMintAccount.decimals,
