@@ -1,20 +1,23 @@
 import { assert } from 'chai';
 import * as anchor from '@project-serum/anchor';
 import {
+	getNearestValidTickIndex,
+	getNextValidTickIndex,
+	priceToTickIndex,
+	tickIndexToPrice,
+} from '@orca-so/whirlpool-sdk/dist/index';
+
+import {
 	createMint,
-	TOKEN_PROGRAM_ID,
 	transfer,
-	mintTo,
-	getAccount,
-	createAssociatedTokenAccount,
-	getMint,
 	Mint,
-	getOrCreateAssociatedTokenAccount,
-} from '@solana/spl-token';
-
-import { priceToTickIndex } from '@orca-so/whirlpool-sdk';
-
-import { Program, ProgramErrorStack } from '@project-serum/anchor';
+	mintTo,
+	getMint,
+	createAssociatedTokenAccount,
+	TOKEN_PROGRAM_ID,
+	ASSOCIATED_TOKEN_PROGRAM_ID,
+	getAccount,
+} from '../node_modules/@solana/spl-token';
 
 import { SurePool } from '../target/types/sure_pool';
 import {
@@ -26,27 +29,31 @@ import {
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 import Decimal from 'decimal.js';
-import { MetadataAccount } from '@metaplex-foundation/js-next';
-import { MethodsBuilder } from '@project-serum/anchor/dist/cjs/program/namespace/methods';
+import {
+	MetadataAccount,
+	TokenMetadataProgram,
+} from '@metaplex-foundation/js-next';
 const { SystemProgram } = anchor.web3;
 
 /// =============== Variables ==================
 
 // PDA seeds
-const program = anchor.workspace.SurePool as Program<SurePool>;
-
+const program = anchor.workspace.SurePool as anchor.Program<SurePool>;
+const TICK_ARRAY_SIZE = 64;
 /// Token for Sure Pool
-let tokenMint: PublicKey;
 let tokenMintAccount: Mint;
 let minterWallet: anchor.web3.Keypair;
 let liqudityProviderWallet: anchor.web3.Keypair;
-let walletATAPubkey: PublicKey;
-let liquidityProviderWalletATA: PublicKey;
 
 /// Token mints
 let tokenMint0: PublicKey;
 let tokenMint1: PublicKey;
+let originAccountA: PublicKey;
+let originAccountB: PublicKey;
 
+let metadataUpdateAuthority = new PublicKey(
+	'rYhoVCsVF8dahDpAYUZ9sDygLbhoVgRcczMxnQhWWjg'
+);
 let vault0: PublicKey;
 
 // global test vars
@@ -63,6 +70,24 @@ const toX64 = (num: anchor.BN): anchor.BN => {
 
 const fromX64 = (num: anchor.BN): anchor.BN => {
 	return num.div(new anchor.BN(2).pow(new anchor.BN(64)));
+};
+
+const getMetaplexMetadataPDA = async (
+	nftMintPDA: PublicKey,
+	test?: boolean
+): Promise<PublicKey> => {
+	const metadataProgramId = test
+		? new PublicKey('5F4dJcMHuNp5qYe3JjPY9CK8G3ePR9dZCJ98aZD9Mxgi')
+		: TokenMetadataProgram.publicKey;
+	const [mpMetadataPDA, mpMetadataBump] = await PublicKey.findProgramAddress(
+		[
+			Buffer.from('metadata'),
+			metadataProgramId.toBuffer(),
+			nftMintPDA.toBytes(),
+		],
+		metadataProgramId
+	);
+	return mpMetadataPDA;
 };
 
 const getPoolPDA = (
@@ -103,7 +128,7 @@ describe('Initialize Sure Pool', () => {
 
 		sig = await connection.requestAirdrop(
 			wallet.publicKey,
-			10 * LAMPORTS_PER_SOL
+			100 * LAMPORTS_PER_SOL
 		);
 		await connection.confirmTransaction(sig);
 		sig = await connection.requestAirdrop(
@@ -118,14 +143,6 @@ describe('Initialize Sure Pool', () => {
 		protcolToInsure0 = anchor.web3.Keypair.generate();
 		// Create a random mint for testing
 		// TODO: The mint should have the same pubkey as USDC
-		tokenMint = await createMint(
-			connection,
-			minterWallet,
-			minterWallet.publicKey,
-			minterWallet.publicKey,
-			8
-		);
-
 		tokenMint0 = await createMint(
 			connection,
 			minterWallet,
@@ -141,29 +158,43 @@ describe('Initialize Sure Pool', () => {
 			minterWallet.publicKey,
 			8
 		);
+		// If tokenMint0 is larger than tokenMint1, reverse the pubkey
+		// so that tokenMint0 < tokenMint1
+		if (Buffer.compare(tokenMint0.toBuffer(), tokenMint1.toBuffer()) > 0) {
+			const tempToken = tokenMint1;
+			tokenMint1 = tokenMint0;
+			tokenMint0 = tempToken;
+		}
 
-		tokenMintAccount = await getMint(connection, tokenMint);
+		tokenMintAccount = await getMint(connection, tokenMint0);
 
 		// Create associated token accounts for each wallet for the tokenMint mint
-		const minterWalletATA = await createAssociatedTokenAccount(
+		const minterWalletATA0 = await createAssociatedTokenAccount(
 			connection,
 			minterWallet,
-			tokenMint,
+			tokenMint0,
 			minterWallet.publicKey
 		);
 
-		walletATAPubkey = await createAssociatedTokenAccount(
+		const minterWalletATA1 = await createAssociatedTokenAccount(
+			connection,
+			minterWallet,
+			tokenMint1,
+			minterWallet.publicKey
+		);
+
+		originAccountA = await createAssociatedTokenAccount(
 			connection,
 			(wallet as NodeWallet).payer,
-			tokenMint,
+			tokenMint0,
 			wallet.publicKey
 		);
 
-		liquidityProviderWalletATA = await createAssociatedTokenAccount(
+		originAccountB = await createAssociatedTokenAccount(
 			connection,
-			liqudityProviderWallet,
-			tokenMint,
-			liqudityProviderWallet.publicKey
+			(wallet as NodeWallet).payer,
+			tokenMint1,
+			wallet.publicKey
 		);
 
 		// Mint initial supply to mint authority associated wallet account
@@ -171,8 +202,17 @@ describe('Initialize Sure Pool', () => {
 		await mintTo(
 			connection,
 			minterWallet,
-			tokenMint,
-			minterWalletATA,
+			tokenMint0,
+			minterWalletATA0,
+			minterWallet,
+			mintAmount
+		);
+
+		await mintTo(
+			connection,
+			minterWallet,
+			tokenMint1,
+			minterWalletATA1,
 			minterWallet,
 			mintAmount
 		);
@@ -182,8 +222,8 @@ describe('Initialize Sure Pool', () => {
 		await transfer(
 			connection,
 			minterWallet,
-			minterWalletATA,
-			walletATAPubkey,
+			minterWalletATA0,
+			originAccountA,
 			minterWallet,
 			tranferAmount
 		);
@@ -192,23 +232,20 @@ describe('Initialize Sure Pool', () => {
 		await transfer(
 			connection,
 			minterWallet,
-			minterWalletATA,
-			liquidityProviderWalletATA,
+			minterWalletATA1,
+			originAccountB,
 			minterWallet,
 			tranferAmount
 		);
 
 		// Validate transfer
-		const liquidityProvidertokenMintATA = await getAccount(
-			connection,
-			walletATAPubkey
-		);
+		const originAccountAData = await getAccount(connection, originAccountA);
 		assert.equal(
-			liquidityProvidertokenMintATA.owner.toBase58(),
+			originAccountAData.owner.toBase58(),
 			wallet.publicKey.toBase58()
 		);
 		assert.equal(
-			liquidityProvidertokenMintATA.amount.toString(),
+			originAccountAData.amount.toString(),
 			tranferAmount.toString()
 		);
 	});
@@ -244,16 +281,7 @@ describe('Initialize Sure Pool', () => {
 		}
 
 		//pool PDA
-		const [poolPDA, _poolPDABump] = findProgramAddressSync(
-			[
-				Buffer.from('sure-pool'),
-				new anchor.BN(productId).toBuffer('le', 1),
-				tokenMintA.toBytes(),
-				tokenMintB.toBytes(),
-				new anchor.BN(tickSpacing).toBuffer('le', 2),
-			],
-			program.programId
-		);
+		const poolPDA = getPoolPDA(1, tokenMintA, tokenMintB, tickSpacing);
 
 		// Token vault 0 PDA
 		const [tokenVaultAPDA, _tokenVaultXBump] = findProgramAddressSync(
@@ -291,15 +319,17 @@ describe('Initialize Sure Pool', () => {
 		const pool = await program.account.pool.fetch(poolPDA);
 		assert.equal(pool.sqrtPriceX64.toString(), initialSqrtPriceX64.toString());
 
+		// ================= Initialize Liquidity Position ========================
 		// Initialize Tick array for pool
-		const tickIndex = priceToTickIndex(
-			new Decimal(4),
+		const tickIndex = getNearestValidTickIndex(
+			new Decimal(4.2),
 			tokenMintAccount.decimals,
-			tokenMintAccount.decimals
+			tokenMintAccount.decimals,
+			tickSpacing
 		);
-		console.log('tick index: ', tickIndex);
+
 		const pool_data = await program.account.pool.fetch(poolPDA);
-		const [tickArrayPDA, _tickArrayBump] = findProgramAddressSync(
+		const [tickArray0PDA, _tickArray0Bump] = findProgramAddressSync(
 			[
 				Buffer.from('sure-pool'),
 				tokenMintA.toBytes(),
@@ -309,34 +339,165 @@ describe('Initialize Sure Pool', () => {
 			],
 			program.programId
 		);
-		const initTickArrayIx = await program.methods
-			.initializeTickArray(tickIndex)
-			.accounts({
-				creator: wallet.publicKey,
-				pool: poolPDA,
-				tickArray: tickArrayPDA,
-				systemProgram: SystemProgram.programId,
-			});
+		try {
+			await program.methods
+				.initializeTickArray(tickIndex)
+				.accounts({
+					creator: wallet.publicKey,
+					pool: poolPDA,
+					tickArray: tickArray0PDA,
+					systemProgram: SystemProgram.programId,
+				})
+				.rpc();
+		} catch (err) {
+			console.log('err: ', err);
+		}
 
-		console.log('initTickArrayIx: ', initTickArrayIx);
-	});
-	it('Supply liquidity to Pool', async () => {
-		const tickIndexLower = priceToTickIndex(
-			new Decimal(4),
-			tokenMintAccount.decimals,
-			tokenMintAccount.decimals
+		const nextTickIndex = tickIndex + tickSpacing * TICK_ARRAY_SIZE;
+
+		console.log('nextTickIndex: ', nextTickIndex);
+		console.log(
+			'next tick index price: ',
+			tickIndexToPrice(
+				nextTickIndex,
+				tokenMintAccount.decimals,
+				tokenMintAccount.decimals
+			)
 		);
-		const tickIndexUpper = priceToTickIndex(
-			new Decimal(4),
-			tokenMintAccount.decimals,
-			tokenMintAccount.decimals
+		const [tickArray1PDA, _tickArray1Bump] = findProgramAddressSync(
+			[
+				Buffer.from('sure-pool'),
+				tokenMintA.toBytes(),
+				tokenMintB.toBytes(),
+				new anchor.BN(pool_data.feeRate).toBuffer('le', 2),
+				new anchor.BN(nextTickIndex).toBuffer('le', 2),
+			],
+			program.programId
 		);
-		const poolPDA = getPoolPDA(1, tokenMint0, tokenMint1, tickSpacing);
-		// await program.methods
-		// 	.initializeLiquidityPosition(tickIndexLower, tickIndexUpper)
-		// 	.accounts({
-		// 		liquidityProvider: wallet.publicKey,
-		// 		pool: poolPDA,
-		// 	});
+		try {
+			await program.methods
+				.initializeTickArray(nextTickIndex)
+				.accounts({
+					creator: wallet.publicKey,
+					pool: poolPDA,
+					tickArray: tickArray1PDA,
+					systemProgram: SystemProgram.programId,
+				})
+				.rpc();
+		} catch (err) {
+			console.log('err: ', err);
+		}
+
+		const tickIndexLower = getNearestValidTickIndex(
+			new Decimal(4.2),
+			tokenMintAccount.decimals,
+			tokenMintAccount.decimals,
+			tickSpacing
+		);
+		const tickIndexUpper = getNearestValidTickIndex(
+			new Decimal(4.8),
+			tokenMintAccount.decimals,
+			tokenMintAccount.decimals,
+			tickSpacing
+		);
+
+		const [positionMintPDA, positionMintBump] = findProgramAddressSync(
+			[Buffer.from('sure-pool'), poolPDA.toBytes()],
+			program.programId
+		);
+		const [positionTokenAccountPDA, positionTokenAccountBump] =
+			await findProgramAddressSync(
+				[Buffer.from('sure-pool'), positionMintPDA.toBytes()],
+				program.programId
+			);
+		const [liquidityPositionPDA, liquidityPositionBump] =
+			findProgramAddressSync(
+				[
+					Buffer.from('sure-pool'),
+					poolPDA.toBytes(),
+					positionMintPDA.toBytes(),
+				],
+				program.programId
+			);
+		const metadataAccount = await getMetaplexMetadataPDA(
+			positionMintPDA,
+			false
+		);
+
+		console.log('metadataAccount: ', metadataAccount.toString());
+		console.log('metadataProgram: ', TokenMetadataProgram.publicKey.toString());
+		console.log(
+			'metadataUpdateAuthority: ',
+			metadataUpdateAuthority.toString()
+		);
+		try {
+			await program.methods
+				.initializeLiquidityPosition(tickIndexUpper, tickIndexLower)
+				.accounts({
+					liquidityProvider: wallet.publicKey,
+					pool: poolPDA,
+					liquidityPosition: liquidityPositionPDA,
+					positionMint: positionMintPDA,
+					positionTokenAccount: positionTokenAccountPDA,
+					metadataAccount: metadataAccount,
+					metadataProgram: TokenMetadataProgram.publicKey,
+					metadataUpdateAuthority: metadataUpdateAuthority,
+					associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+					tokenProgram: TOKEN_PROGRAM_ID,
+					rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+					systemProgram: SystemProgram.programId,
+				})
+				.rpc();
+		} catch (err) {
+			console.log('err: ', err);
+		}
+
+		// ==================== Increase Liquidity Position ====================
+
+		const liquidityAmount = new anchor.BN(1_000_000);
+		const positionTokenAccount = await getAccount(
+			connection,
+			positionTokenAccountPDA
+		);
+
+		console.log('positionTokenAccount amount: ', positionTokenAccount);
+		console.log(
+			'positionTokenAccount owner: ',
+			positionTokenAccount.owner.toString()
+		);
+		console.log('wallet owner: ', wallet.publicKey.toString());
+		try {
+			await program.methods
+				.increaseLiquidityPosition(
+					liquidityAmount,
+					liquidityAmount,
+					liquidityAmount
+				)
+				.accounts({
+					liquidityProvider: wallet.publicKey,
+					liquidityPosition: liquidityPositionPDA,
+					positionTokenAccount: positionTokenAccountPDA,
+					pool: poolPDA,
+					originAccountA: originAccountA,
+					originAccountB: originAccountB,
+					vaultA: tokenVaultAPDA,
+					vaultB: tokenVaultBPDA,
+					tickArrayLower: tickArray0PDA,
+					tickArrayUpper: tickArray1PDA,
+					tokenProgram: TOKEN_PROGRAM_ID,
+				})
+				.rpc();
+		} catch (err) {
+			console.log('err: ', err);
+		}
+
+		// Check amount in each vault
+		const vaultAAccount = await getAccount(connection, tokenVaultAPDA);
+		const vaultBAccount = await getAccount(connection, tokenVaultBPDA);
+		console.log('vaultAAccount amount: ', vaultAAccount.amount);
+		console.log('vaultBAccount amount: ', vaultBAccount.amount);
+
+		const poolAccount = await program.account.pool.fetch(poolPDA);
+		console.log('poolAccount liq: ', poolAccount.liquidity);
 	});
 });

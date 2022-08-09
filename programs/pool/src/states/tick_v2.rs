@@ -29,24 +29,24 @@ pub const MAX_100th_BP: usize = 1_000_000;
 pub struct Tick {
     /// Amount of liquidity added (removed, if neg)
     /// when the tick is crossed going left to right.
-    pub liquidity_net: i128, // 8 bytes
+    pub liquidity_net: i128, // 16 bytes
 
     /// The total amount of liquidity
     /// If liquidity_net=0, liquidity_gross indicates
     /// whether the tick is referenced by a position
-    pub liquidity_gross: u128, // 8 bytes
+    pub liquidity_gross: u128, // 16 bytes
 
     /// Locked liquidity indicates how much of the
     /// liquidity is locked in long term commitments
-    pub liquidity_locked: u128, // 8 bytes
+    pub liquidity_locked: u128, // 16 bytes
 
     /// Fee growth
-    pub fee_growth_outside_0_x64: u128, // 8 bytes
-    pub fee_growth_outside_1_x64: u128, // 8 bytes
+    pub fee_growth_outside_0_x64: u128, // 16 bytes
+    pub fee_growth_outside_1_x64: u128, // 16 bytes
 }
 
 impl Tick {
-    pub const SIZE: usize = 8 + 8 + 8 + 8;
+    pub const SIZE: usize = 16 + 16 + 16 + 16 + 16;
 
     /// Update tick with a NewTick object
     pub fn update(&mut self, new_tick: &NewTick) {
@@ -177,7 +177,7 @@ impl Tick {
         let available_liquidity = self.get_available_liquidity();
 
         // calculate premium
-        let sqrt_price_x64 = get_sqrt_ratio_at_tick(tick_index)?;
+        let sqrt_price_x64 = get_sqrt_ratio_at_tick(tick_index);
 
         let remaining_premium =
             calculate_premium(sqrt_price_x64, current_covered_amount, expiry_ts)?;
@@ -676,7 +676,7 @@ impl<'info> TickArrayPool<'info> {
     /// return: sqrt_price: 32.32
     pub fn max_sqrt_price_x32(&self, tick_spacing: u16) -> Result<u128> {
         let tick_index = self.max_tick_index(tick_spacing)?;
-        get_sqrt_ratio_at_tick(tick_index)
+        Ok(get_sqrt_ratio_at_tick(tick_index))
     }
 
     /// Get tick

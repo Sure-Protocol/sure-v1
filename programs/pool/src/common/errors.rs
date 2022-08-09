@@ -93,6 +93,15 @@ pub enum SureError {
     #[msg("Invalid upper and lower tick provided")]
     InvalidTickIndexProvided,
 
+    #[msg("Invalid upper tick provided")]
+    InvalidUpperTickIndexProvided,
+
+    #[msg("Invalid lower tick provided")]
+    InvalidLowerTickIndexProvided,
+
+    #[msg("Lower tick gt upper tick")]
+    LowerTickgtUpperTick,
+
     #[msg("Not a valid owner. The expected user does not have ownership over the account")]
     InvalidOwner,
 

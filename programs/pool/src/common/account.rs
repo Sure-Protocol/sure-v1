@@ -16,7 +16,7 @@ pub fn validate_token_account_ownership<'info>(
         COption::Some(ref delegate) if expected_owner.key == delegate => {
             validate_owner(delegate, &expected_owner.to_account_info())?
         }
-        _ => validate_owner(&token_account.owner, &token_account.to_account_info())?,
+        _ => validate_owner(&token_account.owner, &expected_owner.to_account_info())?,
     };
     Ok(())
 }

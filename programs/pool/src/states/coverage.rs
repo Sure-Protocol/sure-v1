@@ -137,7 +137,7 @@ impl CoveragePosition {
         self.start_tick_index + NUM_TICKS_IN_COVERAGE_POSITION_USIZE as i32 * tick_spacing as i32
     }
 
-    pub fn get_lowest_sqrt_price_x32(&self) -> Result<u128> {
+    pub fn get_lowest_sqrt_price_x32(&self) -> u128 {
         get_sqrt_ratio_at_tick(self.start_tick_index)
     }
 

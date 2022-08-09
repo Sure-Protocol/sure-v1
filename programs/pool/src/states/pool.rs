@@ -63,7 +63,7 @@ pub struct Pool {
 
     /// ProductId
     pub product_id: u8, // 1
-
+    pub product_id_seed: [u8; 1],
     /// Name of pool
     pub name: String, // 4 + 200 bytes
 
@@ -146,9 +146,10 @@ impl Pool {
         + 32
         + 8;
 
-    pub fn seeds(&self) -> [&[u8]; 5] {
+    pub fn seeds(&self) -> [&[u8]; 6] {
         [
-            &SURE_TOKEN_POOL_SEED.as_bytes() as &[u8],
+            &SURE_DOMAIN.as_bytes() as &[u8],
+            self.product_id_seed.as_ref(),
             self.token_mint_0.as_ref(),
             self.token_mint_1.as_ref(),
             self.tick_spacing_seed.as_ref(),
@@ -173,10 +174,12 @@ impl Pool {
         self.bump_array = bump.to_le_bytes();
 
         self.product_id = product_id;
+        self.product_id_seed = product_id.to_le_bytes();
         self.name = name;
         self.founder = founder;
         self.tick_spacing = tick_spacing;
         self.tick_spacing_seed = tick_spacing.to_le_bytes();
+
         fee_package.validate_fee_rates()?;
 
         self.fee_rate = fee_package.fee_rate;
@@ -209,7 +212,7 @@ impl Pool {
         is_fee_in_a: bool,
     ) -> Result<()> {
         self.liquidity = liquidity;
-        self.sqrt_price_x64 = get_sqrt_ratio_at_tick(tick)?;
+        self.sqrt_price_x64 = get_sqrt_ratio_at_tick(tick);
         if is_fee_in_a {
             self.fee_growth_0_x64 = fee_growth;
             self.protocol_fees_owed_0 += protocol_fee;
@@ -334,13 +337,13 @@ impl Pool {
         let mut current_array_index: usize = 0; // which array in the tick array pool
         let mut current_protocol_fee: u128 = 0; // Q32.32 to represent the fee
         let mut current_founders_fee: u128 = 0; // Q32.32
-        let mut current_sqrt_price = get_sqrt_ratio_at_tick(current_tick_index)?;
+        let mut current_sqrt_price = get_sqrt_ratio_at_tick(current_tick_index);
         // set the sqrt price limit at either the max of the tick array
         // or the minimum of the coverage position
         let sqrt_price_limit = if increase_coverage {
             tick_array_pool.max_sqrt_price_x32(self.tick_spacing)?
         } else {
-            coverage_position.get_lowest_sqrt_price_x32()?
+            coverage_position.get_lowest_sqrt_price_x32()
         };
 
         // Fee rates
@@ -366,7 +369,7 @@ impl Pool {
             )?;
 
             // find the price/premium at current tick
-            let next_sqrt_price_x32 = get_sqrt_ratio_at_tick(next_tick_index)?;
+            let next_sqrt_price_x32 = get_sqrt_ratio_at_tick(next_tick_index);
 
             //
             let current_tick =

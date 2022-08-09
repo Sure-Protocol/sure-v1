@@ -167,6 +167,7 @@ pub fn create_coverage_position_with_metadata<'info>(
 ///
 /// creates a metadata account for the given
 /// position mint
+/// TODO: Remove metadata_update_auth
 pub fn create_liquidity_position_with_metadata<'info>(
     metadata_account: &UncheckedAccount<'info>,
     metadata_program: &UncheckedAccount<'info>,
@@ -174,17 +175,21 @@ pub fn create_liquidity_position_with_metadata<'info>(
     pool: &Account<'info, Pool>,
     liquidity_provider: &Signer<'info>,
     position_mint: &Account<'info, Mint>,
+    position_token_account: &Account<'info, TokenAccount>,
     token_program: &Program<'info, Token>,
     system_program: &Program<'info, System>,
     rent: &Sysvar<'info, Rent>,
 ) -> Result<()> {
+    // Mint position
+    mint_nft(pool, position_token_account, position_mint, token_program)?;
+
     let create_metadata_accounts_ix = create_metadata_accounts_v2(
         metadata_program.key(),
         metadata_account.key(),
         position_mint.key(),
         pool.key(),
         liquidity_provider.key(),
-        metadata_update_auth.key(),
+        pool.key(),
         String::from("Sure LP NFT V1"),
         String::from("SURE-LP"),
         format!("https://sure.claims"),
@@ -198,6 +203,7 @@ pub fn create_liquidity_position_with_metadata<'info>(
 
     // Protocol owner signs the transaction with seeds
     // and bump
+    msg!("Create metadata account");
     solana_program::program::invoke_signed(
         &create_metadata_accounts_ix,
         &[
@@ -212,7 +218,7 @@ pub fn create_liquidity_position_with_metadata<'info>(
         ],
         &[&pool.seeds()],
     )?;
-
+    msg!("remove liquidity position auth");
     remove_liquidity_position_authority(pool, position_mint, token_program)
 }
 
@@ -298,6 +304,7 @@ pub fn remove_liquidity_position_authority<'info>(
     position_mint: &Account<'info, Mint>,
     token_program: &Program<'info, Token>,
 ) -> Result<()> {
+    msg!("Remove Liquidity Position Authority");
     set_authority(
         CpiContext::new_with_signer(
             token_program.to_account_info(),

@@ -13,8 +13,10 @@ use super::{pool::Pool, tick_v2::Tick};
 #[account]
 #[derive(Default)]
 pub struct LiquidityPosition {
+    pub bump: u8, // 1 byte
+
     /// The amount of liquidity provided in lamports
-    pub liquidity: u128, // 8 bytes
+    pub liquidity: u128, // 16 bytes
 
     /// Liquidity Pool
     pub pool: Pubkey, // 32 bytes
@@ -24,27 +26,27 @@ pub struct LiquidityPosition {
     pub position_mint: Pubkey, // 32 bytes
 
     /// Upper tick that liquidity is provided at
-    pub tick_index_upper: i32,
+    pub tick_index_upper: i32, // 4
 
     /// Lower tick
     /// that liquidity is provided at
-    pub tick_index_lower: i32,
+    pub tick_index_lower: i32, // 4
 
     /// Checkpoint last fee in vault a
-    pub fee_checkpoint_in_0_last_x64: u128,
+    pub fee_checkpoint_in_0_last_x64: u128, // 16 bytes
 
     /// Checkpoint last fee in vault b
-    pub fee_checkpoint_in_1_last_x64: u128,
+    pub fee_checkpoint_in_1_last_x64: u128, // 16 bytes
 
     /// Non collected fees from vault a
-    pub fee_owed_in_0: u128,
+    pub fee_owed_in_0: u128, // 16 bytes
 
     /// Non collected fees from vault b
-    pub fee_owed_in_1: u128,
+    pub fee_owed_in_1: u128, // 16 bytes
 }
 
 impl LiquidityPosition {
-    pub const SPACE: usize = 1 + 8 + 8 + 32 + 32 + 32 + 32 + 8 + 1 + 8 + 4;
+    pub const SPACE: usize = 1 + 16 + 32 + 32 + 4 + 4 + 16 + 16 + 16 + 16;
 
     /// Initialize Liquidity Position
     ///
@@ -55,11 +57,15 @@ impl LiquidityPosition {
         tick_index_lower: i32,
         position_mint: Pubkey,
     ) -> Result<()> {
-        if !Tick::is_valid_tick(tick_index_lower, pool.tick_spacing)
-            || !Tick::is_valid_tick(tick_index_upper, pool.tick_spacing)
-            || tick_index_lower > tick_index_upper
-        {
-            return Err(SureError::InvalidTickIndexProvided.into());
+        if !Tick::is_valid_tick(tick_index_lower, pool.tick_spacing) {
+            return Err(SureError::InvalidLowerTickIndexProvided.into());
+        }
+
+        if !Tick::is_valid_tick(tick_index_upper, pool.tick_spacing) {
+            return Err(SureError::InvalidUpperTickIndexProvided.into());
+        }
+        if tick_index_lower > tick_index_upper {
+            return Err(SureError::LowerTickgtUpperTick.into());
         }
         self.pool = pool.key();
         self.position_mint = position_mint;

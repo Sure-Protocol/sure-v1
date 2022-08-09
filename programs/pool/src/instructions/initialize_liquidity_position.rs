@@ -18,6 +18,7 @@ pub struct InitializeLiquidityPosition<'info> {
         payer = liquidity_provider,
         seeds = [
             SURE_DOMAIN.as_bytes(),
+            pool.key().as_ref(),
             position_mint.key().as_ref()
         ],
         space = 8 + LiquidityPosition::SPACE,
@@ -27,9 +28,15 @@ pub struct InitializeLiquidityPosition<'info> {
 
     /// Mint of NFT representing the
     /// liquidity position
+    /// TODO: Unique seeds
     #[account(
         init,
         payer = liquidity_provider,
+        seeds = [
+            SURE_DOMAIN.as_bytes(),
+            pool.key().as_ref(),
+        ],
+        bump,
         mint::authority = pool,
         mint::decimals = 0,
     )]
@@ -40,14 +47,15 @@ pub struct InitializeLiquidityPosition<'info> {
     #[account(
         init,
         payer = liquidity_provider,
-        associated_token::mint = position_mint,
-        associated_token::authority = liquidity_provider,
+        seeds = [
+            SURE_DOMAIN.as_bytes(),
+            position_mint.key().as_ref(),
+        ],
+        bump,
+        token::mint = position_mint,
+        token::authority = liquidity_provider,
     )]
-    pub position_token_account: Box<Account<'info, TokenAccount>>,
-
-    /// Token program to mint new NFT position
-    #[account(address = token::ID)]
-    pub token_program: Program<'info, Token>,
+    pub position_token_account: Account<'info, TokenAccount>,
 
     /// CHECK: Metaplex account is checked in the CPI
     #[account(mut)]
@@ -66,6 +74,10 @@ pub struct InitializeLiquidityPosition<'info> {
     /// used to create an account
     pub associated_token_program: Program<'info, AssociatedToken>,
 
+    /// Token program to mint new NFT position
+    #[account(address = token::ID)]
+    pub token_program: Program<'info, Token>,
+
     pub rent: Sysvar<'info, Rent>,
 
     pub system_program: Program<'info, System>,
@@ -77,7 +89,6 @@ pub fn handler(
     tick_lower: i32,
 ) -> Result<()> {
     let pool = &ctx.accounts.pool;
-    let position_mint = &ctx.accounts.position_mint;
     let liquidity_position = ctx.accounts.liquidity_position.as_mut();
     let position_mint = &ctx.accounts.position_mint;
     // Initialize liquidity position
@@ -91,6 +102,7 @@ pub fn handler(
         pool,
         &ctx.accounts.liquidity_provider,
         position_mint,
+        &ctx.accounts.position_token_account,
         &ctx.accounts.token_program,
         &ctx.accounts.system_program,
         &ctx.accounts.rent,

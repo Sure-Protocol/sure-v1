@@ -38,7 +38,7 @@ pub const Q32_RESOLUTION: u8 = 32;
 ///
 /// When sign(tick) == 1, √1.0001^(2^m) is represented as Q32.96 as
 /// Q_m = √1.0001^(2^m) x 2^96
-pub fn get_sqrt_ratio_at_tick(tick: i32) -> Result<u128> {
+pub fn get_sqrt_ratio_at_tick(tick: i32) -> u128 {
     if tick >= 0 {
         get_sqrt_ratio_at_positive_tick(tick)
     } else {
@@ -46,7 +46,7 @@ pub fn get_sqrt_ratio_at_tick(tick: i32) -> Result<u128> {
     }
 }
 
-pub fn get_sqrt_ratio_at_negative_tick(tick_i: i32) -> Result<u128> {
+pub fn get_sqrt_ratio_at_negative_tick(tick_i: i32) -> u128 {
     let tick = tick_i.abs();
     let mut ratio: u128 = if tick & 1 != 0 {
         18445821805675392311
@@ -109,14 +109,14 @@ pub fn get_sqrt_ratio_at_negative_tick(tick_i: i32) -> Result<u128> {
         ratio = (ratio * 37481735321082) >> 64
     }
 
-    Ok(ratio)
+    ratio
 }
 
 /// Calculate the sqrt price ratio at
 /// the given tick_index
 /// If tick > 0, need less precision in decimals, consider Q32.96 x Q32.96, where 96 is the binary scaling factor
 /// then rsh with 32 to get Q64.64
-pub fn get_sqrt_ratio_at_positive_tick(tick: i32) -> Result<u128> {
+pub fn get_sqrt_ratio_at_positive_tick(tick: i32) -> u128 {
     let mut ratio: U256 = if tick & 1 != 0 {
         U256::from(79232123823359799118286999567 as u128)
     } else {
@@ -185,7 +185,7 @@ pub fn get_sqrt_ratio_at_positive_tick(tick: i32) -> Result<u128> {
     }
     if tick & 2048 != 0 {
         ratio = ratio
-            .checked_mul(U256::from(79244008939048815603706035061 as u128))
+            .checked_mul(U256::from(87770609709833776024991924138 as u128))
             .unwrap()
             .shr(96 as u128)
     }
@@ -233,7 +233,7 @@ pub fn get_sqrt_ratio_at_positive_tick(tick: i32) -> Result<u128> {
     }
 
     // Return result as Q64.64 by shifting(div) Q32.96 by 32 bytes
-    Ok(ratio.shr(32 as u128).as_u128())
+    ratio.shr(32 as u128).as_u128()
 }
 
 /// Calculate premium difference
@@ -452,6 +452,11 @@ pub fn get_tick_at_sqrt_ratio(sqrt_price_x64: u128) -> Result<i32> {
     log_2_x32 |= (f as i128) << 16; // Add f at 1st fractional place
     r >>= f; // Divide r by 2 if MSB of f is non-zero
 
+    r = (r * r) >> 63; // r^2 as U33.31
+    f = (r >> 64) as u8; // MSB of r^2 (0 or 1)
+    log_2_x32 |= (f as i128) << 15; // Add f at 1st fractional place
+    r >>= f; // Divide r by 2 if MSB of f is non-zero
+
     // 14 bit refinement gives an error margin of 2^-14 / log2 (√1.0001) = 0.8461 < 1
     // Since tick is a decimal, an error under 1 is acceptable
 
@@ -461,12 +466,14 @@ pub fn get_tick_at_sqrt_ratio(sqrt_price_x64: u128) -> Result<i32> {
     // tick - 0.01
     let tick_low = ((log_sqrt_10001_x64 - 184467440737095516i128) >> 64) as i32;
 
-    // tick + (2^-14 / log2(√1.001)) + 0.01
+    // tick + (2^-14 / log2(√1.0001)) + 0.01
     let tick_high = ((log_sqrt_10001_x64 + 15793534762490258745i128) >> 64) as i32;
 
+    println!("tick_low: {}", tick_low);
+    println!("tick_high: {}", tick_high);
     Ok(if tick_low == tick_high {
         tick_low
-    } else if get_sqrt_ratio_at_tick(tick_high).unwrap() <= sqrt_price_x64 {
+    } else if get_sqrt_ratio_at_tick(tick_high) <= sqrt_price_x64 {
         tick_high
     } else {
         tick_low
@@ -476,4 +483,165 @@ pub fn get_tick_at_sqrt_ratio(sqrt_price_x64: u128) -> Result<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_get_tick_at_sqrt_price() {
+        // @checkpoint tick index is off by one!
+        let options = [
+            ((4 as u128) << 64, 27726),
+            ((5 as u128) << 64, 32189),
+            ((6 as u128) << 64, 35835),
+        ];
+        // sqrt price of 36 as Q.64.64
+
+        for (sqrt_price_x64, expected_tick) in options {
+            let tick_index = get_tick_at_sqrt_ratio(sqrt_price_x64).unwrap();
+            assert_eq!(
+                tick_index, expected_tick,
+                "compare tick index and expected tick index"
+            );
+        }
+    }
+
+    #[test]
+    fn test_get_sqrt_price_at_tick() {
+        let options = [
+            (
+                0i32,
+                18446744073709551616u128,
+                18446744073709551616u128,
+                "0x0",
+            ),
+            (
+                1i32,
+                18447666387855959850u128,
+                18445821805675392311u128,
+                "0x1",
+            ),
+            (
+                2i32,
+                18448588748116922571u128,
+                18444899583751176498u128,
+                "0x2",
+            ),
+            (
+                4i32,
+                18450433606991734263u128,
+                18443055278223354162u128,
+                "0x4",
+            ),
+            (
+                8i32,
+                18454123878217468680u128,
+                18439367220385604838u128,
+                "0x8",
+            ),
+            (
+                16i32,
+                18461506635090006701u128,
+                18431993317065449817u128,
+                "0x10",
+            ),
+            (
+                32i32,
+                18476281010653910144u128,
+                18417254355718160513u128,
+                "0x20",
+            ),
+            (
+                64i32,
+                18505865242158250041u128,
+                18387811781193591352u128,
+                "0x40",
+            ),
+            (
+                128i32,
+                18565175891880433522u128,
+                18329067761203520168u128,
+                "0x80",
+            ),
+            (
+                256i32,
+                18684368066214940582u128,
+                18212142134806087854u128,
+                "0x100",
+            ),
+            (
+                512i32,
+                18925053041275764671u128,
+                17980523815641551639u128,
+                "0x200",
+            ),
+            (
+                1024i32,
+                19415764168677886926u128,
+                17526086738831147013u128,
+                "0x400",
+            ),
+            (
+                2048i32,
+                20435687552633177494u128,
+                16651378430235024244u128,
+                "0x800",
+            ),
+            (
+                4096i32,
+                22639080592224303007u128,
+                15030750278693429944u128,
+                "0x1000",
+            ),
+            (
+                8192i32,
+                27784196929998399742u128,
+                12247334978882834399u128,
+                "0x2000",
+            ),
+            (
+                16384i32,
+                41848122137994986128u128,
+                8131365268884726200u128,
+                "0x4000",
+            ),
+            (
+                32768i32,
+                94936283578220370716u128,
+                3584323654723342297u128,
+                "0x8000",
+            ),
+            (
+                65536i32,
+                488590176327622479860u128,
+                696457651847595233u128,
+                "0x10000",
+            ),
+            (
+                131072i32,
+                12941056668319229769860u128,
+                26294789957452057u128,
+                "0x20000",
+            ),
+            (
+                262144i32,
+                9078618265828848800676189u128,
+                37481735321082u128,
+                "0x40000",
+            ),
+        ];
+
+        for (tick, exp_pos_sqrt_price, exp_neg_sqrt_price, frac_bit) in options {
+            let pos_sqrt_price = get_sqrt_ratio_at_tick(tick);
+            let neg_sqrt_price = get_sqrt_ratio_at_tick(-tick);
+            println!("{}, {}", pos_sqrt_price, exp_pos_sqrt_price);
+            assert_eq!(
+                pos_sqrt_price, exp_pos_sqrt_price,
+                "Assert positive tick equals expected value on binary fraction bit {}",
+                frac_bit
+            );
+            assert_eq!(
+                neg_sqrt_price, exp_neg_sqrt_price,
+                "Assert negative tick equals expected value on binary fraction bit {}",
+                frac_bit
+            );
+        }
+    }
 }
