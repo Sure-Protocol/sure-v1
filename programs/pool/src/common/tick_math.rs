@@ -457,6 +457,11 @@ pub fn get_tick_at_sqrt_ratio(sqrt_price_x64: u128) -> Result<i32> {
     log_2_x32 |= (f as i128) << 15; // Add f at 1st fractional place
     r >>= f; // Divide r by 2 if MSB of f is non-zero
 
+    r = (r * r) >> 63; // r^2 as U33.31
+    f = (r >> 64) as u8; // MSB of r^2 (0 or 1)
+    log_2_x32 |= (f as i128) << 14; // Add f at 1st fractional place
+    r >>= f; // Divide r by 2 if MSB of f is non-zero
+
     // 14 bit refinement gives an error margin of 2^-14 / log2 (√1.0001) = 0.8461 < 1
     // Since tick is a decimal, an error under 1 is acceptable
 
@@ -469,8 +474,6 @@ pub fn get_tick_at_sqrt_ratio(sqrt_price_x64: u128) -> Result<i32> {
     // tick + (2^-14 / log2(√1.0001)) + 0.01
     let tick_high = ((log_sqrt_10001_x64 + 15793534762490258745i128) >> 64) as i32;
 
-    println!("tick_low: {}", tick_low);
-    println!("tick_high: {}", tick_high);
     Ok(if tick_low == tick_high {
         tick_low
     } else if get_sqrt_ratio_at_tick(tick_high) <= sqrt_price_x64 {
@@ -491,16 +494,33 @@ mod tests {
             ((4 as u128) << 64, 27726),
             ((5 as u128) << 64, 32189),
             ((6 as u128) << 64, 35835),
+            ((7 as u128) << 64, 38919),
         ];
         // sqrt price of 36 as Q.64.64
 
         for (sqrt_price_x64, expected_tick) in options {
             let tick_index = get_tick_at_sqrt_ratio(sqrt_price_x64).unwrap();
             assert_eq!(
-                tick_index, expected_tick,
+                tick_index,
+                expected_tick + 1,
                 "compare tick index and expected tick index"
             );
         }
+    }
+
+    #[test]
+    fn test_convert_back_forth() {
+        let (expected_sqrt_price, expected_tick_index) = (9078618265828848800676189u128, 262144i32);
+        let tick_index = get_tick_at_sqrt_ratio(expected_sqrt_price).unwrap();
+        assert_eq!(tick_index, expected_tick_index);
+        // fails!
+        let sqrt_price = get_sqrt_ratio_at_tick(expected_tick_index);
+        println!("(6 as u128) << 64: {}", (6 as u128) << 64);
+        assert_eq!(sqrt_price, expected_sqrt_price);
+
+        // and back
+        let sqrt_price_back = get_sqrt_ratio_at_tick(tick_index);
+        assert_eq!(sqrt_price_back, expected_sqrt_price);
     }
 
     #[test]

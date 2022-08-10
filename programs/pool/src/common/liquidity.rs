@@ -50,12 +50,28 @@ pub struct UpdatedLiquidityState {
     fee_growth_inside_1_x64: u128,
 }
 
-/// Build new liquidity state
+/// Build new liquidity coverage state
+///
+/// For insurance, vault 0 is used for the deposited liquidity
+/// while vault 1 is for the premiums paid by the users.
+pub fn build_liquidity_coverage_state<'info>(
+    position: &Account<'info, LiquidityPosition>,
+    pool: &Account<'info, Pool>,
+    tick_array_lower: &AccountLoader<'info, TickArray>,
+    tick_array_upper: &AccountLoader<'info, TickArray>,
+    amount_delta: u128,
+    is_increasing: bool,
+) -> Result<()> {
+    Ok(())
+}
+
+/// Build new liquidity state for AMM
 ///
 /// the new state is used to update all the states
 /// involved in the transaction
 ///
 /// TODO: Implement tickArray: TickArrayPool in order to accept only one tick array
+/// TODO: Make it work for productType=1 (coverage)
 pub fn build_new_liquidity_state<'info>(
     position: &Account<'info, LiquidityPosition>,
     pool: &Account<'info, Pool>,
@@ -69,27 +85,19 @@ pub fn build_new_liquidity_state<'info>(
         return Err(SureError::LiquidityHaveToBeGreaterThan0.into());
     }
 
-    msg!("build_new_liquidity_state 1 ");
     // Validate the amount delta and return the +/- delta
     let liquidity_delta = validate_liquidity_amount(amount_delta, is_increasing)?;
 
     // Calculate Tick changes
     // Get Tick accounts
-    msg!("build_new_liquidity_state 2 ");
     let tick_array_lower = tick_array_lower.load_mut()?;
-    msg!("build_new_liquidity_state 2.1 ");
     let tick_lower = tick_array_lower.get_tick(position.tick_index_lower, pool.tick_spacing)?;
 
-    msg!("build_new_liquidity_state 2.2 ");
     let tick_array_upper = tick_array_upper.load_mut()?;
-    msg!("build_new_liquidity_state 2.3 ");
     let tick_upper = tick_array_upper.get_tick(position.tick_index_upper, pool.tick_spacing)?;
 
-    msg!("build_new_liquidity_state 3 ");
     // Calculate the updated liquidity
     let next_liquidity = pool.get_next_liquidity(&position, liquidity_delta)?;
-
-    msg!("build_new_liquidity_state 4 ");
     // Update lower tick
     let tick_lower_update = tick_lower.calculate_next_liquidity_update(
         position.tick_index_lower,
@@ -122,7 +130,6 @@ pub fn build_new_liquidity_state<'info>(
         pool.fee_growth_1_x64,
     )?;
 
-    msg!(&format!("Liquidity delta: {}", liquidity_delta));
     let token_0_delta = calculate_token_0_delta(
         liquidity_delta,
         position.tick_index_lower,
@@ -193,17 +200,12 @@ pub fn calculate_token_0_delta(
     productType: &ProductType,
 ) -> Result<u64> {
     msg!("Calculate token 0 delta");
-    let tick_index_lower = tick_index_lower;
-    let tick_index_upper = tick_index_upper;
     let sqrt_price_0 = get_sqrt_ratio_at_tick(tick_index_lower);
     let sqrt_price_1 = get_sqrt_ratio_at_tick(tick_index_upper);
-    // Q64.64 -> Q192.64 -> Q128.128
-    let liquidity_delta_u = U256::from(liquidity_delta).shl(64);
+    // Q64.64 -> Q192.64
+    let liquidity_delta_u = U256::from(liquidity_delta);
 
     let current_sqrt_price = get_sqrt_ratio_at_tick(current_tick_index);
-    println!("1.0 current sqrt price: {}", current_sqrt_price >> 64);
-    println!("1.0 sqrt_price_0 sqrt price: {}", sqrt_price_0 >> 64);
-    println!("1.0 sqrt_price_1 sqrt price: {}", sqrt_price_1 >> 64);
 
     let (sqrt_price_lower, sqrt_price_upper) = if sqrt_price_1 > sqrt_price_0 {
         (sqrt_price_0, sqrt_price_1)
@@ -217,39 +219,28 @@ pub fn calculate_token_0_delta(
     if current_tick_index < tick_index_lower {
         Ok(0)
     } else if current_tick_index >= tick_index_upper {
-        msg!(&format!("sqrt_price_lower: {}", sqrt_price_lower));
-        let sqrt_diff = U256::from(sqrt_price_upper - sqrt_price_lower).shl(64);
-        msg!(&format!("2. sqrt_diff {}", sqrt_diff));
+        let sqrt_diff = U256::from(sqrt_price_upper - sqrt_price_lower);
         // TODO: calculations should be done in U64.64 and the result should be 64
         let token_change = liquidity_delta_u
             .checked_mul(sqrt_diff)
-            .ok_or(SureError::MultiplictationQ3232Overflow)?;
-        msg!(&format!("token change: {}", token_change));
+            .ok_or(SureError::MultiplictationQ3232Overflow)?
+            .shr(64 as u8) // -> Q.192.64
+            .as_u128();
 
-        let token_change_shr = token_change.shr(64 as u8).as_u128();
-        msg!(&format!("token change: {}", token_change.shr(64 as u8)));
-        msg!(&format!("token_change_shr: {}", token_change_shr));
-        if token_change_shr > u64::MAX as u128 {
+        if token_change > u64::MAX as u128 {
             return Err(SureError::OverflowU64.into());
         }
-        Ok(token_change_shr as u64)
+        Ok(token_change as u64)
     } else {
-        msg!(&format!(
-            "3.0. sqrt_diff {}",
-            current_sqrt_price - sqrt_price_lower
-        ));
         // Q192.64
         let sqrt_diff = U256::from(current_sqrt_price - sqrt_price_lower);
         // Q128.128
-        let sqrt_diff_shift = sqrt_diff.shl(64 as u8);
-        msg!(&format!("3.1. sqrt_diff {}", sqrt_diff));
-        // Q128.128 x Q128.128
+        // 192.64 x 192.64 = x.128
         let token_change = liquidity_delta_u
-            .checked_mul(sqrt_diff_shift)
+            .checked_mul(sqrt_diff)
             .ok_or(SureError::MultiplictationQ3232Overflow)?
             .shr(64 as u8) // -> Q.192.64
-            .as_u128() // -> 64.64
-            .shr(32 as u8); // -> Q64.32
+            .as_u128(); // -> 64.64
 
         // Convert to Q32.32
         if token_change > u64::MAX as u128 {
@@ -275,9 +266,11 @@ pub fn calculate_token_1_delta(
     let liquidity_delta_u = U256::from(liquidity_delta);
 
     let sqrt_price_0 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_lower);
+    // Q64.64
     let sqrt_price_1 = get_sqrt_ratio_at_tick(liquidity_position.tick_index_upper);
 
     let current_sqrt_price = U256::from(get_sqrt_ratio_at_tick(current_tick_index));
+    // Q192.64
     let (sqrt_price_lower, sqrt_price_upper) = if sqrt_price_1 > sqrt_price_0 {
         (U256::from(sqrt_price_0), U256::from(sqrt_price_1))
     } else {
@@ -315,14 +308,16 @@ pub fn calculate_token_1_delta(
     } else if current_tick_index >= tick_index_upper {
         Ok(0)
     } else {
-        let sqrt_price_upper_reciprocal = U256::from(1 as u8)
+        // TODO: simply calculations and correct for shifts
+        let sqrt_price_upper_reciprocal = U256::from((1 as u128) << 64)
             .checked_div(sqrt_price_upper)
             .ok_or(SureError::DivisionQ3232Error)?;
 
-        let sqrt_price_reciprocal = U256::from(1 as u8)
+        let sqrt_price_current_reciprocal = U256::from((1 as u128) << 64)
             .checked_div(current_sqrt_price)
             .ok_or(SureError::MultiplictationQ3232Overflow)?;
-        let sqrt_price_sub = sqrt_price_reciprocal
+
+        let sqrt_price_sub = sqrt_price_current_reciprocal
             .checked_sub(sqrt_price_upper_reciprocal)
             .ok_or(SureError::SubtractionQ3232Error)?;
         let res = liquidity_delta_u
@@ -344,9 +339,11 @@ mod liquidity_test {
 
     use super::*;
 
+    // TODO double check that casting is correct
     #[test]
     fn test_calculate_token_0_delta() {
-        let liquidity_delta = 1_000_000;
+        //Q64.0
+        let liquidity_delta: i128 = 100_000_000;
         let sqrt_price_lower = (5 as u128) << 64;
         let tick_index_lower = get_tick_at_sqrt_ratio(sqrt_price_lower).unwrap();
 
@@ -365,11 +362,8 @@ mod liquidity_test {
         )
         .unwrap();
 
-        println!("ok: {}", token_delta >> 32);
-
-        assert_eq!(
-            token_delta,
-            (1_000_000 as u64) << 32,
+        assert!(
+            (liquidity_delta as u64) - token_delta < 100_000,
             "token delta equal to calculation"
         );
     }
