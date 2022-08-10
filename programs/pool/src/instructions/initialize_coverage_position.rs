@@ -1,12 +1,13 @@
 use crate::common::{
-    access_control::SURE_NFT_UPDATE_AUTH, seeds::SURE_DOMAIN,
+    access_control::SURE_NFT_UPDATE_AUTH, seeds::SURE_COVERAGE_DOMAIN,
     token_tx::create_coverage_position_with_metadata,
 };
 use crate::states::{CoveragePosition, Pool};
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::instruction;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
-
+use std::mem::size_of;
 /// Initialize coverage position
 ///
 /// In order to buy coverage from a pool
@@ -16,6 +17,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount};
 /// is minted so that the user can exit the contract
 /// on secondary markets
 #[derive(Accounts)]
+#[instruction(start_tick_index:i32)]
 pub struct InitializeCoveragePosition<'info> {
     /// Coverage position Owner
     #[account(mut)]
@@ -24,14 +26,33 @@ pub struct InitializeCoveragePosition<'info> {
     /// Pool to buy from
     pub pool: Box<Account<'info, Pool>>,
 
+    /// New position
+    #[account(
+        init,
+        payer = user,
+        seeds = [
+            SURE_COVERAGE_DOMAIN.as_bytes(),
+            position_mint.key().as_ref(),
+        ],
+        space = 8 + size_of::<CoveragePosition>(),
+        bump,
+    )]
+    pub coverage_position: AccountLoader<'info, CoveragePosition>,
+
     /// Position mint
     #[account(
         init,
         payer = user,
+        seeds = [
+            SURE_COVERAGE_DOMAIN.as_bytes(),
+            pool.key().as_ref(),
+            start_tick_index.to_le_bytes().as_ref(),
+        ],
+        bump,
         mint::authority = pool,
         mint::decimals = 0
     )]
-    pub position_mint: Account<'info, Mint>,
+    pub position_mint: Box<Account<'info, Mint>>,
 
     #[account(
         init,
@@ -40,24 +61,6 @@ pub struct InitializeCoveragePosition<'info> {
         associated_token::authority = user
     )]
     pub position_token_account: Account<'info, TokenAccount>,
-
-    /// New position
-    #[account(
-        init,
-        payer = user,
-        seeds = [
-            SURE_DOMAIN.as_bytes(),
-            position_mint.key().as_ref(),
-        ],
-        space = 8 + CoveragePosition::SPACE,
-        bump,
-    )]
-    pub coverage_position: AccountLoader<'info, CoveragePosition>,
-
-    /// Token program to mint new NFT position
-    #[account(address = token::ID)]
-    pub token_program: Program<'info, Token>,
-
     /// CHECK: Metaplex account is checked in the CPI
     #[account(mut)]
     pub metadata_account: UncheckedAccount<'info>,
@@ -71,9 +74,14 @@ pub struct InitializeCoveragePosition<'info> {
     #[account(address = SURE_NFT_UPDATE_AUTH)]
     pub metadata_update_authority: UncheckedAccount<'info>,
 
+    /// Token program to mint new NFT position
+
     /// associated token program
     /// used to create an account
     pub associated_token_program: Program<'info, AssociatedToken>,
+
+    #[account(address = token::ID)]
+    pub token_program: Program<'info, Token>,
 
     pub rent: Sysvar<'info, Rent>,
 
@@ -99,6 +107,7 @@ pub fn handler(ctx: Context<InitializeCoveragePosition>, start_tick_index: i32) 
         &ctx.accounts.pool,
         position_owner,
         &ctx.accounts.position_mint,
+        &ctx.accounts.position_token_account,
         &ctx.accounts.token_program,
         &ctx.accounts.system_program,
         &ctx.accounts.rent,

@@ -17,6 +17,7 @@ import {
 	TOKEN_PROGRAM_ID,
 	ASSOCIATED_TOKEN_PROGRAM_ID,
 	getAccount,
+	getAssociatedTokenAddress,
 } from '../node_modules/@solana/spl-token';
 
 import { SurePool } from '../target/types/sure_pool';
@@ -33,6 +34,7 @@ import {
 	MetadataAccount,
 	TokenMetadataProgram,
 } from '@metaplex-foundation/js-next';
+import { getUnixTime, SureDate } from '@surec/sdk';
 const { SystemProgram } = anchor.web3;
 
 /// =============== Variables ==================
@@ -322,7 +324,7 @@ describe('Initialize Sure Pool', () => {
 		// ================= Initialize Liquidity Position ========================
 		// Initialize Tick array for pool
 		const tickIndex = getNearestValidTickIndex(
-			new Decimal(4.2),
+			new Decimal(16),
 			tokenMintAccount.decimals,
 			tokenMintAccount.decimals,
 			tickSpacing
@@ -353,8 +355,13 @@ describe('Initialize Sure Pool', () => {
 			console.log('err: ', err);
 		}
 
-		const nextTickIndex = tickIndex + tickSpacing * TICK_ARRAY_SIZE;
-
+		//const nextTickIndex = tickIndex + tickSpacing * TICK_ARRAY_SIZE;
+		const nextTickIndex = getNearestValidTickIndex(
+			new Decimal(25),
+			tokenMintAccount.decimals,
+			tokenMintAccount.decimals,
+			tickSpacing
+		);
 		console.log('nextTickIndex: ', nextTickIndex);
 		console.log(
 			'next tick index price: ',
@@ -389,34 +396,35 @@ describe('Initialize Sure Pool', () => {
 		}
 
 		const tickIndexLower = getNearestValidTickIndex(
-			new Decimal(4.2),
+			new Decimal(16),
 			tokenMintAccount.decimals,
 			tokenMintAccount.decimals,
 			tickSpacing
 		);
 		const tickIndexUpper = getNearestValidTickIndex(
-			new Decimal(4.8),
+			new Decimal(25),
 			tokenMintAccount.decimals,
 			tokenMintAccount.decimals,
 			tickSpacing
 		);
 
 		const [positionMintPDA, positionMintBump] = findProgramAddressSync(
-			[Buffer.from('sure-pool'), poolPDA.toBytes()],
+			[
+				Buffer.from('sure-pool'),
+				new anchor.BN(tickIndexLower).toBuffer('le', 4),
+				new anchor.BN(tickIndexUpper).toBuffer('le', 4),
+				poolPDA.toBytes(),
+			],
 			program.programId
 		);
 		const [positionTokenAccountPDA, positionTokenAccountBump] =
 			await findProgramAddressSync(
-				[Buffer.from('sure-pool'), positionMintPDA.toBytes()],
+				[Buffer.from('sure-token-account'), positionMintPDA.toBytes()],
 				program.programId
 			);
 		const [liquidityPositionPDA, liquidityPositionBump] =
 			findProgramAddressSync(
-				[
-					Buffer.from('sure-pool'),
-					poolPDA.toBytes(),
-					positionMintPDA.toBytes(),
-				],
+				[Buffer.from('sure-pool'), positionMintPDA.toBytes()],
 				program.programId
 			);
 		const metadataAccount = await getMetaplexMetadataPDA(
@@ -499,5 +507,98 @@ describe('Initialize Sure Pool', () => {
 
 		const poolAccount = await program.account.pool.fetch(poolPDA);
 		console.log('poolAccount liq: ', poolAccount.liquidity);
+
+		// ============= Decrease liquidity Position ======================
+		const liquidityAmountReduction = new anchor.BN(250_000);
+		try {
+			await program.methods
+				.decreaseLiquidityPosition(
+					liquidityAmountReduction,
+					liquidityAmountReduction,
+					liquidityAmountReduction
+				)
+				.accounts({
+					liquidityProvider: wallet.publicKey,
+					liquidityPosition: liquidityPositionPDA,
+					positionTokenAccount: positionTokenAccountPDA,
+					pool: poolPDA,
+					originAccountA: originAccountA,
+					originAccountB: originAccountB,
+					vaultA: tokenVaultAPDA,
+					vaultB: tokenVaultBPDA,
+					tickArrayLower: tickArray0PDA,
+					tickArrayUpper: tickArray1PDA,
+					tokenProgram: TOKEN_PROGRAM_ID,
+				})
+				.rpc();
+		} catch (err) {
+			console.log('decreaseLiquidityPosition err: ', err);
+			throw new Error('failure ');
+		}
+		console.log(
+			'token vault A amount: ',
+			await (
+				await getAccount(connection, tokenVaultAPDA)
+			).amount
+		);
+		const updatedLiquidityPostion =
+			await program.account.liquidityPosition.fetch(liquidityPositionPDA);
+		console.log(
+			'updatedLiquidityPostion: ',
+			updatedLiquidityPostion.liquidity.toString()
+		);
+
+		// =============== Initilize Coverage Position ==============
+
+		// PDA coverage position
+		const [coveragePositionMintPDA, coveragePositionMintBump] =
+			findProgramAddressSync(
+				[
+					Buffer.from('sure-coverage'),
+					poolPDA.toBuffer(),
+					new anchor.BN(tickIndexLower).toBuffer('le', 4),
+				],
+				program.programId
+			);
+		const coveragePositionTokenAccount = await getAssociatedTokenAddress(
+			coveragePositionMintPDA,
+			wallet.publicKey
+		);
+		const coverageMetadataAccount = await getMetaplexMetadataPDA(
+			coveragePositionMintPDA,
+			false
+		);
+		try {
+			await program.methods
+				.initializeCoveragePosition(tickIndexLower)
+				.accounts({
+					user: wallet.publicKey,
+					pool: poolPDA,
+					positionMint: coveragePositionMintPDA,
+					positionTokenAccount: coveragePositionTokenAccount,
+					metadataAccount: coverageMetadataAccount,
+					metadataProgram: TokenMetadataProgram.publicKey,
+					metadataUpdateAuthority: metadataUpdateAuthority,
+					associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+					tokenProgram: TOKEN_PROGRAM_ID,
+					rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+					systemProgram: SystemProgram.programId,
+				})
+				.rpc();
+		} catch (err) {
+			console.log('initializeCoveragePosition err: ', err);
+			throw new Error('initializeCoveragePosition fail');
+		}
+
+		/// ================= Purchase Cover ===================
+		const converageAmount = 250_000;
+		const expiryTs = SureDate.new(getUnixTime())
+			.addHours(1000)
+			.getTimeInSeconds();
+		try {
+			await program.methods.increaseCoveragePosition();
+		} catch (err) {
+			console.log('');
+		}
 	});
 });

@@ -1,6 +1,6 @@
 use std::cell::RefMut;
 
-use crate::common::liquidity::{build_new_liquidity_state, update_liquidity};
+use crate::common::liquidity::{build_liquidity_state, update_liquidity};
 use crate::common::liquidity::{calculate_token_0_delta, calculate_token_1_delta};
 use crate::common::token_tx::deposit_into_vault;
 use crate::common::{account::validate_token_account_ownership, product::*, seeds::*};
@@ -31,7 +31,7 @@ use mpl_token_metadata::state::Creator;
 ///     - nft_account: nft account to hold the newly minted Liquidity position NFT
 ///
 #[derive(Accounts)]
-pub struct IncreaseLiquidityPosition<'info> {
+pub struct UpdateLiquidityPosition<'info> {
     /// Liquidity provider
     #[account(mut)]
     pub liquidity_provider: Signer<'info>,
@@ -111,7 +111,7 @@ pub struct IncreaseLiquidityPosition<'info> {
 /// TODO: Update build_new_liquidity_state by accepting one TickArrayPool instead of
 /// tick array upper and lower
 pub fn handler(
-    ctx: Context<IncreaseLiquidityPosition>,
+    ctx: Context<UpdateLiquidityPosition>,
     liquidity_amount: u128, // Amount of liquidity in token a
     max_token_a: u64,       // Max amount of token a that can be deposited
     min_token_b: u64,       // Max amount of token b that can be deposited
@@ -127,7 +127,7 @@ pub fn handler(
     let product_type = ProductType::get_product_type(ctx.accounts.pool.product_id)?;
 
     msg!(" > Build the new liquidity state");
-    let updated_liquidity_state = build_new_liquidity_state(
+    let updated_liquidity_state = build_liquidity_state(
         ctx.accounts.liquidity_position.as_ref(),
         ctx.accounts.pool.as_ref(),
         &ctx.accounts.tick_array_lower,
@@ -136,6 +136,8 @@ pub fn handler(
         &product_type,
         true,
     )?;
+    msg!(&format!("liquidity_amount: {}", liquidity_amount));
+    msg!(&format!("updated_liquidity_state: liquidity delta: {}, next_liquidity: {} token 0 delta: {}, token 1 delta {} fgi0:{} fgi1:{}",updated_liquidity_state.liquidity_delta,updated_liquidity_state.next_liquidity,updated_liquidity_state.token_0_delta,updated_liquidity_state.token_1_delta,updated_liquidity_state.fee_growth_inside_0_x64,updated_liquidity_state.fee_growth_inside_1_x64));
 
     msg!(" > Update liquidity");
     msg!(&format!(
@@ -149,7 +151,6 @@ pub fn handler(
         &ctx.accounts.tick_array_upper,
         &updated_liquidity_state,
     )?;
-    panic!("lol");
     msg!(" > Deposit into Vault");
     // Deposit tokens 0 into vault
     deposit_into_vault(

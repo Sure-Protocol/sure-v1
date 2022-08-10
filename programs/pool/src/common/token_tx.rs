@@ -121,19 +121,23 @@ pub fn create_coverage_position_with_metadata<'info>(
     pool: &Account<'info, Pool>,
     user: &Signer<'info>,
     position_mint: &Account<'info, Mint>,
+    position_token_account: &Account<'info, TokenAccount>,
     token_program: &Program<'info, Token>,
     system_program: &Program<'info, System>,
     rent: &Sysvar<'info, Rent>,
 ) -> Result<()> {
+    // Mint position
+    mint_nft(pool, position_token_account, position_mint, token_program)?;
+
     let create_metadata_accounts_ix = create_metadata_accounts_v2(
         metadata_program.key(),
         metadata_account.key(),
         position_mint.key(),
         pool.key(),
         user.key(),
-        metadata_update_auth.key(),
-        String::from("Sure Proof of Coverage V1"),
-        String::from("SURE-POC-v1"),
+        pool.key(),
+        String::from("Sure Cover NFT V1"),
+        String::from("SURE-COVER"),
         format!("https://sure.claims"),
         None,
         0,
@@ -145,6 +149,7 @@ pub fn create_coverage_position_with_metadata<'info>(
 
     // Protocol owner signs the transaction with seeds
     // and bump
+    msg!("Create metadata account");
     solana_program::program::invoke_signed(
         &create_metadata_accounts_ix,
         &[
@@ -159,7 +164,7 @@ pub fn create_coverage_position_with_metadata<'info>(
         ],
         &[&pool.seeds()],
     )?;
-
+    msg!("remove liquidity position auth");
     remove_liquidity_position_authority(pool, position_mint, token_program)
 }
 

@@ -46,13 +46,13 @@ impl CoveragePositions {
 #[repr(packed)]
 pub struct CoveragePosition {
     // bump seed
-    pub bump: u8,
+    pub bump: u8, // 1 byte
 
     /// Pool insured against
-    pub pool: Pubkey,
+    pub pool: Pubkey, // 32 bytes
 
     /// token mint
-    pub position_mint: Pubkey,
+    pub position_mint: Pubkey, // 32 bytes
 
     /// Contract expiry
     pub expiry_ts: i64, // 8 byte
@@ -61,7 +61,7 @@ pub struct CoveragePosition {
     pub start_ts: i64, //8 byte
 
     /// Contract Amount
-    pub covered_amount: u128, // 8 byte
+    pub covered_amount: u128, // 16 byte
 
     /// Owner of contract
     pub owner: Pubkey, // 32 byte
@@ -70,7 +70,7 @@ pub struct CoveragePosition {
     pub start_tick_index: i32, // 4 bytes
 
     /// last tick index with liquidity
-    pub last_covered_tick_index: i32,
+    pub last_covered_tick_index: i32, // 4 bytes
 
     /// Coverage amount at Ticks
     pub coverage_amount_ticks: [u128; NUM_TICKS_IN_COVERAGE_POSITION_USIZE], // 8*64*3 = 1_536 bytes

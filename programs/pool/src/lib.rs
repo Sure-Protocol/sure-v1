@@ -124,7 +124,7 @@ pub mod sure_pool {
     /// * max_token_0: the max amount of token 0 to input
     /// * min_token_0: the min amount of token 0 to input
     pub fn increase_liquidity_position(
-        ctx: Context<IncreaseLiquidityPosition>,
+        ctx: Context<UpdateLiquidityPosition>,
         amount: u128,
         max_token_0: u64,
         min_token_0: u64,
@@ -144,7 +144,7 @@ pub mod sure_pool {
     /// * ctx
     ///
     pub fn decrease_liquidity_position(
-        ctx: Context<DecreaseLiquidityPosition>,
+        ctx: Context<UpdateLiquidityPosition>,
         liquidity_amount: u128,
         token_min_a: u64,
         token_min_b: u64,

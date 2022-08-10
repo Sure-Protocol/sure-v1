@@ -369,7 +369,7 @@ impl Pool {
             )?;
 
             // find the price/premium at current tick
-            let next_sqrt_price_x32 = get_sqrt_ratio_at_tick(next_tick_index);
+            let next_sqrt_price_x64 = get_sqrt_ratio_at_tick(next_tick_index);
 
             //
             let current_tick =
@@ -475,7 +475,7 @@ impl Pool {
                 current_array_index
             };
             current_tick_index = next_tick_index;
-            current_sqrt_price = next_sqrt_price_x32;
+            current_sqrt_price = next_sqrt_price_x64;
         }
 
         Ok(BuyCoverageResult {

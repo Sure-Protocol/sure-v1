@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 #[derive(PartialEq, Clone, Copy)]
 pub enum ProductType {
     Coverage,
+    AMM,
 }
 
 impl ProductType {
@@ -16,5 +17,9 @@ impl ProductType {
 
     pub fn is_smart_contract_coverage(self) -> bool {
         self == ProductType::Coverage
+    }
+
+    pub fn is_smart_AMM(self) -> bool {
+        self == ProductType::AMM
     }
 }

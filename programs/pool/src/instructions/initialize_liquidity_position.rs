@@ -7,6 +7,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{self, Mint, Token, TokenAccount};
 #[derive(Accounts)]
+#[instruction(tick_upper: i32, tick_lower: i32)]
 pub struct InitializeLiquidityPosition<'info> {
     #[account(mut)]
     pub liquidity_provider: Signer<'info>,
@@ -18,7 +19,6 @@ pub struct InitializeLiquidityPosition<'info> {
         payer = liquidity_provider,
         seeds = [
             SURE_DOMAIN.as_bytes(),
-            pool.key().as_ref(),
             position_mint.key().as_ref()
         ],
         space = 8 + LiquidityPosition::SPACE,
@@ -34,6 +34,8 @@ pub struct InitializeLiquidityPosition<'info> {
         payer = liquidity_provider,
         seeds = [
             SURE_DOMAIN.as_bytes(),
+            tick_lower.to_le_bytes().as_ref(),
+            tick_upper.to_le_bytes().as_ref(),
             pool.key().as_ref(),
         ],
         bump,
@@ -48,7 +50,7 @@ pub struct InitializeLiquidityPosition<'info> {
         init,
         payer = liquidity_provider,
         seeds = [
-            SURE_DOMAIN.as_bytes(),
+            SURE_TOKEN_ACCOUNT_SEED.as_bytes(),
             position_mint.key().as_ref(),
         ],
         bump,

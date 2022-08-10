@@ -17,3 +17,4 @@ pub const SURE_POOLS_SEED: &str = "sure-pools";
 pub const SURE_TOKEN_POOL_SEED: &str = "sure-token-pool";
 
 pub const SURE_DOMAIN: &str = "sure-pool";
+pub const SURE_COVERAGE_DOMAIN: &str = "sure-coverage";
