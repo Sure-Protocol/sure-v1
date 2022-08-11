@@ -396,7 +396,7 @@ impl Pool {
             // find the price/premium at current tick
             let next_sqrt_price_x64 = get_sqrt_ratio_at_tick(next_tick_index);
             println!("next_sqrt_price_x64 {}", next_sqrt_price_x64);
-            // @checkpoint : need to calculate exact tick math for buying coverage
+            // @checkpoint : need to calculate exact tick math for buying coverage. Start by unit testing tick
             let current_tick =
                 tick_array_pool.get_tick(next_array_index, next_tick_index, self.tick_spacing)?;
 

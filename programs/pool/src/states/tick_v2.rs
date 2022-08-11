@@ -853,6 +853,14 @@ pub mod tick_testing {
             }
         }
     }
+
+    #[test]
+    pub fn test_is_valid_tick() {
+        let configs = [(40, 20, true)];
+        for (tick, tick_spacing, expected) in configs {
+            assert_eq!(Tick::is_valid_tick(tick, tick_spacing), expected);
+        }
+    }
 }
 
 #[cfg(test)]
