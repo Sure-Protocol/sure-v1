@@ -14,6 +14,15 @@ pub enum SureError {
     #[msg("Invalid tick")]
     InvalidTick,
 
+    #[msg("Invalid Tick: Between tick spaces")]
+    TickOutsideSpacing,
+
+    #[msg("Tick index is not within the tick array range")]
+    TickOutOfRange,
+
+    #[msg("Tick is below tick array ")]
+    TickLtTickArray,
+
     #[msg("Invalid tick spacing. Tick spacing might be 0.")]
     InvalidTickSpacing,
 
@@ -25,9 +34,6 @@ pub enum SureError {
 
     #[msg("Provided Liquidity is too large")]
     LiquidityTooLarge,
-
-    #[msg("Tick index is out of range")]
-    TickOutOfRange,
 
     #[msg("The provided liquidity have to be greater than 0")]
     LiquidityHaveToBeGreaterThan0,

@@ -48,6 +48,8 @@ pub struct UpdatedLiquidityState {
     pub token_1_delta: u64,
     pub fee_growth_inside_0_x64: u128,
     pub fee_growth_inside_1_x64: u128,
+    pub next_sqrt_price_x64: u128,
+    pub next_tick_index: i32,
 }
 
 /// Build liquidity state based on which
@@ -159,6 +161,18 @@ pub fn build_liquidity_coverage_state<'info>(
     // Vault 1 is for premiums
     let token_1_delta = 0;
 
+    // // for coverage the next sqrt price is
+    // // the lowest price which has liquidity
+    // let mut next_tick_index = pool.current_tick_index;
+    // let mut next_sqrt_price_x64 = pool.sqrt_price_x64;
+    // if is_increasing {
+    //     let lowest_sqrt_price_x64 = get_sqrt_ratio_at_tick(position.tick_index_lower);
+    //     if next_sqrt_price_x64 < pool.sqrt_price_x64 {
+    //         next_sqrt_price_x64 = lowest_sqrt_price_x64;
+    //         next_tick_index = position.tick_index_lower;
+    //     }
+    // }
+
     Ok(UpdatedLiquidityState {
         liquidity_delta,
         next_liquidity,
@@ -168,6 +182,8 @@ pub fn build_liquidity_coverage_state<'info>(
         token_1_delta,
         fee_growth_inside_0_x64,
         fee_growth_inside_1_x64,
+        next_sqrt_price_x64: pool.sqrt_price_x64,
+        next_tick_index: pool.current_tick_index,
     })
 }
 
@@ -262,6 +278,8 @@ pub fn build_new_liquidity_AMM_state<'info>(
         token_1_delta,
         fee_growth_inside_0_x64,
         fee_growth_inside_1_x64,
+        next_sqrt_price_x64: pool.sqrt_price_x64,
+        next_tick_index: pool.current_tick_index,
     })
 }
 
@@ -279,7 +297,11 @@ pub fn update_liquidity<'info>(
         state.fee_growth_inside_1_x64,
     )?;
     // Update Pool liquidity
-    pool.update_liquidity(state.next_liquidity)?;
+    pool.update(
+        state.next_liquidity,
+        state.next_sqrt_price_x64,
+        state.next_tick_index,
+    );
 
     tick_array_lower.load_mut()?.update_tick(
         position.tick_index_lower,

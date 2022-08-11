@@ -95,6 +95,7 @@ impl<'info> Validate<'info> for InitializePool<'info> {
 /// product_id:
 ///  - 1. Smart Contract Insurance
 ///
+/// 
 pub fn handler(
     ctx: Context<InitializePool>,
     product_id: u8,

@@ -39,6 +39,7 @@ const { SystemProgram } = anchor.web3;
 
 /// =============== Variables ==================
 
+const SURE_COVERAGE_DOMAIN = Buffer.from('sure-coverage');
 // PDA seeds
 const program = anchor.workspace.SurePool as anchor.Program<SurePool>;
 const TICK_ARRAY_SIZE = 64;
@@ -497,6 +498,7 @@ describe('Initialize Sure Pool', () => {
 				.rpc();
 		} catch (err) {
 			console.log('err: ', err);
+			throw new Error('increaseLiquidityPosition fail');
 		}
 
 		// Check amount in each vault
@@ -533,7 +535,7 @@ describe('Initialize Sure Pool', () => {
 				.rpc();
 		} catch (err) {
 			console.log('decreaseLiquidityPosition err: ', err);
-			throw new Error('failure ');
+			throw new Error(' decreaseLiquidityPosition failure ');
 		}
 		console.log(
 			'token vault A amount: ',
@@ -591,14 +593,38 @@ describe('Initialize Sure Pool', () => {
 		}
 
 		/// ================= Purchase Cover ===================
-		const converageAmount = 250_000;
+		const converageAmount = new anchor.BN(250_000);
 		const expiryTs = SureDate.new(getUnixTime())
 			.addHours(1000)
 			.getTimeInSeconds();
+		const [coveragePositionPDA, coveragePositionBump] =
+			await findProgramAddressSync(
+				[SURE_COVERAGE_DOMAIN, coveragePositionMintPDA.toBuffer()],
+				program.programId
+			);
 		try {
-			await program.methods.increaseCoveragePosition();
+			await program.methods
+				.increaseCoveragePosition(
+					converageAmount,
+					new anchor.BN(expiryTs),
+					true
+				)
+				.accounts({
+					tokenAccount0: originAccountA,
+					pool: poolPDA,
+					positionMint: coveragePositionMintPDA,
+					positionTokenAccount: coveragePositionTokenAccount,
+					coveragePosition: coveragePositionPDA,
+					tokenVault0: tokenVaultAPDA,
+					tokenVault1: tokenVaultBPDA,
+					tickArray0: tickArray0PDA,
+					tickArray1: tickArray1PDA,
+					tickArray2: tickArray1PDA,
+				})
+				.rpc();
 		} catch (err) {
-			console.log('');
+			console.log('Increase coverage position error: ', err);
+			throw new Error('increaseCoveragePosition fail');
 		}
 	});
 });

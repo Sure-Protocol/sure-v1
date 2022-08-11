@@ -117,6 +117,7 @@ impl CoveragePosition {
         self.position_mint = position_mint;
         self.owner = position_owner.key();
         self.start_tick_index = start_tick_index;
+        self.last_covered_tick_index = start_tick_index;
         self.is_active = false;
         Ok(())
     }
@@ -257,9 +258,67 @@ impl CoveragePosition {
     ) -> bool {
         if tick_index < self.start_tick_index || tick_index > self.get_max_tick_index(tick_spacing)
         {
-            return false;
-        } else {
             return true;
+        } else {
+            return false;
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod coverage_testing {
+
+    use std::cell::{RefCell, RefMut};
+
+    use super::*;
+
+    pub struct CoveragePositionProto {
+        /// Contract expiry
+        pub expiry_ts: i64, // 8 byte
+
+        /// Contract start time
+        pub start_ts: i64, //8 byte
+
+        /// Contract Amount
+        pub covered_amount: u128, // 16 byte
+
+        ///start tick index
+        pub start_tick_index: i32, // 4 bytes
+
+        /// last tick index with liquidity
+        pub last_covered_tick_index: i32, // 4 bytes
+
+        /// Coverage amount at Ticks
+        pub coverage_amount_ticks: [u128; NUM_TICKS_IN_COVERAGE_POSITION_USIZE], // 8*64*3 = 1_536 bytes
+
+        /// is active
+        pub is_active: bool,
+    }
+
+    impl CoveragePositionProto {
+        pub fn new() -> Self {
+            CoveragePositionProto {
+                expiry_ts: 0,
+                start_ts: 0,
+                covered_amount: 0,
+                start_tick_index: 0,
+                last_covered_tick_index: 0,
+                coverage_amount_ticks: [0; NUM_TICKS_IN_COVERAGE_POSITION_USIZE],
+                is_active: false,
+            }
+        }
+
+        pub fn build(self) -> RefCell<CoveragePosition> {
+            RefCell::new(CoveragePosition {
+                expiry_ts: self.expiry_ts,
+                start_ts: self.start_ts,
+                covered_amount: self.covered_amount,
+                start_tick_index: self.start_tick_index,
+                last_covered_tick_index: self.last_covered_tick_index,
+                coverage_amount_ticks: self.coverage_amount_ticks,
+                is_active: self.is_active,
+                ..Default::default()
+            })
         }
     }
 }

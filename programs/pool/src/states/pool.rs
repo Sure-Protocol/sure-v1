@@ -57,6 +57,7 @@ impl ProductPool {
 /// Sure pool is used to provide liquidity for
 /// customers of the given product
 #[account]
+#[derive(Default)]
 pub struct Pool {
     /// bump
     pub bump_array: [u8; 1], // 1 byte
@@ -90,7 +91,7 @@ pub struct Pool {
     pub liquidity: u128, // 8 bytes
 
     /// The current market price as
-    /// use Q32.32 - 32 bytes at each
+    /// use Q64.64 - 64 bytes at each
     /// side of decimal point
     pub sqrt_price_x64: u128, // 8 bytes
 
@@ -224,9 +225,15 @@ impl Pool {
         Ok(())
     }
 
-    pub fn update_liquidity(&mut self, liquidity: u128) -> Result<()> {
+    pub fn update_liquidity(&mut self, liquidity: u128) {
         self.liquidity = liquidity;
-        Ok(())
+    }
+
+    /// Update Pool
+    pub fn update(&mut self, liquidity: u128, sqrt_price_x64: u128, tick_index: i32) {
+        self.update_liquidity(liquidity);
+        self.sqrt_price_x64 = sqrt_price_x64;
+        self.current_tick_index = tick_index;
     }
 
     /// Get the current tick index from the
@@ -282,6 +289,13 @@ impl Pool {
 
         Ok(())
     }
+
+    /// Swap for AMM
+    /// TODO: Implement
+    pub fn swap() -> Result<()> {
+        Ok(())
+    }
+
     /// Update coverage
     ///
     /// Start from the current sqrt price and move upwards
@@ -313,6 +327,7 @@ impl Pool {
         increase_coverage: bool,
         is_target_amount: bool,
     ) -> Result<BuyCoverageResult> {
+        msg!("update_coverage method");
         // If we are reducing the coverage position
         // we are actually moving downwards from
         // the current coverage position
@@ -327,12 +342,14 @@ impl Pool {
 
         let mut current_liquidity = self.liquidity; // u64 given in token 0
         let mut current_fee_growth = self.fee_growth_0_x64; //Q64.64
-                                                            // If increase coverage start at the current price, which is the global min
-        let mut current_tick_index = if increase_coverage {
-            self.current_tick_index
-        } else {
-            coverage_position.get_current_coverage_position(self.tick_spacing)?
-        }; // runs from -221_818 to 221_818
+        msg!(&format!(
+            "current_tick_index {}, sqrt_price_x64: {}",
+            self.current_tick_index, self.sqrt_price_x64
+        ));
+        // If increase coverage start at the current price, which is the global min
+        let mut current_tick_index = coverage_position.last_covered_tick_index;
+
+        msg!(&format!("current_tick_index: {}", current_tick_index));
 
         let mut current_array_index: usize = 0; // which array in the tick array pool
         let mut current_protocol_fee: u128 = 0; // Q32.32 to represent the fee
@@ -351,6 +368,10 @@ impl Pool {
 
         // while the coverage amount remaining is greater
         // than 0 and there is more liquidity
+        msg!(&format!(
+            "> buy coverage. coverage_amount_remaining: {}",
+            coverage_amount_remaining
+        ));
         while coverage_amount_remaining > 0
             && current_sqrt_price != sqrt_price_limit
             && !coverage_position.is_tick_index_out_of_bounds(
@@ -367,11 +388,15 @@ impl Pool {
                 !increase_coverage,
                 current_array_index,
             )?;
+            msg!(&format!(
+                "> next array index {}, next tick index: {}",
+                next_array_index, next_tick_index
+            ));
 
             // find the price/premium at current tick
             let next_sqrt_price_x64 = get_sqrt_ratio_at_tick(next_tick_index);
-
-            //
+            println!("next_sqrt_price_x64 {}", next_sqrt_price_x64);
+            // @checkpoint : need to calculate exact tick math for buying coverage
             let current_tick =
                 tick_array_pool.get_tick(next_array_index, next_tick_index, self.tick_spacing)?;
 
@@ -386,6 +411,10 @@ impl Pool {
                 current_covered_amount.min(coverage_amount_remaining)
             };
 
+            msg!(&format!(
+                "> current_covered_amount {}",
+                current_covered_amount
+            ));
             // Calculate the fee and the in and out amounts
             let (fee_amount, amount_in, amount_out) = current_tick.calculate_coverage_delta(
                 next_tick_index,
@@ -522,4 +551,134 @@ pub struct CreatePool {
     pub name: String,
     pub smart_contract: Pubkey,
     pub insurance_fee: u16,
+}
+
+#[cfg(test)]
+pub mod pool_testing {
+
+    use std::{
+        borrow::BorrowMut,
+        ops::Add,
+        time::{Duration, SystemTime},
+    };
+
+    use crate::states::{
+        coverage::coverage_testing::CoveragePositionProto,
+        tick_v2::{
+            tick_array_pool_testing::TickArrayPoolProto, tick_array_testing::TickArrayProto,
+        },
+    };
+
+    use super::*;
+
+    #[derive(Default)]
+    pub struct PoolProto {
+        /// ProductId
+        pub product_id: u8, // 1
+        /// Name of pool
+        pub name: String, // 4 + 200 bytes
+
+        /// space between each tick in basis point
+        pub tick_spacing: u16, // 2 bytes
+
+        /// fee rate for each transaction in pool
+        // hundreth of a basis point i.e. fee_rate = 1 = 0.01 bp = 0.00001%
+        pub fee_rate: u16, //2 bytes
+
+        /// Protocol fee of transaction
+        /// (1/x)% of fee_rate
+        pub protocol_fee_rate: u16, // 2 bytes
+
+        /// Founder fee of transaction
+        /// (1/x)% of fee_rate
+        pub founders_fee_rate: u16, // 2 bytes
+
+        /// Liquidity in Pool
+        pub liquidity: u128, // 8 bytes
+
+        /// The current market price as
+        /// use Q64.64 - 64 bytes at each
+        /// side of decimal point
+        pub sqrt_price_x64: u128, // 8 bytes
+
+        /// Current tick index corrensponding to sqrt price
+        pub current_tick_index: i32, // 4 bytes
+
+        /// Tokens in vault 0 that is owed to the sure
+        pub protocol_fees_owed_0: u128, // 8 bytes
+        pub founders_fees_owed_0: u128, // 8 bytes
+        /// total fees in vault a collected per unit of liquidity
+        pub fee_growth_0_x64: u128, // 8 bytes
+
+        /// Tokens in vault 0 that is owed to the sure
+        pub protocol_fees_owed_1: u128, // 8 bytes
+        pub founders_fees_owed_1: u128, // 8 bytes
+        /// total fees collected in vault b per unit of liquidity
+        pub fee_growth_1_x64: u128, // 8 bytes
+
+        /// Used liquidity
+        pub used_liquidity: u128, // 8 bytes
+    }
+
+    impl PoolProto {
+        pub fn new() -> Self {
+            Default::default()
+        }
+
+        pub fn set_tick_spacing(mut self, tick_spacing: u16) -> Self {
+            self.tick_spacing = tick_spacing;
+            self
+        }
+
+        pub fn into_pool(self) -> Pool {
+            Pool {
+                product_id: self.product_id,
+                name: self.name,
+                tick_spacing: self.tick_spacing,
+                fee_rate: self.fee_rate,
+                protocol_fee_rate: self.protocol_fee_rate,
+                founders_fee_rate: self.founders_fee_rate,
+                liquidity: self.liquidity,
+                sqrt_price_x64: self.sqrt_price_x64,
+                current_tick_index: self.current_tick_index,
+                protocol_fees_owed_0: self.protocol_fees_owed_0,
+                founders_fees_owed_0: self.founders_fees_owed_0,
+                protocol_fees_owed_1: self.protocol_fees_owed_1,
+                founders_fees_owed_1: self.founders_fees_owed_1,
+                fee_growth_0_x64: self.fee_growth_0_x64,
+                fee_growth_1_x64: self.fee_growth_1_x64,
+                used_liquidity: self.used_liquidity,
+                ..Default::default()
+            }
+        }
+    }
+
+    // Test buying coverage from a pool
+    #[test]
+    fn test_buy_coverage() {
+        let pool_proto = PoolProto::new();
+        let mut pool = pool_proto.set_tick_spacing(20).into_pool();
+        let tick_sequence = TickArrayPoolProto::new(0, 20);
+        let tick_array_pool = TickArrayPool::new(
+            tick_sequence[0].borrow_mut(),
+            Some(tick_sequence[1].borrow_mut()),
+            Some(tick_sequence[2].borrow_mut()),
+        );
+        let coverage_position_proto = CoveragePositionProto::new();
+        let coverage_position = coverage_position_proto.build();
+        let coverage_amount_delta = 1_000_000;
+        let expiry_ts = 1691749155 as i64;
+
+        let res = pool
+            .update_coverage(
+                tick_array_pool,
+                coverage_position.borrow_mut(),
+                coverage_amount_delta,
+                expiry_ts,
+                true,
+                true,
+            )
+            .unwrap();
+        println!("res cover amount: {}", res.coverage_amount);
+    }
 }

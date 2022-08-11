@@ -29,7 +29,7 @@ pub fn handler(
     let pool = ctx.accounts.pool.as_mut();
     let coverage_buyer = &ctx.accounts.owner;
     let premium_vault = &ctx.accounts.token_vault_1;
-    let coverage_buyer_account = &ctx.accounts.token_owner_account_0;
+    let coverage_buyer_account = &ctx.accounts.token_account_0;
     let coverage_position = ctx.accounts.coverage_position.load_mut()?;
 
     // Validate the coverage position

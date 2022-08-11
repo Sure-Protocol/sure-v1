@@ -453,7 +453,11 @@ impl TickArray {
 
     // Get the maximum tick index in the array
     pub fn get_max_tick_index(&self, tick_spacing: u16) -> i32 {
-        self.start_tick_index + tick_spacing as i32 * NUM_TICKS_IN_TICK_ARRAY
+        self.start_tick_index + tick_spacing as i32 * (NUM_TICKS_IN_TICK_ARRAY - 1)
+    }
+
+    pub fn get_min_tick_index(&self, tick_spacing: u16) -> i32 {
+        self.start_tick_index
     }
 
     /// Check if tick is in the tick array
@@ -461,6 +465,10 @@ impl TickArray {
         let lower_tick_index = self.start_tick_index;
         let upper_tick_index =
             self.start_tick_index + NUM_TICKS_IN_TICK_ARRAY * tick_spacing as i32;
+        msg!(&format!(
+            "validate tick index > tick index: {} lower_tick_index: {}, upper_tick_index {} ",
+            tick_index, lower_tick_index, upper_tick_index
+        ));
         tick_index >= lower_tick_index && tick_index <= upper_tick_index
     }
 
@@ -485,7 +493,7 @@ impl TickArray {
         condition: fn(&Tick) -> bool,
     ) -> Result<Option<i32>> {
         if !self.validate_tick_index(tick_index, tick_spacing) {
-            return Err(SureError::InvalidTick.into());
+            return Err(SureError::TickOutOfRange.into());
         }
 
         // Find the location of the tick_index in the array [0,64]
@@ -615,20 +623,22 @@ impl TickUpdate {
 /// tick is located
 pub fn get_tick_location(start_tick_index: i32, tick_index: i32, tick_spacing: u16) -> Result<i32> {
     if tick_index < start_tick_index {
-        return Err(SureError::InvalidTick.into());
+        return Err(SureError::TickLtTickArray.into());
     }
     let tick_diff = tick_index - start_tick_index;
-
-    if tick_diff % tick_spacing as i32 != 0 {
-        return Err(SureError::InvalidTick.into());
-    }
 
     if tick_spacing == 0 {
         return Err(SureError::InvalidTickSpacing.into());
     }
+
+    if tick_diff % tick_spacing as i32 != 0 {
+        return Err(SureError::TickOutsideSpacing.into());
+    }
+
     let tick_location = tick_diff / tick_spacing as i32;
+    println!("tick location: {}", tick_location);
     if tick_location < 0 || tick_location >= NUM_TICKS_IN_TICK_ARRAY {
-        return Err(SureError::InvalidTick.into());
+        return Err(SureError::TickOutOfRange.into());
     }
     Ok(tick_location)
 }
@@ -668,6 +678,14 @@ impl<'info> TickArrayPool<'info> {
         let len_array = self.arrays.len();
         let last_array = self.arrays.get(len_array - 1).unwrap();
         Ok(last_array.get_max_tick_index(tick_spacing))
+    }
+
+    /// Min tick index
+    ///
+    /// Find the minimum tick index in the array
+    pub fn min_tick_index(&self, tick_spacing: u16) -> Result<i32> {
+        let first_array = self.arrays.get(0).unwrap();
+        Ok(first_array.get_min_tick_index(tick_spacing))
     }
 
     /// Max sqrt price
@@ -717,11 +735,16 @@ impl<'info> TickArrayPool<'info> {
         a_to_b: bool,
         current_array_index: usize,
     ) -> Result<(usize, i32)> {
+        println!("| find_next_free_tick_index");
         let tick_array_width_in_ticks = NUM_TICKS_IN_TICK_ARRAY * tick_spacing as i32;
         let mut next_tick_index = current_tick_index;
         let mut next_tick_array_index = current_array_index;
 
         loop {
+            println!(
+                "> loop next_tick_array_index: {} , next_tick_index {}",
+                next_tick_array_index, next_tick_index
+            );
             let tick_array = match self.arrays.get(next_tick_array_index) {
                 Some(array) => array,
                 None => return Err(SureError::InvalidTickArrayIndexInTickArrayPool.into()),
@@ -733,10 +756,12 @@ impl<'info> TickArrayPool<'info> {
             match tick_index {
                 Some(tick_index) => return Ok((next_tick_array_index, tick_index)),
                 None => {
+                    println!(" > no liquidity in array");
                     // None when the tick_index is not found in the tick array
 
                     // if the last tick array
-                    if next_tick_array_index + 1 != self.arrays.len() {
+                    if next_tick_array_index + 1 == self.arrays.len() {
+                        println!("> no liquidity in pool");
                         return Ok((
                             next_tick_array_index,
                             tick_array.get_max_tick_index(tick_spacing),
@@ -754,13 +779,18 @@ impl<'info> TickArrayPool<'info> {
 
                     // If we are at the boundary of the
                     // tick array
-                    next_tick_index = if a_to_b {
-                        tick_array.start_tick_index + tick_array_width_in_ticks + 1
+
+                    next_tick_index = if !a_to_b {
+                        tick_array.start_tick_index + tick_array_width_in_ticks
                     } else {
                         tick_array.start_tick_index - 1
                     };
 
                     next_tick_array_index += 1;
+                    println!(
+                        "> next_tick_array_index {} , next_tick_index: {}",
+                        next_tick_array_index, next_tick_index
+                    );
                 }
             }
         }
@@ -775,5 +805,124 @@ impl<'info> TickArrayPool<'info> {
     ) -> Result<()> {
         let tick_array = self.arrays.get_mut(array_index).unwrap();
         tick_array.update_tick(tick_index, tick_spacing, tick_update)
+    }
+}
+
+#[cfg(test)]
+pub mod tick_testing {
+    use super::*;
+
+    #[derive(Default)]
+    pub struct TickProto {
+        pub liquidity_net: i128,            // 16 bytes
+        pub liquidity_gross: u128,          // 16 bytes
+        pub liquidity_locked: u128,         // 16 bytes
+        pub fee_growth_outside_0_x64: u128, // 16 bytes
+        pub fee_growth_outside_1_x64: u128, // 16 bytes
+    }
+
+    impl TickProto {
+        pub fn new() -> Self {
+            Self {
+                ..Default::default()
+            }
+        }
+
+        pub fn set_liquidity_net(mut self, liquidity_net: i128) -> Self {
+            self.liquidity_net = liquidity_net;
+            self
+        }
+
+        pub fn set_liquidity_gross(mut self, liquidity_gross: u128) -> Self {
+            self.liquidity_gross = liquidity_gross;
+            self
+        }
+
+        pub fn set_liquidity_locked(mut self, liquidity_locked: u128) -> Self {
+            self.liquidity_locked = liquidity_locked;
+            self
+        }
+
+        pub fn build(self) -> Tick {
+            Tick {
+                liquidity_net: self.liquidity_net,
+                liquidity_gross: self.liquidity_gross,
+                liquidity_locked: self.liquidity_locked,
+                fee_growth_outside_0_x64: self.fee_growth_outside_0_x64,
+                fee_growth_outside_1_x64: self.fee_growth_outside_1_x64,
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod tick_array_testing {
+    use super::*;
+    use std::borrow::BorrowMut;
+    use std::cell::RefCell;
+
+    // tick array proto
+    pub struct TickArrayProto {
+        pub start_tick_index: i32,                        // 4 bytes
+        pub ticks: [Tick; NUM_TICKS_IN_TICK_ARRAY_USIZE], // NUM_TICKS_IN_TICK_ARRAY*size_of::<Tick>
+    }
+
+    impl TickArrayProto {
+        pub fn new() -> Self {
+            Self {
+                start_tick_index: 0,
+                ticks: [Tick::default(); NUM_TICKS_IN_TICK_ARRAY_USIZE],
+            }
+        }
+
+        pub fn set_start_tick_index(mut self, start_tick_index: i32) -> Self {
+            self.start_tick_index = start_tick_index;
+            self
+        }
+
+        pub fn build<'info>(&self) -> TickArray {
+            let tick_array = TickArray {
+                start_tick_index: self.start_tick_index,
+                ticks: self.ticks,
+                ..Default::default()
+            };
+            tick_array
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod tick_array_pool_testing {
+    use super::{tick_array_testing::TickArrayProto, *};
+    use std::cell::RefCell;
+    pub struct TickArrayPoolProto<'info> {
+        arrays: Vec<RefMut<'info, TickArray>>,
+    }
+    impl<'info> TickArrayPoolProto<'info> {
+        pub fn new(start_tick_index: i32, tick_spacing: u16) -> Vec<RefCell<TickArray>> {
+            let ta0 = TickArrayProto::new()
+                .set_start_tick_index(start_tick_index)
+                .build();
+            let ta1 = TickArrayProto::new()
+                .set_start_tick_index(ta0.get_max_tick_index(tick_spacing))
+                .build();
+            let ta2 = TickArrayProto::new()
+                .set_start_tick_index(ta1.get_max_tick_index(tick_spacing))
+                .build();
+            println!("ta0 start: {}", ta0.start_tick_index);
+            println!("ta1 start: {}", ta1.start_tick_index);
+            println!("ta0 start: {}", ta2.start_tick_index);
+            let mut tick_array_pool = Vec::with_capacity(3);
+            tick_array_pool.push(RefCell::new(ta0));
+            tick_array_pool.push(RefCell::new(ta1));
+            tick_array_pool.push(RefCell::new(ta2));
+            tick_array_pool
+        }
+
+        pub fn build(self) -> TickArrayPool<'info> {
+            TickArrayPool {
+                arrays: self.arrays,
+            }
+        }
     }
 }

@@ -21,7 +21,7 @@ pub struct ChangeCoveragePosition<'info> {
 
     /// Token owner account
     #[account(mut)]
-    pub token_owner_account_0: Account<'info, TokenAccount>,
+    pub token_account_0: Account<'info, TokenAccount>,
 
     /// Pool to buy insurance from
     #[account(mut)]
@@ -36,28 +36,25 @@ pub struct ChangeCoveragePosition<'info> {
     /// Coverage Position
     #[account(
         mut,
-        constraint = coverage_position.load()?.position_mint == position_mint.key()
+        constraint = coverage_position.load()?.position_mint == position_mint.key(),
+        constraint = coverage_position.load()?.owner == owner.key()
     )]
     pub coverage_position: AccountLoader<'info, CoveragePosition>,
-
-    /// Coverage position owner token account
-    #[account(
-        constraint = coverage_position_owner_token_account_0.mint == pool.token_mint_0,
-    )]
-    pub coverage_position_owner_token_account_0: Box<Account<'info, TokenAccount>>,
 
     /// Token vault 0 to buy insurance from
     #[account(
         mut,
-        constraint = token_vault_0.mint == coverage_position_owner_token_account_0.mint,
+        constraint = token_vault_0.mint == token_account_0.mint,
         constraint = token_vault_0.key() == pool.token_vault_0
     )]
     pub token_vault_0: Box<Account<'info, TokenAccount>>,
 
     /// Token vault 1 to deposit premium into
     /// Constraint: should be of same mint as token vault 0
-    #[account(mut,
-    constraint =token_vault_1.mint == token_vault_0.mint )]
+    #[account(
+        mut,
+        constraint =token_vault_1.key() == pool.token_vault_1 
+    )]
     pub token_vault_1: Box<Account<'info, TokenAccount>>,
 
     /// Tick array 0
@@ -99,7 +96,7 @@ pub fn handler(
     let pool = ctx.accounts.pool.as_mut();
     let coverage_buyer = &ctx.accounts.owner;
     let premium_vault = &ctx.accounts.token_vault_1;
-    let coverage_buyer_account = &ctx.accounts.token_owner_account_0;
+    let coverage_buyer_account = &ctx.accounts.token_account_0;
     let coverage_position = ctx.accounts.coverage_position.load_mut()?;
 
     // Validate the coverage position
@@ -121,7 +118,7 @@ pub fn handler(
         coverage_position,
         coverage_amount,
         expiry_ts,
-        false,
+        true,
         false,
     )?;
 

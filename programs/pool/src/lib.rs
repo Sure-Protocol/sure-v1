@@ -57,7 +57,7 @@ pub mod sure_pool {
     /// - productId:
     /// - tick_spacing: space between each tick in basis points
     /// - sqrt_price_x32: initial sqrt price in Q32.32
-    ///
+    /// - name: name of the pool visible to the user
     pub fn initialize_pool(
         ctx: Context<InitializePool>,
         product_id: u8,

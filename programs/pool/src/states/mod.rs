@@ -10,4 +10,4 @@ pub use liquidity::*;
 
 pub use tick_v2::*;
 
-pub use pool::*;
+pub use self::pool::*;
