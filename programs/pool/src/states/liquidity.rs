@@ -1,286 +1,108 @@
-///! Liquidity positions
-///!
+use crate::common::errors::SureError;
+use crate::common::fixed_point_math::mul_round_down_Q3232;
+use crate::common::liquidity::calculate_new_liquidity;
 use anchor_lang::prelude::*;
-
-use crate::states::{
-    bitmap::BitMap,
-    owner::ProtocolOwner,
-    pool::{PoolAccount,},
-    seeds::{SURE_NFT_MINT_SEED,SURE_LIQUIDITY_POSITION,SURE_TOKEN_ACCOUNT_SEED},
-    tick::Tick,
-};
-
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token::{Mint, Token, TokenAccount},
-};
-
 use vipers::{assert_is_ata, prelude::*};
 
-use super::pool::TokenPool;
+use super::{pool::Pool, tick_v2::Tick};
 
 /// -- Liquidity Position --
-/// 
+///
 /// Holds information about liquidity at a given tick
 ///
 #[account]
 #[derive(Default)]
 pub struct LiquidityPosition {
-    /// Bump Identity
-    pub bump: u8, // 1byte
+    pub bump: u8, // 1 byte
 
     /// The amount of liquidity provided in lamports
-    pub liquidity: u64, // 8 bytes
-
-    /// the amount of liquidity used
-    pub used_liquidity: u64, // 8 bytes
+    pub liquidity: u128, // 16 bytes
 
     /// Liquidity Pool
     pub pool: Pubkey, // 32 bytes
 
-    // TokenMint representing the position
-    pub token_mint: Pubkey,
-
-    /// Mint of token provided
-    pub nft_account: Pubkey, // 32 bytes
-
     /// NFT mint. The mint representing the position
     /// The NFT is the owner of the position.
-    pub nft_mint: Pubkey, // 32 bytes
+    pub position_mint: Pubkey, // 32 bytes
 
-    /// Time at liquidity position creation
-    pub created_at: i64, // 8 bytes,
+    /// Upper tick that liquidity is provided at
+    pub tick_index_upper: i32, // 4
 
-    /// Id in the tick pool
-    pub tick_id: u8,
+    /// Lower tick
+    /// that liquidity is provided at
+    pub tick_index_lower: i32, // 4
 
-    /// The tick that the liquidity is at
-    pub tick: u16, // 8 bytes
+    /// Checkpoint last fee in vault a
+    pub fee_checkpoint_in_0_last_x64: u128, // 16 bytes
 
-    /// Outstanding Rewards
-    pub outstanding_rewards: u32, // 4 bytes
+    /// Checkpoint last fee in vault b
+    pub fee_checkpoint_in_1_last_x64: u128, // 16 bytes
+
+    /// Non collected fees from vault a
+    pub fee_owed_in_0: u128, // 16 bytes
+
+    /// Non collected fees from vault b
+    pub fee_owed_in_1: u128, // 16 bytes
 }
 
 impl LiquidityPosition {
-    pub const SPACE: usize = 1 + 8 + 8 + 32 + 32 + 32 + 32 + 8 + 1 + 8 + 4;
-}
+    pub const SPACE: usize = 1 + 16 + 32 + 32 + 4 + 4 + 16 + 16 + 16 + 16;
 
-// ?---------------------------------.----------------- //
-// ?%%%%%%%%%%%%%%%% Method Accounts %%%%%%%%%%%%%%%%! //
-// ?-------------------------------------------------- //
+    /// Initialize Liquidity Position
+    ///
+    pub fn initialize(
+        &mut self,
+        pool: &Account<Pool>,
+        tick_index_upper: i32,
+        tick_index_lower: i32,
+        position_mint: Pubkey,
+    ) -> Result<()> {
+        if !Tick::is_valid_tick(tick_index_lower, pool.tick_spacing) {
+            return Err(SureError::InvalidLowerTickIndexProvided.into());
+        }
 
-
-/// --- Deposit Liquidity ---
-/// 
-/// Deposits liquidity into a 
-/// 
-/// Liquidity Positions on Sure is represented as an NFT. 
-/// The holder has the right to manage the liquidity position
-/// 
-/// The associated method does
-///     - Mint a new Liquidity Position NFT 
-///     - Transfer capital to pool vault
-///     - Creates liquidity position 
-///     - Updates 
-/// 
-/// Initializes:
-///     - nft_mint: Mint associated with the liquidity NFT position
-///     - liquidity_position: keeps a summary of liquidity position
-///     - nft_account: nft account to hold the newly minted Liquidity position NFT
-/// 
-#[derive(Accounts)]
-#[instruction(tick: u16,tick_pos: u64)]
-pub struct DepositLiquidity<'info> {
-    /// Liquidity provider
-    #[account(mut)]
-    pub liquidity_provider: Signer<'info>,
-
-    /// Protocol owner as the authority of mints
-    pub protocol_owner: Account<'info, ProtocolOwner>,
-
-    /// Associated token account to credit
-    #[account(mut)]
-    pub liquidity_provider_ata: Box<Account<'info, TokenAccount>>,
-
-    /// Pool which owns token account
-    #[account(mut)]
-    pub pool: Box<Account<'info, PoolAccount>>,
-
-    /// Token pool account which holds overview
-    #[account(mut)]
-    pub token_pool: Box<Account<'info,TokenPool>>,
-
-    /// Pool Vault account to deposit liquidity to
-    #[account(mut)]
-    pub pool_vault: Account<'info, TokenAccount>,
-
-    /// CHECK: done in method
-    #[account(mut)]
-    pub metadata_account: UncheckedAccount<'info>,
-
-    /// Program id for metadata program
-    /// CHECK: checks that the address matches the mpl token metadata id
-    //#[account(address =mpl_token_metadata::ID )]
-    pub metadata_program: UncheckedAccount<'info>,
-
-    /// Create Liquidity position
-    /// HASH: [sure-lp,liquidity-provider,pool,token,tick]
-    #[account(
-        init,
-        payer = liquidity_provider,
-        seeds = [
-            SURE_LIQUIDITY_POSITION.as_bytes(),
-            liquidity_position_nft_account.key().as_ref()
-        ],
-        space = 8 + LiquidityPosition::SPACE,
-        bump,
-    )]
-    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
-
-     // NFT minting
-     #[account(
-        init,
-        seeds = [
-            SURE_NFT_MINT_SEED.as_ref(),
-            liquidity_position_nft_account.key().as_ref()
-            ],
-        bump,
-        mint::decimals = 0,
-        mint::authority = protocol_owner,
-        payer = liquidity_provider,
-    )]
-    pub liquidity_position_nft_mint: Box<Account<'info, Mint>>,
-
-    /// Account to deposit NFT into
-    #[account(
-        init,
-        seeds =
-        [
-            SURE_TOKEN_ACCOUNT_SEED.as_bytes().as_ref(),
-            pool.key().as_ref(),
-            pool_vault.key().as_ref(),
-            tick.to_le_bytes().as_ref(),
-            tick_pos.to_le_bytes().as_ref(),
-        ],
-        bump,
-        token::mint = liquidity_position_nft_mint,
-        token::authority = liquidity_provider,
-        payer = liquidity_provider,
-    )]
-    pub liquidity_position_nft_account: Box<Account<'info, TokenAccount>>,
-
-    /// Pool Liquidity Tick Bitmap
-    /// 
-    /// Holds information on which ticks that contains 
-    /// available liquidity
-    #[account(mut)]
-    pub pool_liquidity_tick_bitmap: Box<Account<'info, BitMap>>,
-
-    /// Tick contains information on liquidity at
-    /// one specific tick
-    #[account(mut)]
-    pub liquidity_tick_info: AccountLoader<'info, Tick>,
-
-    /// Sysvar for token mint and ATA creation
-    pub rent: Sysvar<'info, Rent>,
-
-    // Token program that executes the transfer
-    pub token_program: Program<'info, Token>,
-
-    /// Provide the system program
-    pub system_program: Program<'info, System>,
-
-    /// Program to create an ATA for receiving position NFT
-    pub associated_token_program: Program<'info, AssociatedToken>,
-}
-
-impl<'info> Validate<'info> for DepositLiquidity<'info> {
-    fn validate(&self) -> Result<()> {
-        assert_is_zero_token_account!(self.liquidity_position_nft_account);
-
-        // check the same bitmap
-        //assert_keys_eq!(self.pool.pool_liquidity_tick_bitmap, self.pool_liquidity_tick_bitmap);
+        if !Tick::is_valid_tick(tick_index_upper, pool.tick_spacing) {
+            return Err(SureError::InvalidUpperTickIndexProvided.into());
+        }
+        if tick_index_lower > tick_index_upper {
+            return Err(SureError::LowerTickgtUpperTick.into());
+        }
+        self.pool = pool.key();
+        self.position_mint = position_mint;
+        self.tick_index_upper = tick_index_upper;
+        self.tick_index_lower = tick_index_lower;
         Ok(())
     }
-}
 
-/// Redeem liquidity
-/// Allow holder of NFT to redeem liquidity from pool
-#[derive(Accounts)]
-pub struct RedeemLiquidity<'info> {
-    /// Holder of the LP NFT
-    pub nft_holder: Signer<'info>,
+    /// Update the liquidity position
+    ///
+    /// This happens if the liquidity position is changed
+    /// or the user wants to collect the fees
+    pub fn update(
+        &mut self,
+        liquidity_delta: i128,
+        fee_growth_inside_0: u128,
+        fee_growth_inside_1: u128,
+    ) -> Result<()> {
+        let fee_change_per_unit_0 = fee_growth_inside_0
+            .checked_sub(self.fee_checkpoint_in_0_last_x64)
+            .ok_or(SureError::InvalidFeeGrowthSubtraction)?;
 
-    /// Sure Protocol Pool Account
-    #[account(mut)]
-    pub pool: Box<Account<'info, PoolAccount>>,
+        let fee_change_per_unit_1 = fee_growth_inside_1
+            .checked_sub(self.fee_checkpoint_in_1_last_x64)
+            .ok_or(SureError::InvalidFeeGrowthSubtraction)?;
 
-    /// Token pool account which holds overview
-    #[account(mut)]
-    pub token_pool: Box<Account<'info,TokenPool>>,
+        let fee_change_total_0 = mul_round_down_Q3232(self.liquidity, fee_change_per_unit_0)?;
+        let fee_change_total_1 = mul_round_down_Q3232(self.liquidity, fee_change_per_unit_1)?;
 
-    /// NFT that proves ownership of position
-    #[account(
-        constraint = liquidity_position_nft_account.mint ==liquidity_position.nft_mint
-    )]
-    pub liquidity_position_nft_account: Box<Account<'info, TokenAccount>>,
+        self.fee_checkpoint_in_0_last_x64 = fee_growth_inside_0;
+        self.fee_checkpoint_in_1_last_x64 = fee_growth_inside_1;
 
-    /// Protocol owner as the authority of mints
-    pub protocol_owner: Account<'info, ProtocolOwner>,
+        self.fee_owed_in_0 = self.fee_owed_in_0.wrapping_add(fee_change_total_0);
+        self.fee_owed_in_1 = self.fee_owed_in_1.wrapping_add(fee_change_total_1);
 
-    /// Liquidity position
-    #[account(mut)]
-    pub liquidity_position: Box<Account<'info, LiquidityPosition>>,
+        self.liquidity = calculate_new_liquidity(self.liquidity, liquidity_delta)?;
 
-    /// Token account to recieve the tokens
-    #[account(mut)]
-    pub liquidity_provider_ata: Box<Account<'info, TokenAccount>>,
-
-    /// Pool Vault to transfer tokens from
-    #[account(mut)]
-    pub pool_vault: Box<Account<'info, TokenAccount>>,
-
-     /// Pool Liquidity Tick Bitmap
-    /// 
-    /// Holds information on which ticks that contains 
-    /// available liquidity
-    #[account(mut)]
-    pub pool_liquidity_tick_bitmap: Box<Account<'info, BitMap>>,
-    
-    #[account(mut)]
-    pub liquidity_tick_info: AccountLoader<'info, Tick>,
-
-    /// CHECK: Account used to hold metadata on the LP NFT
-    #[account(mut)]
-    pub metadata_account: AccountInfo<'info>,
-
-    /// CHECK: Checks that the address is the metadata metaplex program
-    #[account(address = mpl_token_metadata::ID)]
-    pub metadata_program: AccountInfo<'info>,
-
-    // Token program that executes the transfer
-    pub token_program: Program<'info, Token>,
-
-    /// Provide the system program
-    pub system_program: Program<'info, System>,
-}
-
-impl<'info> Validate<'info> for RedeemLiquidity<'info> {
-    fn validate(&self) -> Result<()> {
-        //assert_is_zero_token_account!(self.nft);
-
-        // Check correct vault
-
-        // check the same bitmap
-        //assert_keys_eq!(self.pool.bitmap, self.bitmap);
         Ok(())
     }
-}
-
-
-
-#[event]
-pub struct NewLiquidityPosition {
-    pub tick: u16,
-    pub liquidity: u64,
 }

@@ -1,7 +1,7 @@
 [package]
 name = "sure-pool"
-version = "0.0.1"
-description = "Pool smart contract for Sure insurance pools"
+version = "0.0.2"
+descrip2on = "Pool smart contract for Sure insurance pools"
 edition = "2021"
 license = "AGPL-3.0-only"
 keywords = ["solana", "anchor", "blockchain"]
@@ -18,10 +18,11 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.24.2"
-anchor-spl = "0.24.2"
+anchor-lang = "0.25.0"
+anchor-spl = "0.25.0"
 uint = "=0.9.1"
 vipers = "2.0.4"
 mpl-token-metadata = {version ="1.2.7", features = ["no-entrypoint"] }
+spl-associated-token-account = "1.0.5"
 
 [dev-dependencies]
