@@ -1,9 +1,9 @@
 use crate::states::{
     bitmap::BitMap,
-    contract::{InsuranceTickContract,PoolInsuranceContract},
+    coverage::InsuranceTickContract,
     liquidity::{self, LiquidityPosition},
     owner::ProtocolOwner,
-    pool::{PoolAccount, PoolManager, SurePools, TokenPool},
+    pool::{Pool, PoolManager, SurePools},
     tick::{Tick, TickTrait},
 };
 use anchor_lang::prelude::*;
@@ -67,10 +67,9 @@ pub struct InitializeProtocol<'info> {
     pub system_program: Program<'info, System>,
 }
 
-
 impl<'info> Validate<'info> for InitializeProtocol<'info> {
     fn validate(&self) -> Result<()> {
-      //  assert_eq!(self.program.programdata_address()?,Some(self.program_data.key()));
+        //  assert_eq!(self.program.programdata_address()?,Some(self.program_data.key()));
         //assert_eq!(Some(self.owner.key()), self.program_data.upgrade_authority_address);
         Ok(())
     }
@@ -102,154 +101,6 @@ impl<'info> Validate<'info> for InitializePoolManager<'info> {
         Ok(())
     }
 }
-
-#[derive(Accounts)]
-pub struct CreatePool<'info> {
-    /// Pool creator
-    #[account(mut)]
-    pub pool_creator: Signer<'info>,
-
-    /// Protocol owner
-    pub protocol_owner: Account<'info, ProtocolOwner>,
-
-    #[account(
-        init,
-        space = 8 + PoolAccount::SPACE,
-        payer = pool_creator,
-        seeds = [
-            SURE_PRIMARY_POOL_SEED.as_bytes(),
-            smart_contract.key().to_bytes().as_ref(),
-        ],
-        bump
-    )]
-    pub pool: Box<Account<'info, PoolAccount>>,
-
-    /// Sure Pools keeps an overview over
-    /// existing pools
-    #[account(mut)]
-    pub pools: Box<Account<'info, SurePools>>,
-
-    // Assume the contract being hacked is a token account
-    /// CHECK: This accounts represents the executable contract
-    /// that is to be insured.
-    pub smart_contract: UncheckedAccount<'info>,
-
-    /// Sysvar for Associated Token Account
-    pub rent: Sysvar<'info, Rent>,
-
-    /// Provide the system program
-    pub system_program: Program<'info, System>,
-}
-
-impl<'info> Validate<'info> for CreatePool<'info> {
-    fn validate(&self) -> Result<()> {
-        assert_eq!(self.smart_contract.executable,true,"smart contract have to be executable");
-        Ok(())
-    }
-}
-
-/// Create Pool Vaults
-/// creates the associated pool vault
-/// based on token mint
-#[derive(Accounts)]
-pub struct InitializeTokenPool<'info> {
-    // Signer of the creation
-    #[account(mut)]
-    pub creator: Signer<'info>,
-
-    /// Pool account that the vaults are associated to
-    #[account(mut)]
-    pub pool: Box<Account<'info, PoolAccount>>,
-
-    /// Token mint used for the Vaults
-    pub pool_vault_token_mint: Box<Account<'info, Mint>>,
-
-    // Pool Vault used to hold tokens from token_mint
-    #[account(
-        init,
-        payer = creator,
-        seeds = [
-            SURE_VAULT_POOL_SEED.as_bytes(),
-            pool.key().as_ref(),
-            pool_vault_token_mint.key().as_ref(),
-        ],
-        bump,
-        token::mint = pool_vault_token_mint,
-        token::authority = pool,
-    )]
-    pub pool_vault: Box<Account<'info, TokenAccount>>,
-
-    // Premium Vault holding all future premiums
-    #[account(
-        init,
-        payer = creator,
-        seeds = [
-            SURE_PREMIUM_POOL_SEED.as_bytes(),
-            pool.key().as_ref(),
-            pool_vault_token_mint.key().as_ref()
-        ],
-        bump,
-        token::mint = pool_vault_token_mint,
-        token::authority = pool
-    )]
-    pub premium_vault: Box<Account<'info, TokenAccount>>,
-
-    /// Pool Tick Accounts
-    /// Keep track of tick accounts that has
-    /// liquidity in a pool
-    #[account(
-        init,
-        space = 8 + BitMap::SPACE,
-        payer = creator,
-        seeds = [
-            SURE_BITMAP.as_bytes(),
-            pool.key().as_ref(),
-            pool_vault_token_mint.key().as_ref()
-        ],
-        bump,
-    )]
-    pub pool_liquidity_tick_bitmap: Box<Account<'info, BitMap>>,
-
-    /// Token Pool
-    /// holds statistics about the given token pool
-    /// 
-    #[account(
-        init,
-        space = 8 + TokenPool::SPACE,
-        payer = creator,
-        seeds = [
-            SURE_TOKEN_POOL_SEED.as_bytes(),
-            pool.key().as_ref(),
-            pool_vault_token_mint.key().as_ref()
-        ],
-        bump,
-    )]
-    pub token_pool: Box<Account<'info,TokenPool>>,
-
-    /// Sysvar for Associated Token Account
-    pub rent: Sysvar<'info, Rent>,
-
-    // Token program
-    pub token_program: Program<'info, Token>,
-
-    /// Provide the system program
-    pub system_program: Program<'info, System>,
-}
-
-impl<'info> Validate<'info> for InitializeTokenPool<'info> {
-    fn validate(&self) -> Result<()> {
-        // Make sure that token is USDC
-        assert_eq!(
-            self.pool_vault_token_mint.key(),
-            mint::USDC,
-            "Vaults can only have mint USDC"
-        );
-
-        Ok(())
-    }
-}
-
-
 
 #[derive(Accounts)]
 pub struct UpdateTickPosition<'info> {
@@ -302,4 +153,3 @@ pub struct CloseTick<'info> {
     )]
     pub liquidity_tick_info: AccountLoader<'info, Tick>,
 }
-

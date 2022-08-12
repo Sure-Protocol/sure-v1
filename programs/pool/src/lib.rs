@@ -1,13 +1,12 @@
 pub mod context;
+pub mod instructions;
 pub mod modules;
 pub mod states;
 pub mod utils;
 
-use crate::states::bitmap::*;
+use crate::states::coverage::*;
 use crate::states::tick;
 use crate::states::tick::TickTrait;
-use crate::states::liquidity::*;
-use crate::states::contract::*;
 use crate::states::*;
 use crate::utils::errors::*;
 use anchor_lang::prelude::*;
@@ -22,7 +21,6 @@ declare_id!("D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM");
 
 #[program]
 pub mod sure_pool {
-
 
     use super::*;
 
@@ -79,28 +77,25 @@ pub mod sure_pool {
         Ok(())
     }
 
-
     /// --- Initialize Policy Holder ----
     ///
-    /// Prepare a new user for buying insurance 
+    /// Prepare a new user for buying insurance
     ///
     /// # Arguments
     ///
     /// * ctx - initialize the manager
     ///
-    pub fn initialize_policy_holder(ctx: Context<InitializePolicyHolder>) -> Result<()> {
+    pub fn initialize_policy_holder(ctx: Context<InitializeCover>) -> Result<()> {
         let insurance_contracts = &mut ctx.accounts.insurance_contracts;
         insurance_contracts.owner = ctx.accounts.signer.key();
         insurance_contracts.bump = *ctx.bumps.get("insurance_contracts").unwrap();
         insurance_contracts.pools = Vec::new();
-        
+
         emit!(InitializePolicyHolderEvent {
             owner: ctx.accounts.signer.key()
         });
         Ok(())
     }
-
-
 
     // ------------ Pool -----------------------------------------------
     /// Create an insurance pool for a smart contract
@@ -111,91 +106,12 @@ pub mod sure_pool {
     /// * insurance_fee: fee taken on each insurance bought. In basis points (1bp = 0.01%)
     /// * range_size: The size of the ranges in which users can provide insurance
     /// * name: [optional] Name of the pool
-    pub fn create_pool(
+    pub fn initialize_pool(
         ctx: Context<CreatePool>,
-        insurance_fee: u16,
         name: String,
+        tick_spacing: u16,
     ) -> Result<()> {
-        // ________________ Validation ________________
-        // Only allow the owner of the protocol to create pools
-        // let protocol_owner = &ctx.accounts.protocol_owner.load()?;
-        // require!(
-        //     ctx.accounts.pool_creator.key() == protocol_owner.owner,
-        //     SureError::InvalidPoolCreator
-        // );
-
-        // Load Accounts
-        let pool = &mut ctx.accounts.pool;
-        let sure_pools = &mut ctx.accounts.pools;
-        
-        let insured_smart_contract = ctx.accounts.smart_contract.key();
-        // Range size should be less than 100. Meaning that the premium should be less than 100%
-
-        // Set up pool account
-        pool.bump = *ctx.bumps.get("pool").unwrap();
-        pool.insurance_fee = insurance_fee;
-        pool.name = name.clone();
-        pool.smart_contract = insured_smart_contract.clone();
-        pool.locked = false;
-        pool.token_pools = Vec::new();
-
-        // Update the pools
-        sure_pools.pools.push(pool.key().clone());
-
-        emit!(pool::CreatePool {
-            name: name,
-            smart_contract: ctx.accounts.smart_contract.key(),
-            insurance_fee: insurance_fee
-        });
-
-        Ok(())
-    }
-
-    /// Remove pool
-    /// The pool owner can remove the pool
-    /// This results in
-    /// - All insurance contracts being voided
-    /// - All liquidity sent to the holder of the NFT
-    ///
-    // pub fn remove_pool() -> Result<()> {
-    //     Ok(())
-    // }
-
-    /// Initialize Token Pool
-    /// 
-    /// Initialize
-    /// - Liquidity Vault
-    /// - Premium Vault
-    /// - TokenPool
-    /// 
-    /// for the provided Pool.
-    ///
-    /// # Arguments
-    /// * ctx:
-    ///
-    pub fn initialize_token_pool(ctx: Context<InitializeTokenPool>) -> Result<()> {
-        // Load accounts
-        let pool_liquidity_tick_bitmap = &mut ctx.accounts.pool_liquidity_tick_bitmap;
-        let pool = &mut ctx.accounts.pool;
-        let token_pool = &mut ctx.accounts.token_pool;
-
-        // Initialize Pool Liquidity Tick Bitmap
-        pool_liquidity_tick_bitmap.bump = *ctx.bumps.get("pool_liquidity_tick_bitmap").unwrap();
-        pool_liquidity_tick_bitmap.spacing = 10;
-        pool_liquidity_tick_bitmap.word = [0; 4];
-
-        // Initialize Token Pool
-        token_pool.bump = *ctx.bumps.get("token_pool").unwrap();
-        token_pool.liquidity = 0;
-        token_pool.used_liquidity = 0;
-        token_pool.token_mint = ctx.accounts.pool_vault_token_mint.key();
-        token_pool.pool = pool.key();
-
-        // Update pool with new tokenPool entry
-        pool.token_pools.push(token_pool.key().clone());
-        
-        emit!(pool::InitializeTokenPool{});
-        Ok(())
+        instructions::initialize_pool::handler(ctx, name, tick_spacing)
     }
 
     /// Deposit liquidity into pool
@@ -242,8 +158,16 @@ pub mod sure_pool {
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info().clone(),
                 token::MintTo {
-                    mint: ctx.accounts.liquidity_position_nft_mint.to_account_info().clone(),
-                    to: ctx.accounts.liquidity_position_nft_account.to_account_info().clone(),
+                    mint: ctx
+                        .accounts
+                        .liquidity_position_nft_mint
+                        .to_account_info()
+                        .clone(),
+                    to: ctx
+                        .accounts
+                        .liquidity_position_nft_account
+                        .to_account_info()
+                        .clone(),
                     authority: ctx.accounts.protocol_owner.to_account_info().clone(),
                 },
                 &[&protocol_owner_seeds[..]],
@@ -276,12 +200,15 @@ pub mod sure_pool {
 
         // Protocol owner signs the transaction with seeds
         // and bump
-       
+
         solana_program::program::invoke_signed(
             &create_metadata_accounts_ix,
             &[
                 ctx.accounts.metadata_account.to_account_info().clone(),
-                ctx.accounts.liquidity_position_nft_mint.to_account_info().clone(),
+                ctx.accounts
+                    .liquidity_position_nft_mint
+                    .to_account_info()
+                    .clone(),
                 ctx.accounts.protocol_owner.to_account_info().clone(),
                 ctx.accounts.liquidity_provider.to_account_info().clone(),
                 ctx.accounts.system_program.to_account_info().clone(),
@@ -308,8 +235,9 @@ pub mod sure_pool {
         )?;
 
         // Load tick account state
-        let liquidity_tick_info_state =
-            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.liquidity_tick_info.to_account_info())?;
+        let liquidity_tick_info_state = AccountLoader::<tick::Tick>::try_from(
+            &ctx.accounts.liquidity_tick_info.to_account_info(),
+        )?;
         let mut liquidity_tick_info = liquidity_tick_info_state.load_mut()?;
 
         let new_id = liquidity_tick_info.get_new_id();
@@ -332,7 +260,7 @@ pub mod sure_pool {
             pool_liquidity_tick_bitmap.flip_bit(tick);
         }
 
-        // Update Token Pool 
+        // Update Token Pool
         token_pool.liquidity += amount;
 
         // # 4. Update tick with new liquidity position
@@ -372,8 +300,9 @@ pub mod sure_pool {
         // _______________ LOAD accounts __________________
         let liquidity_position = &ctx.accounts.liquidity_position;
 
-        let tick_account_state =
-            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.liquidity_tick_info.to_account_info())?;
+        let tick_account_state = AccountLoader::<tick::Tick>::try_from(
+            &ctx.accounts.liquidity_tick_info.to_account_info(),
+        )?;
         let mut liquidity_tick_info = tick_account_state.load_mut()?;
         let pool_liquidity_tick_bitmap = &mut ctx.accounts.pool_liquidity_tick_bitmap;
         let protocol_owner = &ctx.accounts.protocol_owner;
@@ -398,7 +327,11 @@ pub mod sure_pool {
                 ctx.accounts.token_program.to_account_info().clone(),
                 token::Transfer {
                     from: ctx.accounts.pool_vault.to_account_info().clone(),
-                    to: ctx.accounts.liquidity_provider_ata.to_account_info().clone(),
+                    to: ctx
+                        .accounts
+                        .liquidity_provider_ata
+                        .to_account_info()
+                        .clone(),
                     authority: ctx.accounts.pool.to_account_info().clone(),
                 },
                 &[&pool_seeds[..]],
@@ -448,7 +381,7 @@ pub mod sure_pool {
             .remove_liquidity(liquidity_position.tick_id)
             .map_err(|e| e.to_anchor_error())?;
 
-        if !liquidity_tick_info.active{
+        if !liquidity_tick_info.active {
             if pool_liquidity_tick_bitmap.is_initialized(liquidity_position.tick) {
                 pool_liquidity_tick_bitmap.flip_bit(liquidity_position.tick);
             }
@@ -456,22 +389,20 @@ pub mod sure_pool {
         Ok(())
     }
 
-
     /// --- Initialize: User Pool Insurance Contract ---
-    /// 
+    ///
     /// Creates a new insurance contract for a user for the given pool
-    /// 
-    /// Initializes 
+    ///
+    /// Initializes
     ///     - insurance_pool_contract_bitmap: accumulative insurance contract information
     ///     - insurance_pool_contract_info:   keeps tracks of ticks used by the user insurance contract
-    /// 
+    ///
     /// # Arguments
     /// * ctx
     ///
     pub fn initialize_user_pool_insurance_contract(
         ctx: Context<InitializeUserPoolInsuranceContract>,
     ) -> Result<()> {
-        
         // Load accounts
         let pool_insurance_contract_bitmap = &mut ctx.accounts.pool_insurance_contract_bitmap;
         let pool_insurance_contract_info = &mut ctx.accounts.pool_insurance_contract_info;
@@ -479,11 +410,11 @@ pub mod sure_pool {
         let insurance_contracts = &mut ctx.accounts.insurance_contracts;
 
         let current_time = Clock::get()?.unix_timestamp;
-       
+
         // Initialize the insurance contract overview
         pool_insurance_contract_info.bump = unwrap_bump!(ctx, "pool_insurance_contract_info");
         pool_insurance_contract_info.expiry_ts = current_time;
-        pool_insurance_contract_info.insured_amount=0;
+        pool_insurance_contract_info.insured_amount = 0;
         pool_insurance_contract_info.owner = ctx.accounts.signer.key();
 
         pool_insurance_contract_bitmap.bump = unwrap_bump!(ctx, "pool_insurance_contract_bitmap");
@@ -495,31 +426,31 @@ pub mod sure_pool {
 
         Ok(())
     }
-    
-    /// --- Initialize Insurance Contract --- 
+
+    /// --- Initialize Insurance Contract ---
     ///
     ///  Let a user create an insurance contract with a tick account
-    /// in a Sure pool. 
-    /// 
-    /// Initializes: 
+    /// in a Sure pool.
+    ///
+    /// Initializes:
     ///     - insurance_tick_contract: holds information about the insurance for a user at the given tick
     ///
     /// # Arguments
     /// * ctx: Contains the pool, insurance contract and signer
     ///
     pub fn initialize_insurance_contract(ctx: Context<InitializeInsuranceContract>) -> Result<()> {
-        
         // Load Accounts
         let insurance_tick_contract = &mut ctx.accounts.insurance_tick_contract;
         let pool_insurance_contract_bitmap = &mut ctx.accounts.pool_insurance_contract_bitmap;
-        
-        let liquidity_tick_info_state =
-            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.liquidity_tick_info.to_account_info())?;
+
+        let liquidity_tick_info_state = AccountLoader::<tick::Tick>::try_from(
+            &ctx.accounts.liquidity_tick_info.to_account_info(),
+        )?;
         let liquidity_tick_info = liquidity_tick_info_state.load()?;
-        
-        // Method variables 
+
+        // Method variables
         let current_time = Clock::get()?.unix_timestamp;
-        
+
         // Initialize insurance_contract
         insurance_tick_contract.insured_amount = 0;
         insurance_tick_contract.premium = 0;
@@ -529,47 +460,44 @@ pub mod sure_pool {
         insurance_tick_contract.token_mint = ctx.accounts.token_mint.key();
         insurance_tick_contract.active = false;
         insurance_tick_contract.end_ts = current_time;
-        insurance_tick_contract.created_ts =current_time;
-        insurance_tick_contract.start_ts = current_time; 
+        insurance_tick_contract.created_ts = current_time;
+        insurance_tick_contract.start_ts = current_time;
 
         // Update insurance contract
         // Mark the position as filled
         if !pool_insurance_contract_bitmap.is_initialized(liquidity_tick_info.tick) {
             pool_insurance_contract_bitmap.flip_bit(liquidity_tick_info.tick);
         }
-        
 
         Ok(())
     }
 
-   
-
     /// --- Update Insurance Tick Contract ---
-    /// 
+    ///
     /// Updates the insurance contract for the given tick and the pool contract information
     /// and bitmap.
-    /// 
+    ///
     /// Initializes:
     ///     <nothing>
     ///
     /// TODO: Allow for unlocking of insured amount
-    /// 
+    ///
     /// # Arguments
     /// * ctx
     /// * new_insured_amount_on_tick: Final insurance amount for tick
-    /// * new_expiry_ts: expiry of the contract in timestamp 
+    /// * new_expiry_ts: expiry of the contract in timestamp
     ///
     pub fn update_insurance_tick_contract(
         ctx: Context<UpdateInsuranceTickContract>,
         new_insured_amount_on_tick: u64,
         new_expiry_ts: i64,
     ) -> Result<()> {
-
         // Load accounts
-        let liquidity_tick_info_state =
-            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.liquidity_tick_info.to_account_info())?;
+        let liquidity_tick_info_state = AccountLoader::<tick::Tick>::try_from(
+            &ctx.accounts.liquidity_tick_info.to_account_info(),
+        )?;
         let mut liquidity_tick_info = liquidity_tick_info_state.load_mut()?;
-        
+
         let pool = &mut ctx.accounts.pool;
         let token_pool = &mut ctx.accounts.token_pool;
         let insurance_tick_contract = &mut ctx.accounts.insurance_tick_contract;
@@ -578,32 +506,39 @@ pub mod sure_pool {
 
         // Calculate coverage amount
         let current_insured_amount_on_tick = insurance_tick_contract.insured_amount;
-        let amount_diff = if new_insured_amount_on_tick > current_insured_amount_on_tick {new_insured_amount_on_tick-current_insured_amount_on_tick} else {current_insured_amount_on_tick-new_insured_amount_on_tick};
+        let amount_diff = if new_insured_amount_on_tick > current_insured_amount_on_tick {
+            new_insured_amount_on_tick - current_insured_amount_on_tick
+        } else {
+            current_insured_amount_on_tick - new_insured_amount_on_tick
+        };
 
         // Calculate the premium that has to be refunded or paid
-        let (increase_premium,premium) = insurance_tick_contract.update_position_and_get_premium(liquidity_tick_info.tick, new_insured_amount_on_tick, new_expiry_ts)?;
-        
-        
-        if new_insured_amount_on_tick > current_insured_amount_on_tick{
-            liquidity_tick_info
-            .buy_insurance(amount_diff)
-            .map_err(|e| e.to_anchor_error())?;
+        let (increase_premium, premium) = insurance_tick_contract.update_position_and_get_premium(
+            liquidity_tick_info.tick,
+            new_insured_amount_on_tick,
+            new_expiry_ts,
+        )?;
 
-            if liquidity_tick_info.is_pool_full(){
+        if new_insured_amount_on_tick > current_insured_amount_on_tick {
+            liquidity_tick_info
+                .buy_insurance(amount_diff)
+                .map_err(|e| e.to_anchor_error())?;
+
+            if liquidity_tick_info.is_pool_full() {
                 liquidity_tick_bitmap.flip_bit(liquidity_tick_info.tick);
             }
-            
+
             // Increase total insured amount for insurance pool contract
             pool_insurance_contract_info.insured_amount += amount_diff;
-            
+
             token_pool.used_liquidity += amount_diff;
             pool_insurance_contract_info.expiry_ts = new_expiry_ts
-        }else{
+        } else {
             liquidity_tick_info
-            .exit_insurance(amount_diff)
-            .map_err(|e| e.to_anchor_error())?;
-            
-            if !liquidity_tick_info.is_pool_full(){
+                .exit_insurance(amount_diff)
+                .map_err(|e| e.to_anchor_error())?;
+
+            if !liquidity_tick_info.is_pool_full() {
                 if !liquidity_tick_bitmap.is_initialized(liquidity_tick_info.tick) {
                     liquidity_tick_bitmap.flip_bit(liquidity_tick_info.tick);
                 }
@@ -614,7 +549,7 @@ pub mod sure_pool {
             token_pool.used_liquidity -= amount_diff;
             pool_insurance_contract_info.expiry_ts = new_expiry_ts
         }
-        
+
         if increase_premium {
             token::transfer(
                 CpiContext::new(
@@ -627,13 +562,13 @@ pub mod sure_pool {
                 ),
                 premium,
             )?;
-        }else{
+        } else {
             let pool_seed = [
                 &SURE_PRIMARY_POOL_SEED.as_bytes() as &[u8],
                 &pool.smart_contract.to_bytes() as &[u8],
                 &[pool.bump],
             ];
-    
+
             token::transfer(
                 CpiContext::new_with_signer(
                     ctx.accounts.token_program.to_account_info().clone(),
@@ -650,20 +585,19 @@ pub mod sure_pool {
         Ok(())
     }
 
-
     /// -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.--.-.-.
     /// -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.- TICK -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-
     /// -.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.--.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.-.--.-.-.
 
     /// --- Initialize Tick Account ---
-    /// 
-    /// 
+    ///
+    ///
     /// Initializes:
     ///     - tick_account: holds info about the liquidity for the given tick
     ///
     ///  # Argument
     /// * ctx:
-    /// 
+    ///
     pub fn initialize_pool_liquidity_tick(
         ctx: Context<InitializeTick>,
         _pool: Pubkey,
@@ -678,16 +612,17 @@ pub mod sure_pool {
     }
 
     /// --- Close Tick Account ---
-    /// 
+    ///
     /// Closes tick account if there is no more liquidity in the account
-    /// and transfers the rent back 
+    /// and transfers the rent back
     ///
     /// # Arguments
     /// * ctx
     ///
     pub fn close_pool_liquidity_tick(ctx: Context<CloseTick>) -> Result<()> {
-        let liquidity_tick_info_state =
-            AccountLoader::<tick::Tick>::try_from(&ctx.accounts.liquidity_tick_info.to_account_info())?;
+        let liquidity_tick_info_state = AccountLoader::<tick::Tick>::try_from(
+            &ctx.accounts.liquidity_tick_info.to_account_info(),
+        )?;
         let liquidity_tick_info = liquidity_tick_info_state.load_mut()?;
 
         if !liquidity_tick_info.is_pool_empty() {
