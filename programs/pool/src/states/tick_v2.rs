@@ -85,6 +85,11 @@ impl Tick {
 
     pub fn get_available_liquidity(&self) -> u128 {
         let liquidity_net_abs = self.liquidity_net.abs() as u128;
+        self.liquidity_gross + liquidity_net_abs
+    }
+
+    pub fn get_available_coverage_liquidity(&self) -> u128 {
+        let liquidity_net_abs = self.liquidity_net.abs() as u128;
         self.liquidity_gross + liquidity_net_abs - self.liquidity_locked
     }
 
@@ -167,6 +172,7 @@ impl Tick {
     pub fn calculate_coverage_delta(
         &self,
         tick_index: i32,
+        target_tick_index: i32,
         coverage_delta: u128,         // the change in coverage > 0
         current_covered_amount: u128, // Current covered amount
         fee_rate: u16,
@@ -174,16 +180,27 @@ impl Tick {
         expiry_ts: i64,
         increase: bool,
     ) -> Result<(u128, u128, u128)> {
+        // available liquidity at tick
         let available_liquidity = self.get_available_liquidity();
 
         // calculate premium
         let sqrt_price_x64 = get_sqrt_ratio_at_tick(tick_index);
+        let sqrt_price_target = get_sqrt_ratio_at_tick(target_tick_index);
 
-        let remaining_premium =
-            calculate_premium(sqrt_price_x64, current_covered_amount, expiry_ts)?;
+        let remaining_premium = calculate_premium(
+            sqrt_price_target,
+            sqrt_price_x64,
+            current_covered_amount,
+            expiry_ts,
+        )?;
         // calculates premium
-        let (increase_premium, premium_delta) =
-            calculate_premium_diff(remaining_premium, sqrt_price_x64, coverage_delta, expiry_ts)?;
+        let (increase_premium, premium_delta) = calculate_premium_diff(
+            remaining_premium,
+            sqrt_price_target,
+            sqrt_price_x64,
+            coverage_delta,
+            expiry_ts,
+        )?;
 
         // calculate base fee amount of amount
         let fee_amount = coverage_delta
@@ -828,17 +845,17 @@ pub mod tick_testing {
             }
         }
 
-        pub fn set_liquidity_net(mut self, liquidity_net: i128) -> Self {
+        pub fn liquidity_net(mut self, liquidity_net: i128) -> Self {
             self.liquidity_net = liquidity_net;
             self
         }
 
-        pub fn set_liquidity_gross(mut self, liquidity_gross: u128) -> Self {
+        pub fn liquidity_gross(mut self, liquidity_gross: u128) -> Self {
             self.liquidity_gross = liquidity_gross;
             self
         }
 
-        pub fn set_liquidity_locked(mut self, liquidity_locked: u128) -> Self {
+        pub fn liquidity_locked(mut self, liquidity_locked: u128) -> Self {
             self.liquidity_locked = liquidity_locked;
             self
         }
@@ -856,10 +873,220 @@ pub mod tick_testing {
 
     #[test]
     pub fn test_is_valid_tick() {
-        let configs = [(40, 20, true)];
+        let configs = [(40, 20, true), (30, 20, false)];
         for (tick, tick_spacing, expected) in configs {
             assert_eq!(Tick::is_valid_tick(tick, tick_spacing), expected);
         }
+    }
+
+    #[test]
+    pub fn test_is_initilized() {
+        let tick = TickProto::new().liquidity_gross(10).build();
+        assert_eq!(tick.is_initialized(), true);
+    }
+
+    #[test]
+    pub fn test_calculate_next_liquidity_update() {
+        #[derive(Default)]
+        pub struct Test<'a> {
+            test_name: &'a str,
+            tick: Tick,
+            tick_index: i32,
+            current_tick: i32,
+            fee_growth_global_0_x64: u128,
+            fee_growth_global_1_x64: u128,
+            liquidity_delta: i128,
+            product_type: ProductType,
+            is_upper_tick: bool,
+            expected_tick_update: TickUpdate,
+        }
+
+        let test_data = [
+            Test {
+                test_name: "1. empty tick. Current tick below lower tick",
+                tick: TickProto::new().liquidity_gross(0).build(),
+                tick_index: 100,
+                current_tick: 20,
+                fee_growth_global_0_x64: 0,
+                fee_growth_global_1_x64: 0,
+                liquidity_delta: 24000,
+                product_type: ProductType::Coverage,
+                is_upper_tick: false,
+                expected_tick_update: TickUpdate {
+                    initialized: true,
+                    liquidity_net: 24000,
+                    liquidity_gross: 24000,
+                    liquidity_locked: 0,
+                    fee_growth_outside_0: 0,
+                    fee_growth_outside_1: 0,
+                },
+            },
+            Test {
+                test_name: "2. empty tick. Current tick above lower tick",
+                tick: TickProto::new().liquidity_gross(0).build(),
+                tick_index: 100,
+                current_tick: 120,
+                fee_growth_global_0_x64: 100,
+                fee_growth_global_1_x64: 100,
+                liquidity_delta: 24000,
+                product_type: ProductType::Coverage,
+                is_upper_tick: false,
+                expected_tick_update: TickUpdate {
+                    initialized: true,
+                    liquidity_net: 24000,
+                    liquidity_gross: 24000,
+                    liquidity_locked: 0,
+                    fee_growth_outside_0: 100,
+                    fee_growth_outside_1: 100,
+                },
+            },
+            Test {
+                test_name: "3. lower tick, initialized tick. Current tick above lower tick",
+                tick: TickProto::new()
+                    .liquidity_gross(100)
+                    .liquidity_net(100)
+                    .build(),
+                tick_index: 100,
+                current_tick: 20,
+                fee_growth_global_0_x64: 100,
+                fee_growth_global_1_x64: 100,
+                liquidity_delta: 24000,
+                product_type: ProductType::Coverage,
+                is_upper_tick: false,
+                expected_tick_update: TickUpdate {
+                    initialized: true,
+                    liquidity_net: 24100,
+                    liquidity_gross: 24100,
+                    liquidity_locked: 0,
+                    fee_growth_outside_0: 0,
+                    fee_growth_outside_1: 0,
+                },
+            },
+            Test {
+                test_name: "4. upper tick, initialized tick. Upper tick above current tick. Should subtract from net and add to gross",
+                tick: TickProto::new()
+                    .liquidity_gross(100000)
+                    .liquidity_net(100000)
+                    .build(),
+                tick_index: 100,
+                current_tick: 20,
+                fee_growth_global_0_x64: 100,
+                fee_growth_global_1_x64: 100,
+                liquidity_delta: 24000,
+                product_type: ProductType::Coverage,
+                is_upper_tick: true,
+                expected_tick_update: TickUpdate {
+                    initialized: true,
+                    liquidity_net: 100000 - 24000,
+                    liquidity_gross: 100000 + 24000,
+                    liquidity_locked: 0,
+                    fee_growth_outside_0: 0,
+                    fee_growth_outside_1: 0,
+                },
+            },
+            Test {
+                test_name: "5. upper initialized tick. Upper tick above current tick. Reduce position, should subtract from gross and add to net",
+                tick: TickProto::new()
+                    .liquidity_gross(100000)
+                    .liquidity_net(-100000)
+                    .build(),
+                tick_index: 100,
+                current_tick: 20,
+                fee_growth_global_0_x64: 100,
+                fee_growth_global_1_x64: 100,
+                liquidity_delta: -100000,
+                product_type: ProductType::Coverage,
+                is_upper_tick: true,
+                expected_tick_update: TickUpdate {
+                    initialized: false,
+                    liquidity_net: 0,
+                    liquidity_gross: 0,
+                    liquidity_locked: 0,
+                    fee_growth_outside_0: 0,
+                    fee_growth_outside_1: 0,
+                },
+            },
+        ];
+
+        for test in test_data {
+            let tick_update = test
+                .tick
+                .calculate_next_liquidity_update(
+                    test.tick_index,
+                    test.current_tick,
+                    test.fee_growth_global_0_x64,
+                    test.fee_growth_global_1_x64,
+                    test.liquidity_delta,
+                    &test.product_type,
+                    test.is_upper_tick,
+                )
+                .unwrap();
+            assert_eq!(
+                tick_update.initialized, test.expected_tick_update.initialized,
+                "{}.initialized.failed",
+                test.test_name
+            );
+            assert_eq!(
+                tick_update.liquidity_net, test.expected_tick_update.liquidity_net,
+                "{}.liquidity_net.failed",
+                test.test_name
+            );
+            assert_eq!(
+                tick_update.liquidity_gross, test.expected_tick_update.liquidity_gross,
+                "{}.liquidity_gross.failed",
+                test.test_name
+            );
+            assert_eq!(
+                tick_update.liquidity_locked, test.expected_tick_update.liquidity_locked,
+                "{}.liquidity_locked.failed",
+                test.test_name
+            );
+            assert_eq!(
+                tick_update.fee_growth_outside_0, test.expected_tick_update.fee_growth_outside_0,
+                "{}.fee_growth_outside_0.failed",
+                test.test_name
+            );
+            assert_eq!(
+                tick_update.fee_growth_outside_1, test.expected_tick_update.fee_growth_outside_1,
+                "{}.fee_growth_outside_1.failed",
+                test.test_name
+            );
+        }
+    }
+
+    #[test]
+    pub fn test_calculate_coverage_delta() {
+        #[derive(Default)]
+        pub struct ExpectedOutput {
+            fee_amount: u128,
+            amount_in: u128,
+            amount_out: u128,
+        }
+        #[derive(Default)]
+        pub struct Test<'a> {
+            test_name: &'a str,
+            tick: Tick,
+            tick_index: i32,
+            coverage_delta: u128,
+            current_covered_amount: u128,
+            fee_rate: u16,
+            current_start_ts: i64,
+            expiry_ts: i64,
+            increase: bool,
+            expected_output: ExpectedOutput,
+        }
+
+        // let test_data = [
+        //     Test {
+        //         test_name: "1. ",
+        //         tick: TickProto::new().build(),
+        //         tick_index: 120,
+        //         coverage_delta: 100,
+        //         current_covered_amount: 20,
+        //         fee_rate: 10,
+        //         current_start_ts:
+        //     }
+        // ];
     }
 }
 

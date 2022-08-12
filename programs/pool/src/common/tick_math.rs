@@ -1,6 +1,6 @@
 use std::ops::Shr;
 
-use super::uint::U256;
+use super::{liquidity::get_conditional_delta_amount_1, uint::U256};
 use crate::common::errors::SureError;
 use anchor_lang::prelude::*;
 /// the minimum tick i is calculated as
@@ -238,6 +238,9 @@ pub fn get_sqrt_ratio_at_positive_tick(tick: i32) -> u128 {
 
 /// Calculate premium difference
 ///
+/// # Arguments
+/// - sqrt_price_x64: <U64.64>, price in %
+/// - amount: Q64.64
 /// Premium are given in bp 0.01% = 0.0001
 /// yearly premium
 /// P_a = A*sqrt(P)^2/10_000 , A: amount u64, P: price Q32.32
@@ -245,19 +248,14 @@ pub fn get_sqrt_ratio_at_positive_tick(tick: i32) -> u128 {
 /// O_1 = sqrt(P)/100
 /// P_a = A*O_1^2
 ///
-pub fn calculate_yearly_premium(sqrt_price_x32: u128, amount: u128) -> Result<u128> {
-    let O1_x32 = sqrt_price_x32.wrapping_div(100);
-
-    let O1_x32_2 = O1_x32
-        .checked_mul(O1_x32)
-        .ok_or(SureError::MultiplictationQ3232Overflow)?;
-    // u64*32.32 = 32.32
-    let premium_x32 = amount
-        .checked_mul(O1_x32_2)
-        .ok_or(SureError::MultiplictationQ3232Overflow)?;
-    let premium = (premium_x32 >> 32);
-
-    Ok(premium)
+/// Is a BtoA trade -> price increasing. Should choose sqrt_price_target to
+/// be the smallest sqrt_price in tick sequence
+pub fn calculate_yearly_premium(
+    sqrt_price_target: u128,
+    sqrt_price_current: u128,
+    amount: u128,
+) -> Result<u64> {
+    get_conditional_delta_amount_1(sqrt_price_target, sqrt_price_current, amount as i128)
 }
 
 /// Calculate the premium change
@@ -276,11 +274,12 @@ pub fn calculate_yearly_premium(sqrt_price_x32: u128, amount: u128) -> Result<u1
 /// where t_0 + e > t_0 i.e. e > 0
 pub fn calculate_premium_diff(
     remaining_premium: u128,
-    sqrt_price_x64: u128,
+    sqrt_price_target: u128,
+    sqrt_price_current: u128,
     amount: u128,
     expiry_ts: i64,
 ) -> Result<(bool, u128)> {
-    let new_premium = calculate_premium(sqrt_price_x64, amount, expiry_ts)?;
+    let new_premium = calculate_premium(sqrt_price_target, sqrt_price_current, amount, expiry_ts)?;
     let (increase_premium, premium_delta) = if new_premium > remaining_premium {
         (true, new_premium - remaining_premium)
     } else {
@@ -289,8 +288,13 @@ pub fn calculate_premium_diff(
     return Ok((increase_premium, premium_delta));
 }
 
-pub fn calculate_premium(sqrt_price_x64: u128, amount: u128, expiry_ts: i64) -> Result<u128> {
-    let yearly_premium = calculate_yearly_premium(sqrt_price_x64, amount)?;
+pub fn calculate_premium(
+    sqrt_price_target: u128,
+    sqrt_price_current: u128,
+    amount: u128,
+    expiry_ts: i64,
+) -> Result<u128> {
+    let yearly_premium = calculate_yearly_premium(sqrt_price_target, sqrt_price_current, amount)?;
     let time = Clock::get()?;
     let t0 = time.unix_timestamp;
     let premium = time_fraction(yearly_premium, t0, expiry_ts)?;
@@ -301,7 +305,7 @@ pub fn calculate_premium(sqrt_price_x64: u128, amount: u128, expiry_ts: i64) -> 
 ///
 /// calculates
 ///     num * (t0-t1)/SECONDS_IN_YEAR
-pub fn time_fraction(num: u128, t0: i64, t1: i64) -> Result<u128> {
+pub fn time_fraction(num: u64, t0: i64, t1: i64) -> Result<u128> {
     if t0 >= t1 {
         return Err(SureError::InvalidTimestamp.into());
     }
@@ -485,6 +489,11 @@ pub fn get_tick_at_sqrt_ratio(sqrt_price_x64: u128) -> Result<i32> {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        default,
+        ops::{BitAnd, BitXor},
+    };
+
     use super::*;
 
     #[test]
@@ -661,6 +670,50 @@ mod tests {
                 neg_sqrt_price, exp_neg_sqrt_price,
                 "Assert negative tick equals expected value on binary fraction bit {}",
                 frac_bit
+            );
+        }
+    }
+
+    #[test]
+    pub fn test_calculate_yearly_premium() {
+        const Q64_MASK: u128 = 0xFFFF_FFFF_FFFF_FFFF;
+        pub struct ExpectedOutput {
+            premium: u64,
+        }
+        #[derive()]
+        pub struct Test<'a> {
+            name: &'a str,
+            sqrt_price_target: u128,
+            sqrt_price_current: u128,
+            amount: u128,
+            expected_output: ExpectedOutput,
+        };
+
+        let test_data = [Test {
+            name: "1. assume buying insurance. Sqrt price target < sqrt_price_current",
+            sqrt_price_target: get_sqrt_ratio_at_tick(MIN_TICK_INDEX),
+            sqrt_price_current: get_sqrt_ratio_at_tick(-40000),
+            amount: 10_000,
+            expected_output: ExpectedOutput { premium: 128 },
+        }];
+
+        for test in test_data {
+            let premium = calculate_yearly_premium(
+                test.sqrt_price_target,
+                test.sqrt_price_current,
+                test.amount,
+            )
+            .unwrap();
+            assert_eq!(
+                premium,
+                test.expected_output.premium,
+                "calculate_yearly_premium.{}.fail with \n
+                sqrt_price_target: {} \n
+                sqrt_price_current: {}
+                ",
+                test.name,
+                test.sqrt_price_target.bitand(Q64_MASK),
+                test.sqrt_price_current
             );
         }
     }

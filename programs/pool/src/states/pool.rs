@@ -336,6 +336,7 @@ impl Pool {
             return Err(SureError::InvalidAmount.into());
         }
 
+        let target_tick_index = tick_array_pool.min_tick_index(self.tick_spacing)?;
         let mut coverage_amount_remaining = coverage_amount_delta; // given in u64
         let mut coverage_amount: u128 = 0; // amount that is covered
         let mut coverage_premium: u128 = 0; // premium to be deposited
@@ -416,15 +417,18 @@ impl Pool {
                 current_covered_amount
             ));
             // Calculate the fee and the in and out amounts
-            let (fee_amount, amount_in, amount_out) = current_tick.calculate_coverage_delta(
-                next_tick_index,
-                coverage_tick_delta,
-                current_covered_amount,
-                fee_rate,
-                coverage_position.expiry_ts,
-                expiry_ts,
-                increase_coverage,
-            )?;
+            let (fee_amount, amount_in, amount_out) = current_tick
+                .calculate_coverage_delta(
+                    next_tick_index,
+                    target_tick_index,
+                    coverage_tick_delta,
+                    current_covered_amount,
+                    fee_rate,
+                    coverage_position.expiry_ts,
+                    expiry_ts,
+                    increase_coverage,
+                )
+                .unwrap();
 
             // calculate remaining coverage
             if increase_coverage {

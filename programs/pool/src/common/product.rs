@@ -23,3 +23,9 @@ impl ProductType {
         self == ProductType::AMM
     }
 }
+
+impl Default for ProductType {
+    fn default() -> Self {
+        ProductType::Coverage
+    }
+}
