@@ -79,6 +79,10 @@ pub struct UpdateLiquidity<'info> {
 }
 
 /// Increase liquidity Position
-pub fn handler(ctx: Context<UpdateLiquidity>) -> Result<()> {
+pub fn handler(ctx: Context<UpdateLiquidity>, liquidity_amount: u128) -> Result<()> {
+    // TODO: validation
+
+    // create update
+
     Ok(())
 }

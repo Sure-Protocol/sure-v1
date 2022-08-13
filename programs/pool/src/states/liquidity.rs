@@ -27,35 +27,46 @@ pub struct LiquidityPosition {
     pub bump: u8, // 1byte
 
     /// The amount of liquidity provided in lamports
-    pub liquidity: u64, // 8 bytes
+    pub liquidity: u128, // 8 bytes
 
     /// the amount of liquidity used
-    pub used_liquidity: u64, // 8 bytes
+    pub used_liquidity: u128, // 8 bytes
 
     /// Liquidity Pool
     pub pool: Pubkey, // 32 bytes
 
-    /// Mint of token provided
-    pub nft_account: Pubkey, // 32 bytes
-
     /// NFT mint. The mint representing the position
     /// The NFT is the owner of the position.
-    pub nft_mint: Pubkey, // 32 bytes
+    pub position_mint: Pubkey, // 32 bytes
 
     /// Id in the tick pool
-    pub tick_id: u8,
+    pub tick_index_lower: i32,
 
     /// The tick that the liquidity is at
-    pub tick: u16, // 8 bytes
+    pub tick_index_upper: i32, // 8 bytes
 
     /// Outstanding Rewards
-    pub outstanding_rewards: u32, // 4 bytes
+    pub owed_fees: u32, // 4 bytes
+    pub owed_premium: u32,
 }
 
 impl LiquidityPosition {
     pub const SPACE: usize = 1 + 8 + 8 + 32 + 32 + 32 + 32 + 8 + 1 + 8 + 4;
 
-    pub fn initialize(&mut self, bump: u8) {
+    pub fn initialize(
+        &mut self,
+        bump: u8,
+        liquidity_delta: u128,
+        pool: Pubkey,
+        position_mint: Pubkey,
+        tick_index_lower: i32,
+        tick_index_upper: i32,
+    ) {
         self.bump = bump;
+        self.liquidity = liquidity_delta;
+        self.pool = pool;
+        self.position_mint = position_mint;
+        self.tick_index_lower = tick_index_lower;
+        self.tick_index_upper = tick_index_upper;
     }
 }

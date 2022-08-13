@@ -5,9 +5,11 @@ pub mod tick_math;
 pub mod access_control;
 pub mod bitmap;
 pub mod errors;
+pub mod product;
 pub mod token;
 pub mod uint;
 
 pub use access_control::*;
 pub use errors::SureError;
+pub use product::*;
 pub use token::*;

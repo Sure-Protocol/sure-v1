@@ -26,6 +26,18 @@ pub const UNIX_TIME_IN_YEARS: i128 = 31556926;
 pub const BASE_FACTOR: f64 = 1.0001;
 pub const Q32_RESOLUTION: u8 = 32;
 
+/// Get the price at a given tick
+///
+/// Assume the relation
+///  - P = 1.0001^(t)
+/// where P is the price and t is the tick
+pub fn get_price_ratio_at_tick(tick: i32) -> u128 {}
+
+/// TODO: find the correct ratios
+fn get_price_ratio_at_negative_tick() -> u128 {
+    return 0;
+}
+
 /// Calculate the sqrt price
 ///
 /// Calculates √1.0001^tick as

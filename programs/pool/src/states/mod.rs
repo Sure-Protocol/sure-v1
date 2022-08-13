@@ -11,3 +11,4 @@ pub mod tick_array;
 pub use coverage::*;
 pub use liquidity::*;
 pub use seeds::*;
+pub use tick_array::*;

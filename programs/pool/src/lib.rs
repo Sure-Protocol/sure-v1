@@ -1,6 +1,6 @@
 pub mod context;
 pub mod instructions;
-pub mod modules;
+pub mod managers;
 pub mod states;
 pub mod utils;
 
