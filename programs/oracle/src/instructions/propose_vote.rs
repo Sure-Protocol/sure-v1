@@ -36,9 +36,18 @@ pub struct Proposal {
     /// vault for storing stake and votes
     pub vault: Pubkey, // 32 bytes
 
-    // Qu
+    /// % of ve tokens needed to conclude
+    /// represented as basis points 1% = 100bp
+    pub quorum_vote_ratio_required: u32,
+
+    /// Current votes given in basis points
+    pub current_vote_ratio: u32,
+    pub number_votes: u64,
+
     /// deadline for vote
     pub vote_end_ts: i64,
+
+    pub is_active: bool,
 
     /// Instruction to be exectued if passed
     pub instructions: [VoteInstruction; 32],
@@ -81,12 +90,18 @@ impl Proposal {
             .unix_timestamp
             .checked_add(duration)
             .ok_or(SureError::InvalidVoteEndTime)?;
+
+        self.quorum_vote_ratio_required = 3000;
+        self.current_vote_ratio = 0;
+        self.is_active = true;
         Ok(())
     }
 
     pub fn has_ended(&mut self) -> Result<bool> {
         let current_time = Clock::get()?.unix_timestamp;
-        Ok(current_time > self.vote_end_ts)
+        let enough_votes = self.current_vote_ratio > self.quorum_vote_ratio_required;
+        let timeouted = current_time > self.vote_end_ts;
+        Ok(timeouted | enough_votes)
     }
 }
 

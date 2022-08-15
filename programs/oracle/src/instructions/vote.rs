@@ -20,6 +20,12 @@ pub struct VoteAccount {
     // real vote: 
     pub vote: i64,
 
+    // staked tokens on vote
+    pub staked_ve_tokens: u128,
+
+    // rewards earned from voting
+    pub earned_rewards: u64,
+
     // how many votes put on the vote_hash
     pub votes: u64,
 }
@@ -41,6 +47,7 @@ impl VoteAccount {
         let res  = vote_hash.into_bytes();
         self.votes = votes;
         self.vote = 0;
+        self.earned_rewards = 0;
         Ok(())
     }
 
@@ -52,7 +59,7 @@ impl VoteAccount {
         Ok(())
     }
 
-    /// Reveal vote by decrypting vote hash 
+    /// reveal vote by proving salt 
     pub fn reveal_vote(&mut self,salt: u32,vote: i64) -> Result<()>{
         let mut hasher = Sha3_256::new();
         let message = format!("{}{}",vote,salt);
@@ -66,6 +73,12 @@ impl VoteAccount {
         self.vote = vote;
 
         Ok(())
+    }
+
+    // 
+    pub fn reset_rewards(&mut self){
+        self.earned_rewards = 0;
+
     }
 }
 
