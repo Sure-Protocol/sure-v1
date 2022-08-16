@@ -6,11 +6,13 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
-pub const MINIMUM_STAKE: u128 = (3 as u128) << 64;
+use super::VoteAccount;
+
+pub const MINIMUM_STAKE: u64 = 3_000_000;
 
 /// Validate that the stake is large enough
 ///
-pub fn validate_stake(stake: u128) -> Result<()> {
+pub fn validate_stake(stake: u64) -> Result<()> {
     if stake < MINIMUM_STAKE {
         return Err(SureError::StakeTooLittle.into());
     }
@@ -31,26 +33,52 @@ pub struct Proposal {
     pub proposer: Pubkey, // 32 bytes
 
     /// amount staked by propose
-    pub proposed_staked: u128, // 16 bytes
+    pub proposed_staked: u64, // 16 bytes
 
     /// vault for storing stake and votes
     pub vault: Pubkey, // 32 bytes
 
     /// % of ve tokens needed to conclude
     /// represented as basis points 1% = 100bp
-    pub quorum_vote_ratio_required: u32,
+    pub quorum_votes: u64,
 
     /// Current votes given in basis points
-    pub current_vote_ratio: u32,
-    pub number_votes: u64,
+    pub votes: u64,
 
     /// deadline for vote
     pub vote_end_ts: i64,
 
     pub is_active: bool,
 
+    pub is_successful: bool,
+
+    /// reward earned by propsing vote
+    pub earned_rewards: u64,
+
     /// Instruction to be exectued if passed
     pub instructions: [VoteInstruction; 32],
+}
+
+impl Default for Proposal {
+    #[inline]
+    fn default() -> Proposal {
+        Proposal {
+            bump: 0,
+            bump_array: [0; 1],
+            name: "test proposal".to_string(),
+            description: "test descr".to_string(),
+            proposer: Pubkey::default(),
+            proposed_staked: 0,
+            vault: Pubkey::default(),
+            quorum_votes: 100_000,
+            votes: 0,
+            vote_end_ts: 0,
+            is_active: false,
+            is_successful: false,
+            earned_rewards: 0,
+            instructions: [VoteInstruction::default(); 32],
+        }
+    }
 }
 pub const SURE_ORACLE_SEED: &str = "sure-oracle";
 impl Proposal {
@@ -70,10 +98,10 @@ impl Proposal {
         name: String,
         description: String,
         proposer: &Pubkey,
-        proposed_staked: u128,
+        proposed_staked: u64,
         vault: &Pubkey,
+        end_time_ts: Option<i64>,
     ) -> Result<()> {
-        // validate state change
         validate_stake(proposed_staked)?;
 
         // initialize account
@@ -86,22 +114,62 @@ impl Proposal {
         self.vault = *vault;
 
         let duration = clock::SECONDS_PER_DAY as i64;
-        self.vote_end_ts = Clock::get()?
-            .unix_timestamp
-            .checked_add(duration)
-            .ok_or(SureError::InvalidVoteEndTime)?;
 
-        self.quorum_vote_ratio_required = 3000;
-        self.current_vote_ratio = 0;
+        self.vote_end_ts = match end_time_ts {
+            Some(t) => t,
+            None => Clock::get()?
+                .unix_timestamp
+                .checked_add(duration)
+                .ok_or(SureError::InvalidVoteEndTime)?,
+        };
+
+        self.quorum_votes = 100_000;
+        self.votes = 0;
         self.is_active = true;
         Ok(())
     }
 
-    pub fn has_ended(&mut self) -> Result<bool> {
+    /// cast a vote
+    pub fn cast_vote(&mut self, vote: VoteAccount) -> Result<()> {
+        self.votes += vote.votes;
+        // Try finalize
+        self.try_finalize_vote()
+    }
+
+    pub fn has_ended(&self) -> Result<bool> {
         let current_time = Clock::get()?.unix_timestamp;
-        let enough_votes = self.current_vote_ratio > self.quorum_vote_ratio_required;
+        let enough_votes = self.votes >= self.quorum_votes;
         let timeouted = current_time > self.vote_end_ts;
         Ok(timeouted | enough_votes)
+    }
+
+    /// try finalize vote
+    /// Only finalize vote if either the
+    /// quorum is reached or if it timed out
+    pub fn try_finalize_vote(&mut self) -> Result<()> {
+        let has_ended = self.has_ended()?;
+        let successful = self.votes >= self.quorum_votes;
+        if has_ended {
+            self.is_active = false
+        }
+        if successful {
+            self.is_successful = true
+        }
+
+        // Initiate instruction
+        let vote_instruction = self.instructions[0];
+        vote_instruction.invoke_proposal()?;
+        Ok(())
+    }
+
+    /// Calculate reward for proposing vote
+    ///
+    /// if the vote has ended calculate reward
+    pub fn calculate_rewards(&mut self) -> Result<()> {
+        if self.has_ended()? {
+            self.earned_rewards = self.proposed_staked;
+        }
+        Ok(())
     }
 }
 
@@ -147,10 +215,11 @@ pub fn handler(
     ctx: Context<ProposeVote>,
     name: String,
     description: String,
-    stake: u128,
+    stake: u64,
 ) -> Result<()> {
-    let proposal = ctx.accounts.proposal;
+    let proposal = ctx.accounts.proposal.as_mut();
     let proposal_bump = *ctx.bumps.get("proposal").unwrap();
+
     proposal.initialize(
         proposal_bump,
         name,
@@ -158,6 +227,34 @@ pub fn handler(
         &ctx.accounts.proposer.key(),
         stake,
         &ctx.accounts.stake_account.key(),
+        None,
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+pub mod test_propose_vote {
+    use super::*;
+
+    pub fn create_test_proposal() -> Result<Proposal> {
+        let mut proposal = Proposal::default();
+        let end_time_ts = 1692182416;
+        let proposer = Pubkey::default();
+        let stake = 100_000_000;
+        proposal.initialize(
+            245,
+            "My first proposal".to_string(),
+            "protocol lost 25%".to_string(),
+            &proposer,
+            stake,
+            &Pubkey::default(),
+            Some(end_time_ts),
+        )?;
+        Ok(proposal)
+    }
+
+    #[test]
+    pub fn test_initialize() {
+        create_test_proposal().unwrap();
+    }
 }
