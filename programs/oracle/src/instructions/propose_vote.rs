@@ -1,3 +1,5 @@
+use std::ops::{Div, Mul, Shl};
+
 use crate::{states::VoteInstruction, utils::*};
 
 use anchor_lang::{prelude::*, solana_program::clock};
@@ -5,6 +7,8 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{Mint, Token, TokenAccount},
 };
+
+use solana_program_test::ProgramTestContext;
 
 use super::VoteAccount;
 
@@ -130,24 +134,28 @@ impl Proposal {
     }
 
     /// cast a vote
-    pub fn cast_vote(&mut self, vote: VoteAccount) -> Result<()> {
+    pub fn cast_vote_at_time(&mut self, vote: VoteAccount, current_time: i64) -> Result<()> {
         self.votes += vote.votes;
         // Try finalize
-        self.try_finalize_vote()
+        self.try_finalize_vote_at_time(current_time)
+    }
+
+    pub fn has_ended_at_time(&self, current_time: i64) -> bool {
+        let enough_votes = self.votes >= self.quorum_votes;
+        let timeouted = current_time > self.vote_end_ts;
+        timeouted | enough_votes
     }
 
     pub fn has_ended(&self) -> Result<bool> {
         let current_time = Clock::get()?.unix_timestamp;
-        let enough_votes = self.votes >= self.quorum_votes;
-        let timeouted = current_time > self.vote_end_ts;
-        Ok(timeouted | enough_votes)
+        Ok(self.has_ended_at_time(current_time))
     }
 
     /// try finalize vote
     /// Only finalize vote if either the
     /// quorum is reached or if it timed out
-    pub fn try_finalize_vote(&mut self) -> Result<()> {
-        let has_ended = self.has_ended()?;
+    pub fn try_finalize_vote_at_time(&mut self, current_time: i64) -> Result<()> {
+        let has_ended = self.has_ended_at_time(current_time);
         let successful = self.votes >= self.quorum_votes;
         if has_ended {
             self.is_active = false
@@ -162,12 +170,23 @@ impl Proposal {
         Ok(())
     }
 
+    /// Calculate the reward from the votes
+    ///
+    /// 0.1% = 10bp of the total votes
+    fn get_proposer_reward(&self) -> u64 {
+        let votes_x64 = (self.votes as u128) << 64;
+        let reward_x64 = votes_x64.div((1_000 as u128) << 64);
+
+        let reward = (reward_x64 >> 64) as u64;
+        reward
+    }
     /// Calculate reward for proposing vote
     ///
     /// if the vote has ended calculate reward
-    pub fn calculate_rewards(&mut self) -> Result<()> {
-        if self.has_ended()? {
-            self.earned_rewards = self.proposed_staked;
+    pub fn update_proposer_reward(&mut self) -> Result<()> {
+        // if vote is successful
+        if self.is_successful {
+            self.earned_rewards = self.proposed_staked + self.get_proposer_reward();
         }
         Ok(())
     }
@@ -235,6 +254,8 @@ pub fn handler(
 #[cfg(test)]
 pub mod test_propose_vote {
     use super::*;
+    use crate::instructions::test_vote_on_proposal;
+    const START_TIME: i64 = 1660681219;
 
     pub fn create_test_proposal() -> Result<Proposal> {
         let mut proposal = Proposal::default();
@@ -256,5 +277,17 @@ pub mod test_propose_vote {
     #[test]
     pub fn test_initialize() {
         create_test_proposal().unwrap();
+    }
+
+    #[test]
+    pub fn calculate_rewards() {
+        let mut proposal = create_test_proposal().unwrap();
+        let vote_1 = test_vote_on_proposal::get_test_vote(300);
+        let vote_2 = test_vote_on_proposal::get_test_vote(400);
+        proposal.cast_vote_at_time(vote_1, START_TIME).unwrap();
+        proposal.cast_vote_at_time(vote_2, START_TIME + 1).unwrap();
+
+        let proposal_rewards = proposal.get_proposer_reward();
+        assert_eq!(proposal_rewards, 0);
     }
 }

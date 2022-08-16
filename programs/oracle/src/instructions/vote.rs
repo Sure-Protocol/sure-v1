@@ -160,6 +160,12 @@ pub mod test_vote_on_proposal {
         expected_hash.to_vec()
     }
 
+    pub fn get_test_vote(vote_power: u64) -> VoteAccount {
+        let mut vote_account = VoteAccount::default();
+        vote_account.votes = vote_power;
+        vote_account
+    }
+
     /// Happy path tests 
     #[test]
     pub fn vote_on_proposal() {
