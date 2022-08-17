@@ -18,6 +18,15 @@ pub enum SureError {
 
     #[msg("Invalid salt resulted in invalid vote_hash")]
     InvalidSalt,
+
+    #[msg("Revealed vote list full")]
+    FullRevealList,
+
+    #[msg("Vote hasn't been revealed")]
+    VoteNotRevealed,
+
+    #[msg("U64 overflow")]
+    OverflowU64,
 }
 
 impl From<TryFromIntError> for SureError {

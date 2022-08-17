@@ -1,6 +1,9 @@
-use std::ops::{Div, Mul, Shl};
+use std::ops::{BitAnd, Div, Mul, Shl, Shr};
 
-use crate::{states::VoteInstruction, utils::*};
+use crate::{
+    states::VoteInstruction,
+    utils::{uint::U256, *},
+};
 
 use anchor_lang::{prelude::*, solana_program::clock};
 use anchor_spl::{
@@ -8,9 +11,7 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
-use solana_program_test::ProgramTestContext;
-
-use super::VoteAccount;
+use super::{RevealedVoteArray, VoteAccount};
 
 pub const MINIMUM_STAKE: u64 = 3_000_000;
 
@@ -49,6 +50,9 @@ pub struct Proposal {
     /// Current votes given in basis points
     pub votes: u64,
 
+    pub running_sum_weighted_vote: u128,
+    pub running_weight: u128,
+
     /// deadline for vote
     pub vote_end_ts: i64,
 
@@ -58,6 +62,9 @@ pub struct Proposal {
 
     /// reward earned by propsing vote
     pub earned_rewards: u64,
+
+    /// Scale parameter in exp(L)
+    pub scale_parameter: u128,
 
     /// Instruction to be exectued if passed
     pub instructions: [VoteInstruction; 32],
@@ -76,14 +83,20 @@ impl Default for Proposal {
             vault: Pubkey::default(),
             quorum_votes: 100_000,
             votes: 0,
+            running_sum_weighted_vote: 0,
+            running_weight: 0,
             vote_end_ts: 0,
             is_active: false,
             is_successful: false,
             earned_rewards: 0,
+            scale_parameter: 0,
             instructions: [VoteInstruction::default(); 32],
         }
     }
 }
+
+pub struct FinalizeVoteResult {}
+
 pub const SURE_ORACLE_SEED: &str = "sure-oracle";
 impl Proposal {
     pub const SPACE: usize = 1 + 1 + 4 + 64 + 4 + 200 + 32 + 16 + 32;
@@ -133,11 +146,12 @@ impl Proposal {
         Ok(())
     }
 
-    /// cast a vote
+    /// cast a vote if vote is active
     pub fn cast_vote_at_time(&mut self, vote: VoteAccount, current_time: i64) -> Result<()> {
-        self.votes += vote.votes;
-        // Try finalize
-        self.try_finalize_vote_at_time(current_time)
+        if !self.has_ended_at_time(current_time) {
+            self.votes += vote.vote_power;
+        }
+        Ok(())
     }
 
     pub fn has_ended_at_time(&self, current_time: i64) -> bool {
@@ -151,23 +165,80 @@ impl Proposal {
         Ok(self.has_ended_at_time(current_time))
     }
 
+    /// Update the weighted vote sum and the weight sum
+    /// - S_n = sum_i^n (w_i x V_i)
+    /// - W_N = sum_i^n (w_i)
+    pub fn update_running_sum_weighted_vote(&mut self, vote: VoteAccount) {
+        if vote.revealed_vote {
+            if vote.vote > 0 {
+                self.running_sum_weighted_vote += (vote.vote_power as u128).mul(vote.vote as u128);
+            } else {
+                self.running_sum_weighted_vote -= (vote.vote_power as u128).mul(-vote.vote as u128);
+            }
+            self.running_weight += vote.vote_power as u128;
+        }
+    }
+
+    /// Consensus
+    ///
+    /// X_n^bar = (1 / sum_i^n w_i ) * sum_i^n (w_i * v_i)
+    ///       = (1/W_n) x S_n
+    ///       = S_n / W_n
+    pub fn calculate_consensus(&self) -> u64 {
+        self.running_sum_weighted_vote.div(self.running_weight) as u64
+    }
+
+    /// Estimate the scale parameter used in the
+    /// exponential model
+    /// Estimate:
+    ///     L_n = W_N / sum_i^n (w_i x v_i - X_n)^2
+    pub fn estimate_scale_parameter(&self, revealed_votes: RevealedVoteArray) -> Result<u128> {
+        let consensus = self.calculate_consensus();
+        let sum_squared = revealed_votes.calculate_sum_squared_difference(consensus);
+        let running_weight_x128 = U256::from(self.running_weight).shr(128 as u8);
+        let sum_squared_x128 = U256::from(sum_squared).shr(128 as u8);
+        let res = running_weight_x128.div(sum_squared_x128);
+        let frac_part = res.bitand(U256::from(u128::MAX)).as_u128().shr(64 as u8);
+        let real_part = res.shr(128 as u8).as_u128();
+        if real_part as u64 > u64::MAX {
+            return Err(SureError::OverflowU64.into());
+        }
+        // Q64.64
+        Ok(real_part + frac_part)
+    }
+
+    /// Calculate and update the scale parameter
+    pub fn update_scale_parameter(&mut self, revealed_votes: RevealedVoteArray) -> Result<()> {
+        self.scale_parameter = self.estimate_scale_parameter(revealed_votes)?;
+        Ok(())
+    }
+
     /// try finalize vote
     /// Only finalize vote if either the
     /// quorum is reached or if it timed out
-    pub fn try_finalize_vote_at_time(&mut self, current_time: i64) -> Result<()> {
+    pub fn try_finalize_vote_at_time(&mut self, current_time: i64) -> Result<u64> {
         let has_ended = self.has_ended_at_time(current_time);
         let successful = self.votes >= self.quorum_votes;
+
+        if successful & self.is_active {
+            self.is_successful = true;
+            self.is_active = false;
+
+            // distribute rewards
+            let rewards = self.calculate_proposer_reward();
+            self.earned_rewards = rewards;
+
+            // Initiate instruction
+            let vote_instruction = self.instructions[0];
+            vote_instruction.invoke_proposal()?;
+            return Ok(rewards);
+        }
+
         if has_ended {
             self.is_active = false
         }
-        if successful {
-            self.is_successful = true
-        }
 
-        // Initiate instruction
-        let vote_instruction = self.instructions[0];
-        vote_instruction.invoke_proposal()?;
-        Ok(())
+        Ok(0)
     }
 
     /// Calculate the reward from the votes
@@ -176,19 +247,15 @@ impl Proposal {
     fn get_proposer_reward(&self) -> u64 {
         let votes_x64 = (self.votes as u128) << 64;
         let reward_x64 = votes_x64.div((1_000 as u128) << 64);
-
-        let reward = (reward_x64 >> 64) as u64;
-        reward
+        reward_x64 as u64
     }
+
     /// Calculate reward for proposing vote
     ///
     /// if the vote has ended calculate reward
-    pub fn update_proposer_reward(&mut self) -> Result<()> {
+    pub fn calculate_proposer_reward(&mut self) -> u64 {
         // if vote is successful
-        if self.is_successful {
-            self.earned_rewards = self.proposed_staked + self.get_proposer_reward();
-        }
-        Ok(())
+        return self.proposed_staked + self.get_proposer_reward();
     }
 }
 
@@ -254,7 +321,7 @@ pub fn handler(
 #[cfg(test)]
 pub mod test_propose_vote {
     use super::*;
-    use crate::instructions::test_vote_on_proposal;
+    use crate::instructions::{test_vote, vote_account_proto};
     const START_TIME: i64 = 1660681219;
 
     pub fn create_test_proposal() -> Result<Proposal> {
@@ -282,12 +349,16 @@ pub mod test_propose_vote {
     #[test]
     pub fn calculate_rewards() {
         let mut proposal = create_test_proposal().unwrap();
-        let vote_1 = test_vote_on_proposal::get_test_vote(300);
-        let vote_2 = test_vote_on_proposal::get_test_vote(400);
+        let vote_1 = vote_account_proto::VoteAccountProto::initialize()
+            .set_vote_power(3_000_000)
+            .build();
+        let vote_2 = vote_account_proto::VoteAccountProto::initialize()
+            .set_vote_power(4_000_000)
+            .build();
         proposal.cast_vote_at_time(vote_1, START_TIME).unwrap();
         proposal.cast_vote_at_time(vote_2, START_TIME + 1).unwrap();
 
         let proposal_rewards = proposal.get_proposer_reward();
-        assert_eq!(proposal_rewards, 0);
+        assert_eq!(proposal_rewards, 7_000);
     }
 }
