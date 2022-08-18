@@ -1,5 +1,5 @@
 
-use std::ops::Mul;
+use std::ops::{Mul, Div};
 
 use anchor_lang::prelude::*;
 use locked_voter::{Locker, Escrow};
@@ -20,14 +20,16 @@ pub struct VoteAccount {
     // hash of vote "vote"+"salt"
     pub vote_hash: [u8;32], // 32 bytes
 
-    // real vote: 
+    /// real vote: 
+    /// I32.32
     pub vote: i64, // 8 bytes 
 
     // rewards earned from voting
     pub earned_rewards: u64, // 8 bytes
 
     // how many votes put on the vote_hash
-    pub vote_power: u64, // 8  bytes
+    // Q32.0 - assume rounded
+    pub vote_power: u32, // 8  bytes
 
     pub revealed_vote: bool, // 1 bytes
 }
@@ -48,15 +50,33 @@ impl VoteAccount {
         owner: &Pubkey,
         vote_hash: &[u8;32],
         vote_power: u64,
+        decimals: u32,
     ) -> Result<()> {
         // validate that the user has enough votes
 
         self.bump = bump;
         self.vote_hash  = *vote_hash;
-        self.vote_power = vote_power;
+        let vote_power_proto:f64 = (vote_power as f64).div(10_u64.pow(decimals) as f64);
+        // convert to Q32.32
+        self.vote_power = vote_power_proto.floor() as u32;
         self.vote = 0;
         self.earned_rewards = 0;
         Ok(())
+    }
+
+   
+    /// Returns vote_power Q32.0
+    /// NOTE: consider to be external
+    pub fn calculate_vote_power_x32_from_tokens(amount: u64,decimals:u32) -> u32 {
+        let vote_power_proto = (amount as f64).div(10_u64.pow(decimals) as f64);
+        vote_power_proto.floor() as u32
+    }
+
+    /// Returns vote_power Q32.32
+    /// NOTE: consider to be external
+    pub fn calculate_vote_power_x64_from_tokens(amount: u64,decimals:u32) -> u64 {
+        let vote_power_proto = (amount as f64).div(10_u64.pow(decimals) as f64);
+        (vote_power_proto.floor() as u64) << 32
     }
 
     pub fn update_vote(&mut self,proposal: Proposal, new_vote_hash: [u8;32]) -> Result<()>{
@@ -94,12 +114,18 @@ impl VoteAccount {
     }
 
     /// Calculate the weigted vote
-    pub fn calculate_weighted_vote(self) -> Result<i128> {
-        let weigted_sum_abs = (self.vote.abs() as u128).mul(self.vote_power as u128) as i128;
+    pub fn calculate_weighted_vote(self) -> Result<i64> {
+        // Q32.32 x Q32.32 -> Q64.32
+        let weigted_vote_abs = (self.vote_power as u64).mul(self.vote.abs() as u64) as u128;
+        // convert Q64.32 -> Q64.0
+        let weigted_vote_abs_x32 =(weigted_vote_abs >> 32) as u64;
+        if weigted_vote_abs_x32  > i64::MAX as u64{
+            return Err(SureError::OverflowU64.into())
+        }
         if self.vote > 0 {
-            return Ok(weigted_sum_abs);
+            return Ok(weigted_vote_abs as i64);
         }else{
-            return Ok(-weigted_sum_abs)
+            return Ok(-(weigted_vote_abs as i64))
         }
     }
 
@@ -156,12 +182,12 @@ pub fn handler(ctx:Context<VoteOnProposal>,vote_hash: String) -> Result<()>{
     }
     let locker =&ctx.accounts.locker;
     let voting_power = ctx.accounts.user_escrow.voting_power(&locker.params)?;
-
+    let decimals = 6;
     //initialize vote account
     let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let vote_account_bump = *ctx.bumps.get("vote_account").unwrap();
     let vote_hash_bytes:&[u8;32] = vote_hash.as_bytes().try_into().unwrap();
-    vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), vote_hash_bytes, voting_power)?;
+    vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), vote_hash_bytes, voting_power,decimals)?;
     Ok(())
 }
 
@@ -189,7 +215,7 @@ pub mod vote_account_proto {
         pub earned_rewards: u64, // 8 bytes
 
         // how many votes put on the vote_hash
-        pub vote_power: u64, // 8  bytes
+        pub vote_power: u32, // 8  bytes
 
         pub revealed_vote: bool, // 1 bytes
     }
@@ -198,8 +224,9 @@ pub mod vote_account_proto {
             Self { bump: 0, vote_hash: [0;32], vote: 0, earned_rewards: 0, vote_power: 0,revealed_vote: false }
         }
 
-        pub fn set_vote_power(mut self,vote_power: u64) -> Self {
-            self.vote_power = vote_power;
+        pub fn set_vote_power(mut self,amount: u64,decimals: u32) -> Self {
+
+            self.vote_power = VoteAccount::calculate_vote_power_x32_from_tokens(amount, decimals);
             self
         }
 
@@ -208,6 +235,11 @@ pub mod vote_account_proto {
             self
         }
 
+        pub fn set_vote_raw(mut self,vote: f32) -> Self {
+            self.vote = convert_f32_i64(vote);
+            self.revealed_vote = true;
+            self
+        }
         pub fn set_vote(mut self, vote: i64 ) -> Self {
             self.vote = vote;
             self.revealed_vote = true;
@@ -231,13 +263,14 @@ pub mod test_vote {
         #[derive(Default)]
         pub struct ExpectedValue {
             vote: i64,
-            weighted_vote: i128,
+            weighted_vote: i64,
         }
         #[derive(Default)]
         pub struct Test {
             name: String,
             vote: i64,
             vote_power: u64,
+            decimals: u32,
             salt_true: String,
             salt_provided: String,
             proposal: Proposal,
@@ -251,38 +284,41 @@ pub mod test_vote {
                 name: "1. provide the right salt".to_string(),
                 vote: 400,
                 vote_power: 2_300_000,
+                decimals: 6,
                 salt_true: "a23sw23".to_string(),
                 salt_provided:  "a23sw23".to_string(),
                 proposal: test_propose_vote::create_test_proposal().unwrap(),
                 vote_account: VoteAccount::default(),
                 expected_value: ExpectedValue{
                     vote: 400,
-                    weighted_vote: 920000000,
+                    weighted_vote: 800,
                 }
             },
             Test{
                 name: "2. negative vote the right salt".to_string(),
                 vote: -400,
                 vote_power: 2_300_000,
+                decimals: 6,
                 salt_true: "a23sw23".to_string(),
                 salt_provided:  "a23sw23".to_string(),
                 proposal: test_propose_vote::create_test_proposal().unwrap(),
                 vote_account: VoteAccount::default(),
                 expected_value: ExpectedValue{
                     vote: -400,
-                    weighted_vote: -920000000,
+                    weighted_vote: -800,
                 }
             },
         ];
 
         for test in tests {
             let vote_hash =vote_account_proto::hash_vote(test.vote, &test.salt_true);
-            vote_account.initialize(0, &Pubkey::default(),&vote_hash , test.vote_power).unwrap();
+            vote_account.initialize(0, &Pubkey::default(),&vote_hash , test.vote_power,test.decimals).unwrap();
             assert_eq!(vote_account.vote,0);
+            assert_eq!(vote_account.vote_power,2,"{}: test vote power",test.name);
             vote_account.reveal_vote(&test.salt_provided, test.vote).unwrap();
-            assert_eq!(vote_account.vote,test.expected_value.vote,"{}",test.name);
+            assert_eq!(vote_account.vote,test.expected_value.vote,"{}: reveal vote ",test.name);
             let weighted_vote = vote_account.calculate_weighted_vote().unwrap();
-            assert_eq!(weighted_vote,test.expected_value.weighted_vote);
+            assert_eq!(weighted_vote,test.expected_value.weighted_vote,"{}: calculate expected weight",test.name);
         }
 
     }
@@ -294,6 +330,8 @@ pub mod test_vote {
         pub struct Test {
             name: String,
             vote: i64,
+            vote_power: u64,
+            decimals: u32,
             salt_true: String,
             salt_provided: String,
             proposal: Proposal,
@@ -306,6 +344,8 @@ pub mod test_vote {
             Test{
                 name: "1. provide the wrong salt".to_string(),
                 vote: 400,
+                vote_power: 3_000_000,
+                decimals: 6,
                 salt_true: "a23sw23".to_string(),
                 salt_provided:  "a23sw24".to_string(),
                 proposal: test_propose_vote::create_test_proposal().unwrap(),
@@ -316,7 +356,7 @@ pub mod test_vote {
 
         for test in tests {
             let vote_hash =vote_account_proto::hash_vote(test.vote, &test.salt_true);
-            vote_account.initialize(0, &Pubkey::default(),&vote_hash , 0).unwrap();
+            vote_account.initialize(0, &Pubkey::default(),&vote_hash , test.vote_power,test.decimals).unwrap();
             assert_eq!(vote_account.vote,0);
             let err = vote_account.reveal_vote(&test.salt_provided, test.vote).unwrap_err();
             let expected_err: anchor_lang::error::Error = test.expected_error.into();

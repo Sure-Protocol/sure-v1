@@ -27,6 +27,9 @@ pub enum SureError {
 
     #[msg("U64 overflow")]
     OverflowU64,
+
+    #[msg("U32 overflow")]
+    OverflowU32,
 }
 
 impl From<TryFromIntError> for SureError {

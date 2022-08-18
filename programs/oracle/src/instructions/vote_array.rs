@@ -15,8 +15,9 @@ pub const NUM_VOTES_IN_ARRAY: u16 = 620;
 #[repr(packed)]
 #[derive(Debug, PartialEq)]
 pub struct RevealedVoteArray {
-    pub proposal: Pubkey,                                 // 32
-    pub weighted_votes: [i128; NUM_VOTES_IN_ARRAY_USIZE], // 8*64
+    pub proposal: Pubkey, // 32
+    /// Q32.32
+    pub weighted_votes: [i64; NUM_VOTES_IN_ARRAY_USIZE], // 8*64
     pub last_index: i16,
 }
 
@@ -59,14 +60,23 @@ impl RevealedVoteArray {
     /// Calculate
     /// sum_i^n (w_i - x^bar)^2
     /// NOTE: tested
-    pub fn calculate_sum_squared_difference(&self, consensus: u64) -> u128 {
+    ///
+    /// ### Arguments
+    /// * consensus: i32.32
+    ///
+    /// ### Returns
+    /// * sum_i^n (w_i - x^bar)^2:  Q32.32
+    pub fn calculate_sum_squared_difference(&self, consensus: i64) -> u64 {
         let res = self.weighted_votes[..(self.last_index + 1) as usize]
             .iter()
             .map(|w| {
-                println!("w: {}", w);
-                println!("c: {}", consensus);
-                println!("w - X: {}", w.sub(consensus as i128));
-                w.sub(consensus as i128).mul(w.sub(consensus as i128)) as u128
+                // i32.32 - i32.32  -> i32.32
+                let sub = w.sub(consensus) as i128;
+                // i32.32 x i32.32 -> i64.64
+                let sub_squared_ix64 = sub.mul(sub) as u128;
+                // Q64.64 >> 32 -> Q32.32
+                let sub_squared_ix32 = (sub_squared_ix64 >> 32) as u64;
+                sub_squared_ix32
             })
             .sum();
         res
@@ -85,9 +95,9 @@ pub mod test_revealed_vote_array {
     #[test]
     pub fn test_reveal_vote_happy() {
         pub struct ExpectedResult {
-            weighted_votes: [i128; NUM_VOTES_IN_ARRAY_USIZE],
+            weighted_votes: [i64; NUM_VOTES_IN_ARRAY_USIZE],
             last_index: i16,
-            sum_squared_difference: u128,
+            sum_squared_difference: u64,
         }
         impl ExpectedResult {
             pub fn initialize() -> Self {
@@ -98,7 +108,7 @@ pub mod test_revealed_vote_array {
                 }
             }
 
-            pub fn set_weighted_vote(mut self, index: usize, weighted_vote: i128) -> Self {
+            pub fn set_weighted_vote(mut self, index: usize, weighted_vote: i64) -> Self {
                 self.weighted_votes[index] = weighted_vote;
                 self
             }
@@ -108,7 +118,7 @@ pub mod test_revealed_vote_array {
                 self
             }
 
-            pub fn set_sum_squared_difference(mut self, ssd: u128) -> Self {
+            pub fn set_sum_squared_difference(mut self, ssd: u64) -> Self {
                 self.sum_squared_difference = ssd;
                 self
             }
@@ -116,7 +126,7 @@ pub mod test_revealed_vote_array {
 
         pub struct Test {
             name: String,
-            consensus: u64,
+            consensus: i64, // i32.32
             votes: Vec<VoteAccount>,
             expected_result: ExpectedResult,
         }
@@ -125,34 +135,34 @@ pub mod test_revealed_vote_array {
             Test {
                 name: "1. Initialize and reveal vote ".to_string(),
                 votes: [vote_account_proto::VoteAccountProto::initialize()
-                    .set_vote_power(3_000_000)
+                    .set_vote_power(3_000_000, 6)
                     .set_vote(300)
                     .build()]
                 .to_vec(),
-                consensus: 300,
+                consensus: (300 as i64) << 32,
                 expected_result: ExpectedResult::initialize()
-                    .set_weighted_vote(0 as usize, 900_000_000)
-                    .set_sum_squared_difference(809999460000090000)
+                    .set_weighted_vote(0 as usize, 900)
+                    .set_sum_squared_difference(360000)
                     .set_last_index(0),
             },
             Test {
                 name: "2. Reveal multiple votes".to_string(),
                 votes: [
                     vote_account_proto::VoteAccountProto::initialize()
-                        .set_vote_power(3_000_000)
+                        .set_vote_power(3_000_000, 6)
                         .set_vote(300)
                         .build(),
                     vote_account_proto::VoteAccountProto::initialize()
-                        .set_vote_power(4_000_000)
+                        .set_vote_power(4_000_000, 6)
                         .set_vote(400)
                         .build(),
                 ]
                 .to_vec(),
-                consensus: 357,
+                consensus: (300 as i64) << 32,
                 expected_result: ExpectedResult::initialize()
-                    .set_weighted_vote(0 as usize, 900_000_000)
-                    .set_weighted_vote(1, 1_600_000_000)
-                    .set_sum_squared_difference(3369998215000254898)
+                    .set_weighted_vote(0 as usize, 900)
+                    .set_weighted_vote(1, 1_600)
+                    .set_sum_squared_difference(1839898)
                     .set_last_index(1),
             },
         ];
