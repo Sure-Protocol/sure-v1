@@ -99,9 +99,12 @@ pub fn convert_ix32_f64(num: i64) -> f64 {
 /// ### Returns
 /// * exp(x): Q64.64
 fn calculate_exp(x: u64, negative: bool) -> u128 {
+    println!("calculate_exp");
     // Q32.32 x Q16.16 -> Q48.48 >> 32 => Q16.16
-    let exponent = x.mul(DIV_LN2_X64) as u32;
+    let exponent = (x.mul(DIV_LN2_X64) >> 32) as u32;
+    println!("exponent: {}", exponent);
     let exponent_f = convert_q16_f16(exponent);
+    println!("exponentf: {}", exponent_f);
     let exponent_sign = if negative { -exponent_f } else { exponent_f };
     let exp_x = 2_f32.powf(exponent_sign) as f64;
     convert_f64_q64(exp_x)
@@ -477,11 +480,12 @@ impl Proposal {
         let pt2_x64 = calculate_exp(exponent_q64, true);
         println!("pt2_x64: {}", pt2_x64);
         println!("pt2_x64 as f64: {}", convert_q64_to_f64(pt2_x64));
-        // CAST DOWN: Q64.64 -> Q16.16
-        if pt2_x64 > u32::MAX as u128 {
-            return Err(SureError::OverflowU32.into());
+        // CAST DOWN: Q64.64 >> 32 -> Q32.32
+        if pt2_x64 > u64::MAX as u128 {
+            return Err(SureError::OverflowU64.into());
         }
-        let pt2_q16 = (pt2_x64 >> 48) as u32;
+        // !Checkpoint : need to convert to correct Q16.16
+        let pt2_q16 = (pt2_x64 >> 32) as u32;
         // Q16.16 x Q16.16 -> Q32.32
         let exp_factor = self.scale_parameter.mul(pt2_q16) as u64;
         // Q64.64 >> 64 => u64
