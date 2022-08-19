@@ -1,4 +1,4 @@
-use crate::utils::{convert_x32_to_u64, SureError};
+use crate::utils::{convert_x32_to_u64, SureError, VOTE_STAKE_RATE};
 
 use super::{Proposal, ProposalStatus};
 use anchor_lang::prelude::*;
@@ -7,6 +7,11 @@ use std::ops::{Add, BitAnd, BitOr, Div, Mul, Shl, Shr, Sub};
 use hex_literal::hex;
 use sha3::{Digest, Keccak256FullCore, Sha3_256, Sha3_256Core};
 pub const MINT_FACTOR: u32 = 1_000;
+
+pub struct VoteAccountUpdate {
+    pub stake_change: u64,
+    pub increase_stake: bool,
+}
 #[account(zero_copy)]
 #[repr(packed)]
 #[derive(Debug, PartialEq)]
@@ -58,18 +63,22 @@ impl VoteAccount {
         owner: &Pubkey,
         vote_hash: &[u8; 32],
         vote_power: u64,
-        decimals: u32,
-    ) -> Result<()> {
+        decimals: u8,
+    ) -> Result<VoteAccountUpdate> {
         // validate that the user has enough votes
 
         self.bump = bump;
         self.vote_hash = *vote_hash;
-        let vote_power_proto: f64 = (vote_power as f64).div(10_u64.pow(decimals) as f64);
+        let stake = (vote_power as f64).div(VOTE_STAKE_RATE) as u64;
+        let vote_power_proto: f64 = (vote_power as f64).div(10_u64.pow(decimals as u32) as f64);
         // convert to Q32.32
         self.vote_power = vote_power_proto.floor() as u32;
         self.vote = 0;
         self.earned_rewards = 0;
-        Ok(())
+        Ok(VoteAccountUpdate {
+            stake_change: stake,
+            increase_stake: true,
+        })
     }
 
     /// Returns vote_power Q32.0
@@ -126,7 +135,7 @@ impl VoteAccount {
     ///
     /// ### Returns
     /// - mint reward in Q32.32
-    pub fn calculate_token_reward(&self, proposal: Proposal, mint_decimals: u32) -> Result<u64> {
+    pub fn calculate_token_reward(&self, proposal: Proposal, mint_decimals: u8) -> Result<u64> {
         self.calculate_token_reward_(
             proposal.calculate_vote_factor(&self).unwrap(),
             mint_decimals,
@@ -137,7 +146,7 @@ impl VoteAccount {
     pub fn calculate_token_reward_(
         &self,
         exponential_value: u64,
-        mint_decimals: u32,
+        mint_decimals: u8,
     ) -> Result<u64> {
         if self.revealed_vote {
             // Q32.0 x Q32.32 -> Q64.32
@@ -148,7 +157,7 @@ impl VoteAccount {
             let reward_x32 = reward_x64 as u64;
 
             // convert to token mint
-            let reward_10 = convert_x32_to_u64(reward_x32, mint_decimals);
+            let reward_10 = convert_x32_to_u64(reward_x32, mint_decimals as u32);
             Ok(reward_10)
         } else {
             return Err(SureError::VoteNotRevealed.into());
@@ -277,7 +286,7 @@ pub mod test_vote {
             name: String,
             vote: i64,
             vote_power: u64,
-            decimals: u32,
+            decimals: u8,
             salt_true: String,
             salt_provided: String,
             proposal: Proposal,
@@ -354,7 +363,7 @@ pub mod test_vote {
             name: String,
             vote: i64,
             vote_power: u64,
-            decimals: u32,
+            decimals: u8,
             salt_true: String,
             salt_provided: String,
             proposal: Proposal,
@@ -407,7 +416,7 @@ pub mod test_vote {
             name: String,
             vote: i64,
             vote_power: u64,
-            decimals: u32,
+            decimals: u8,
             vote_updated: i64,
             salt_true: String,
             salt_provided: String,
@@ -469,7 +478,7 @@ pub mod test_vote {
             name: String,
             vote: i64,
             vote_power: u64,
-            decimals: u32,
+            decimals: u8,
             vote_updated: i64,
             salt_true: String,
             salt_provided: String,

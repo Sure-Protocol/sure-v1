@@ -1,4 +1,7 @@
-use std::ops::{Add, BitAnd, BitOr, Div, Mul, Shl, Shr, Sub};
+use std::{
+    cell::RefMut,
+    ops::{Add, BitAnd, BitOr, Div, Mul, Shl, Shr, Sub},
+};
 
 use crate::{
     instructions::validate_stake,
@@ -174,7 +177,7 @@ impl Proposal {
     }
 
     /// cast a vote if vote is active
-    pub fn cast_vote_at_time(&mut self, vote: VoteAccount, time: i64) -> Result<()> {
+    pub fn cast_vote_at_time(&mut self, vote: RefMut<VoteAccount>, time: i64) -> Result<()> {
         if self.get_status(time).unwrap() == ProposalStatus::Voting {
             self.votes += vote.vote_power as u64;
         }
@@ -429,6 +432,8 @@ impl Proposal {
 
 #[cfg(test)]
 pub mod test_propose_vote {
+    use std::cell::RefCell;
+
     use crate::states::vote_account_proto;
 
     use super::*;
@@ -488,7 +493,9 @@ pub mod test_propose_vote {
             let mut proposal = create_test_proposal().unwrap();
             let mut current_time = START_TIME;
             for vote in test.votes {
-                proposal.cast_vote_at_time(vote, current_time).unwrap();
+                proposal
+                    .cast_vote_at_time(RefCell::new(vote).borrow_mut(), current_time)
+                    .unwrap();
 
                 current_time += 1; // tick
             }
@@ -575,7 +582,9 @@ pub mod test_propose_vote {
             let mut vote_array = RevealedVoteArray::default();
             let mut current_time = START_TIME;
             for vote in test.votes.clone() {
-                proposal.cast_vote_at_time(vote, current_time).unwrap();
+                proposal
+                    .cast_vote_at_time(RefCell::new(vote).borrow_mut(), current_time)
+                    .unwrap();
                 proposal.update_running_sum_weighted_vote(vote);
                 vote_array.reveal_vote(vote).unwrap();
                 current_time += 1; // tick

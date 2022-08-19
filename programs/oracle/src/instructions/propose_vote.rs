@@ -43,14 +43,14 @@ pub struct ProposeVote<'info> {
 
     #[account(
         mut, 
-        constraint = proposer_account.mint == stake_mint.key()
+        constraint = proposer_account.mint == proposal_vault_mint.key()
     )]
     pub proposer_account: Box<Account<'info,TokenAccount>>,
 
     #[account(
-        constraint = stake_mint.key() == SURE
+        constraint = proposal_vault_mint.key() == SURE
     )]
-    pub stake_mint: Box<Account<'info, Mint>>,
+    pub proposal_vault_mint: Box<Account<'info, Mint>>,
 
     #[account(
         init,
@@ -62,7 +62,7 @@ pub struct ProposeVote<'info> {
 
         ],
         bump,
-        associated_token::mint = stake_mint,
+        associated_token::mint = proposal_vault_mint,
         associated_token::authority = proposal
     )]
     pub proposal_vault: Box<Account<'info, TokenAccount>>,
@@ -84,7 +84,7 @@ pub struct ProposeVote<'info> {
     #[account(
         init,
         payer = proposer,
-        associated_token::mint = stake_mint,
+        associated_token::mint = proposal_vault_mint,
         associated_token::authority = proposal,
     )]
     pub stake_account: Box<Account<'info, TokenAccount>>,
@@ -104,8 +104,8 @@ pub fn handler(
 ) -> Result<()> {
     let proposal = ctx.accounts.proposal.as_mut();
     let proposal_bump = *ctx.bumps.get("proposal").unwrap();
-    let decimals = ctx.accounts.stake_mint.decimals;
-    let token_supply = ctx.accounts.stake_mint.supply;
+    let decimals = ctx.accounts.proposal_vault_mint.decimals;
+    let token_supply = ctx.accounts.proposal_vault_mint.supply;
 
     // Initialize state 
     proposal.initialize(
@@ -124,5 +124,6 @@ pub fn handler(
     // deposit stake into vault 
     token::deposit_into_vault(&ctx.accounts.proposer, &ctx.accounts.proposal_vault, &ctx.accounts.proposer_account, &ctx.accounts.token_program, stake)?;
 
+   
     Ok(())
 }
