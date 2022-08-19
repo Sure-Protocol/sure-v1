@@ -1,5 +1,8 @@
+anchor_version = "0.24.2"
+solana_version = "1.9.29"
+
 [features]
-seeds = false
+seeds = true
 
 [programs.localnet]
 sure_pool = "D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM"
