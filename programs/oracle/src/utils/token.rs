@@ -1,40 +1,40 @@
-// use crate::states::*;
-// use anchor_lang::prelude::*;
-// use anchor_lang::solana_program;
-// use anchor_lang::solana_program::instruction::Instruction;
-// use anchor_spl::token::spl_token::instruction::AuthorityType;
-// use anchor_spl::token::{
-//     burn, close_account, mint_to, set_authority, transfer, Burn, CloseAccount, Mint, MintTo,
-//     SetAuthority, Token, TokenAccount, Transfer,
-// };
-// use locked_voter::Locker;
-// use mpl_token_metadata::{
-//     instruction::{create_metadata_accounts_v2, update_metadata_accounts_v2},
-//     state::DataV2,
-// };
+use crate::states::*;
+use anchor_lang::prelude::*;
+use anchor_lang::solana_program;
+use anchor_lang::solana_program::instruction::Instruction;
+use anchor_spl::token::spl_token::instruction::AuthorityType;
+use anchor_spl::token::{
+    burn, close_account, mint_to, set_authority, transfer, Burn, CloseAccount, Mint, MintTo,
+    SetAuthority, Token, TokenAccount, Transfer,
+};
+use locked_voter::Locker;
+use mpl_token_metadata::{
+    instruction::{create_metadata_accounts_v2, update_metadata_accounts_v2},
+    state::DataV2,
+};
 
-// /// Deposit into vault
-// /// Helper to transfer from an origin user account
-// /// into a vault
-// pub fn deposit_into_vault<'info>(
-//     user: &Signer<'info>,
-//     vault: &Account<'info, TokenAccount>,
-//     origin_account: &Account<'info, TokenAccount>,
-//     token_program: &Program<'info, Token>,
-//     amount: u64,
-// ) -> Result<()> {
-//     transfer(
-//         CpiContext::new(
-//             token_program.to_account_info(),
-//             Transfer {
-//                 from: origin_account.to_account_info(),
-//                 to: vault.to_account_info(),
-//                 authority: user.to_account_info(),
-//             },
-//         ),
-//         amount,
-//     )
-// }
+/// Deposit into vault
+/// Helper to transfer from an origin user account
+/// into a vault
+pub fn deposit_into_vault<'info>(
+    user: &Signer<'info>,
+    vault: &Account<'info, TokenAccount>,
+    origin_account: &Account<'info, TokenAccount>,
+    token_program: &Program<'info, Token>,
+    amount: u64,
+) -> Result<()> {
+    transfer(
+        CpiContext::new(
+            token_program.to_account_info(),
+            Transfer {
+                from: origin_account.to_account_info(),
+                to: vault.to_account_info(),
+                authority: user.to_account_info(),
+            },
+        ),
+        amount,
+    )
+}
 
 // /// Withdraw from a vault
 // pub fn withdraw_from_vault<'info>(

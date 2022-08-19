@@ -8,8 +8,8 @@ use anchor_lang::prelude::*;
 use crate::utils::SureError;
 
 use super::VoteAccount;
-pub const NUM_VOTES_IN_ARRAY_USIZE: usize = 620;
-pub const NUM_VOTES_IN_ARRAY: u16 = 620;
+pub const NUM_VOTES_IN_ARRAY_USIZE: usize = 1240;
+pub const NUM_VOTES_IN_ARRAY: u16 = 1240;
 
 #[account(zero_copy)]
 #[repr(packed)]
@@ -17,7 +17,7 @@ pub const NUM_VOTES_IN_ARRAY: u16 = 620;
 pub struct RevealedVoteArray {
     pub proposal: Pubkey, // 32
     /// Q32.32
-    pub weighted_votes: [i64; NUM_VOTES_IN_ARRAY_USIZE], // 8*64
+    pub weighted_votes: [i64; NUM_VOTES_IN_ARRAY_USIZE], // 8*
     pub last_index: i16,
 }
 
@@ -33,7 +33,7 @@ impl Default for RevealedVoteArray {
 }
 
 impl RevealedVoteArray {
-    pub const SPACE: usize = 32 + 16 * NUM_VOTES_IN_ARRAY_USIZE + 2;
+    pub const SPACE: usize = 32 + 8 * NUM_VOTES_IN_ARRAY_USIZE + 2;
 
     pub fn initialize(&mut self, proposal: Pubkey) {
         self.proposal = proposal;
@@ -87,8 +87,8 @@ impl RevealedVoteArray {
 pub mod test_revealed_vote_array {
     use anchor_lang::prelude::Pubkey;
 
-    use crate::instructions::{
-        test_vote, vote_account_proto, RevealedVoteArray, VoteAccount, NUM_VOTES_IN_ARRAY_USIZE,
+    use crate::states::{
+        vote_account_proto, RevealedVoteArray, VoteAccount, NUM_VOTES_IN_ARRAY_USIZE,
     };
 
     /// Happy path

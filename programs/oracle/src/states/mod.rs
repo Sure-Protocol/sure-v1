@@ -1,7 +1,9 @@
-pub mod instruction;
 pub mod proposal;
-pub mod vote_account;
+pub mod vote;
+pub mod vote_array;
+pub mod vote_instruction;
 
-pub use instruction::*;
 pub use proposal::*;
-pub use vote_account::*;
+pub use vote::*;
+pub use vote_array::*;
+pub use vote_instruction::*;
