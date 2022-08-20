@@ -31,7 +31,9 @@ pub const Q32_RESOLUTION: u8 = 32;
 /// Assume the relation
 ///  - P = 1.0001^(t)
 /// where P is the price and t is the tick
-pub fn get_price_ratio_at_tick(tick: i32) -> u128 {}
+pub fn get_price_ratio_at_tick(tick: i32) -> u128 {
+    1 as u128
+}
 
 /// TODO: find the correct ratios
 fn get_price_ratio_at_negative_tick() -> u128 {

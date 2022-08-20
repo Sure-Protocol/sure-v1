@@ -642,7 +642,10 @@ impl<'info> TickArrayPool<'info> {
     }
 
     /// Update Ticks with new liquidity
-    pub fn update_liquidity(liquidity_target: u128, current_tick: i32) -> Result<()> {}
+    /// TODO: implement
+    pub fn update_liquidity(liquidity_target: u128, current_tick: i32) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(test)]

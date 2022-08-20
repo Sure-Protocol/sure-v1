@@ -55,15 +55,8 @@ pub struct ProposeVote<'info> {
     #[account(
         init,
         payer = proposer,
-        seeds = [
-            SURE_ORACLE_SEED.as_bytes().as_ref(),
-            b"vault",
-            name.as_bytes().as_ref(),
-
-        ],
-        bump,
         associated_token::mint = proposal_vault_mint,
-        associated_token::authority = proposal
+        associated_token::authority = proposal,
     )]
     pub proposal_vault: Box<Account<'info, TokenAccount>>,
 
@@ -81,13 +74,6 @@ pub struct ProposeVote<'info> {
     )]
     pub token_reward_mint: Box<Account<'info, Mint>>,
 
-    #[account(
-        init,
-        payer = proposer,
-        associated_token::mint = proposal_vault_mint,
-        associated_token::authority = proposal,
-    )]
-    pub stake_account: Box<Account<'info, TokenAccount>>,
 
     //
     pub token_program: Program<'info, Token>,
@@ -116,7 +102,7 @@ pub fn handler(
         stake,
         &ctx.accounts.token_reward_mint.key(),
         token_supply,
-        &ctx.accounts.stake_account.key(),
+        &ctx.accounts.proposal_vault.key(),
         None,
         decimals,
     )?;

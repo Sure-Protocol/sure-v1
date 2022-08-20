@@ -12,6 +12,5 @@ pub fn get_next_liquidity_state(
     liquidity_position: LiquidityPosition,
     tick_array_pool: TickArrayPool,
 ) -> Result<LiquidityUpdate> {
-    
     Ok(LiquidityUpdate {})
 }

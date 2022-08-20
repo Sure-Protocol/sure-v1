@@ -101,41 +101,41 @@ pub fn handler(
     let coverage_position = ctx.accounts.coverage_position.load_mut()?;
 
     // Validate the coverage position
-    account::validate_token_account_ownership(
-        &ctx.accounts.position_token_account,
-        &ctx.accounts.owner,
-    )?;
+    // account::validate_token_account_ownership(
+    //     &ctx.accounts.position_token_account,
+    //     &ctx.accounts.owner,
+    // )?;
 
-    // Combine input tick arrays into a tick array pool to buy insurance from
-    let tick_array_pool = TickArrayPool::new(
-        ctx.accounts.tick_array_0.load_mut().unwrap(),
-        ctx.accounts.tick_array_1.load_mut().ok(),
-        ctx.accounts.tick_array_2.load_mut().ok(),
-    );
+    // // Combine input tick arrays into a tick array pool to buy insurance from
+    // let tick_array_pool = TickArrayPool::new(
+    //     ctx.accounts.tick_array_0.load_mut().unwrap(),
+    //     ctx.accounts.tick_array_1.load_mut().ok(),
+    //     ctx.accounts.tick_array_2.load_mut().ok(),
+    // );
 
-    // Calculate the coverage
-    let coverage_result = pool.update_coverage(
-        tick_array_pool,
-        coverage_position,
-        coverage_amount,
-        expiry_ts,
-        true,
-        false,
-    )?;
+    // // Calculate the coverage
+    // let coverage_result = pool.update_coverage(
+    //     tick_array_pool,
+    //     coverage_position,
+    //     coverage_amount,
+    //     expiry_ts,
+    //     true,
+    //     false,
+    // )?;
 
-    // update pool
-    pool.update_after_coverage_change(&coverage_result.borrow())?;
+    // // update pool
+    // pool.update_after_coverage_change(&coverage_result.borrow())?;
 
-    // ---
-    // deposit premium and fees into vault
-    let premium_plus_cost = coverage_result.get_total_cost_of_coverage()?;
-    deposit_into_vault(
-        coverage_buyer,
-        premium_vault,
-        coverage_buyer_account,
-        &ctx.accounts.token_program,
-        premium_plus_cost,
-    )?;
+    // // ---
+    // // deposit premium and fees into vault
+    // let premium_plus_cost = coverage_result.get_total_cost_of_coverage()?;
+    // deposit_into_vault(
+    //     coverage_buyer,
+    //     premium_vault,
+    //     coverage_buyer_account,
+    //     &ctx.accounts.token_program,
+    //     premium_plus_cost,
+    // )?;
 
     Ok(())
 }
