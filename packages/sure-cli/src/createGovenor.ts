@@ -11,6 +11,7 @@ import {
 	GOKI_ADDRESSES,
 	SmartWalletWrapper,
 } from '@gokiprotocol/client';
+import * as tribeca from '@tribecahq/tribeca-sdk';
 async function run() {
 	const keypair = Keypair.fromSecretKey(
 		Buffer.from(
@@ -34,16 +35,25 @@ async function run() {
 		wallet: anchorProvider.wallet,
 		opts: anchorProvider.opts,
 	});
-	const gokiSDK = GokiSDK.load({ provider });
 
-	const owners = [wallet.payer.publicKey];
-	const { smartWalletWrapper, tx } = await gokiSDK.newSmartWallet({
-		owners: owners,
-		threshold: new anchor.BN(10),
-		numOwners: 3,
+	const tribecaSDK = tribeca.TribecaSDK.load({
+		provider,
 	});
-
-	console.log('tx: ', tx);
+	const gokiSDK = GokiSDK.load({
+		provider,
+	});
+	const [governor] = await tribeca.findGovernorAddress(wallet.publicKey);
+	const { smartWalletWrapper, tx } = await gokiSDK.newSmartWallet({
+		owners: [governor],
+		numOwners: 3,
+		threshold: new anchor.BN(1),
+	});
+	console.log('smart wallet res: ', tx);
+	const { wrapper, tx: tx2 } = await tribecaSDK.govern.createGovernor({
+		electorate: wallet.publicKey,
+		smartWallet: smartWalletWrapper.key,
+	});
+	console.log('createGovenor res: ', tx2);
 }
 
 run().catch((err) => {
