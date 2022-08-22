@@ -1,7 +1,7 @@
-use crate::utils::{convert_x32_to_u64, SureError, VOTE_STAKE_RATE};
+use crate::utils::{convert_x32_to_u64, SureError, SURE_ORACLE_VOTE_SEED, VOTE_STAKE_RATE};
 
 use super::{Proposal, ProposalStatus};
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program::pubkey};
 use std::ops::{Add, BitAnd, BitOr, Div, Mul, Shl, Shr, Sub};
 
 use hex_literal::hex;
@@ -16,7 +16,11 @@ pub struct VoteAccountUpdate {
 #[repr(packed)]
 #[derive(Debug, PartialEq)]
 pub struct VoteAccount {
-    pub bump: u8, // 1 byte
+    pub bump: u8,            // 1 byte
+    pub bump_array: [u8; 1], // 1 byte
+
+    pub proposal: Pubkey,
+    pub owner: Pubkey,
 
     // hash of vote "vote"+"salt"
     pub vote_hash: [u8; 32], // 32 bytes
@@ -44,7 +48,10 @@ impl Default for VoteAccount {
     fn default() -> VoteAccount {
         VoteAccount {
             bump: 0,
+            bump_array: [0; 1],
             vote_hash: [0; 32],
+            owner: Pubkey::default(),
+            proposal: Pubkey::default(),
             vote: 0,
             vote_factor: 0,
             earned_rewards: 0,
@@ -57,10 +64,20 @@ impl Default for VoteAccount {
 impl VoteAccount {
     pub const SPACE: usize = 1 + 32 + 8 + 8 + 8 + 1;
 
+    pub fn seeds(&self) -> [&[u8]; 4] {
+        [
+            SURE_ORACLE_VOTE_SEED.as_bytes() as &[u8],
+            self.proposal.as_ref(),
+            self.owner.as_ref(),
+            self.bump_array.as_ref(),
+        ]
+    }
+
     pub fn initialize(
         &mut self,
         bump: u8,
         owner: &Pubkey,
+        proposal: &Pubkey,
         vote_hash: &[u8; 32],
         vote_power: u64,
         decimals: u8,
@@ -75,6 +92,8 @@ impl VoteAccount {
         self.vote_power = vote_power_proto.floor() as u32;
         self.vote = 0;
         self.earned_rewards = 0;
+        self.owner = *owner;
+        self.proposal = *proposal;
         Ok(VoteAccountUpdate {
             stake_change: stake,
             increase_stake: true,
@@ -97,20 +116,29 @@ impl VoteAccount {
 
     pub fn update_vote_at_time(
         &mut self,
-        proposal: Proposal,
-        new_vote_hash: [u8; 32],
+        proposal: &Proposal,
+        new_vote_hash: &[u8; 32],
         time: i64,
     ) -> Result<()> {
         // If blind voting is over
         if !(proposal.get_status(time).unwrap() == ProposalStatus::Voting) {
             return Err(SureError::VotingPeriodEnded.into());
         }
-        self.vote_hash = new_vote_hash;
+        self.vote_hash = *new_vote_hash;
         Ok(())
     }
 
     /// reveal vote by proving salt
-    pub fn reveal_vote(&mut self, salt: &str, vote: i64) -> Result<()> {
+    pub fn reveal_vote(
+        &mut self,
+        proposal: &Proposal,
+        salt: &str,
+        vote: i64,
+        time: i64,
+    ) -> Result<()> {
+        if !(proposal.get_status(time).unwrap() == ProposalStatus::RevealVote) {
+            return Err(SureError::RevealPeriodNotActive.into());
+        }
         let mut hasher = Sha3_256::new();
         let message = format!("{}{}", vote, salt);
         hasher.update(message.as_bytes());
@@ -255,12 +283,15 @@ pub mod vote_account_proto {
         pub fn build(self) -> VoteAccount {
             VoteAccount {
                 bump: self.bump,
+                bump_array: [self.bump; 1],
                 vote_hash: self.vote_hash,
                 vote: self.vote,
                 vote_factor: self.vote_factor,
                 earned_rewards: self.earned_rewards,
                 vote_power: self.vote_power,
                 revealed_vote: self.revealed_vote,
+                owner: Pubkey::default(),
+                proposal: Pubkey::default(),
             }
         }
     }
@@ -268,7 +299,12 @@ pub mod vote_account_proto {
 
 #[cfg(test)]
 pub mod test_vote {
-    use crate::{states::test_propose_vote, utils::convert_f32_i64};
+    use proposal::test_proposal_proto::{self, ProposalProto};
+
+    use crate::{
+        states::{proposal, test_propose_vote},
+        utils::convert_f32_i64,
+    };
 
     use super::*;
     const START_TIME: i64 = 1660681219;
@@ -289,7 +325,8 @@ pub mod test_vote {
             decimals: u8,
             salt_true: String,
             salt_provided: String,
-            proposal: Proposal,
+            start_time: i64,
+            proposal: ProposalProto,
             vote_account: VoteAccount,
             expected_value: ExpectedValue,
         }
@@ -303,7 +340,8 @@ pub mod test_vote {
                 decimals: 6,
                 salt_true: "a23sw23".to_string(),
                 salt_provided: "a23sw23".to_string(),
-                proposal: test_propose_vote::create_test_proposal().unwrap(),
+                start_time: START_TIME,
+                proposal: test_proposal_proto::ProposalProto::initialize(),
                 vote_account: VoteAccount::default(),
                 expected_value: ExpectedValue {
                     vote: 400,
@@ -317,7 +355,8 @@ pub mod test_vote {
                 decimals: 6,
                 salt_true: "a23sw23".to_string(),
                 salt_provided: "a23sw23".to_string(),
-                proposal: test_propose_vote::create_test_proposal().unwrap(),
+                start_time: START_TIME,
+                proposal: test_proposal_proto::ProposalProto::initialize(),
                 vote_account: VoteAccount::default(),
                 expected_value: ExpectedValue {
                     vote: -400,
@@ -332,6 +371,7 @@ pub mod test_vote {
                 .initialize(
                     0,
                     &Pubkey::default(),
+                    &Pubkey::default(),
                     &vote_hash,
                     test.vote_power,
                     test.decimals,
@@ -339,8 +379,11 @@ pub mod test_vote {
                 .unwrap();
             assert_eq!(vote_account.vote, 0);
             assert_eq!(vote_account.vote_power, 2, "{}: test vote power", test.name);
+
+            let reveal_time = test.proposal.get_reveal_time();
+            let proposal = test.proposal.set_in_reveal_state().build();
             vote_account
-                .reveal_vote(&test.salt_provided, test.vote)
+                .reveal_vote(&proposal, &test.salt_provided, test.vote, reveal_time)
                 .unwrap();
             assert_eq!(
                 vote_account.vote, test.expected_value.vote,
@@ -366,7 +409,8 @@ pub mod test_vote {
             decimals: u8,
             salt_true: String,
             salt_provided: String,
-            proposal: Proposal,
+            start_time: i64,
+            proposal: ProposalProto,
             vote_account: VoteAccount,
             expected_error: SureError,
         }
@@ -379,7 +423,8 @@ pub mod test_vote {
             decimals: 6,
             salt_true: "a23sw23".to_string(),
             salt_provided: "a23sw24".to_string(),
-            proposal: test_propose_vote::create_test_proposal().unwrap(),
+            start_time: START_TIME,
+            proposal: test_proposal_proto::ProposalProto::initialize(),
             vote_account: VoteAccount::default(),
             expected_error: SureError::InvalidSalt,
         }];
@@ -390,14 +435,18 @@ pub mod test_vote {
                 .initialize(
                     0,
                     &Pubkey::default(),
+                    &Pubkey::default(),
                     &vote_hash,
                     test.vote_power,
                     test.decimals,
                 )
                 .unwrap();
             assert_eq!(vote_account.vote, 0);
+
+            let reveal_time = test.proposal.get_reveal_time();
+            let proposal = test.proposal.set_in_reveal_state().build();
             let err = vote_account
-                .reveal_vote(&test.salt_provided, test.vote)
+                .reveal_vote(&proposal, &test.salt_provided, test.vote, reveal_time)
                 .unwrap_err();
             let expected_err: anchor_lang::error::Error = test.expected_error.into();
             println!("err: {}", err.to_string());
@@ -420,7 +469,8 @@ pub mod test_vote {
             vote_updated: i64,
             salt_true: String,
             salt_provided: String,
-            proposal: Proposal,
+            start_time: i64,
+            proposal: ProposalProto,
             vote_account: VoteAccount,
             expected_value: ExpectedValue,
         }
@@ -434,7 +484,8 @@ pub mod test_vote {
             decimals: 6,
             salt_true: "a23sw23".to_string(),
             salt_provided: "a23sw23".to_string(),
-            proposal: test_propose_vote::create_test_proposal().unwrap(),
+            start_time: START_TIME,
+            proposal: test_proposal_proto::ProposalProto::initialize(),
             vote_account: VoteAccount::default(),
             expected_value: ExpectedValue { vote: 450 },
         }];
@@ -446,6 +497,7 @@ pub mod test_vote {
                 .initialize(
                     0,
                     &Pubkey::default(),
+                    &Pubkey::default(),
                     &vote_hash,
                     test.vote_power,
                     test.decimals,
@@ -453,11 +505,19 @@ pub mod test_vote {
                 .unwrap();
             assert_eq!(vote_account.vote, 0, "{} vote equal to 0", test.name);
             let new_vote_hash = vote_account_proto::hash_vote(test.vote_updated, &test.salt_true);
+            let reveal_time = test.proposal.get_reveal_time();
+            let proposal = test.proposal.set_in_reveal_state().build();
             vote_account
-                .update_vote_at_time(test.proposal, new_vote_hash, current_time)
+                .update_vote_at_time(&proposal, &new_vote_hash, current_time)
                 .unwrap();
+
             vote_account
-                .reveal_vote(&test.salt_provided, test.vote_updated)
+                .reveal_vote(
+                    &proposal,
+                    &test.salt_provided,
+                    test.vote_updated,
+                    reveal_time,
+                )
                 .unwrap();
             assert_eq!(
                 vote_account.vote, test.expected_value.vote,
@@ -482,7 +542,8 @@ pub mod test_vote {
             vote_updated: i64,
             salt_true: String,
             salt_provided: String,
-            proposal: Proposal,
+            start_time: i64,
+            proposal: ProposalProto,
             vote_account: VoteAccount,
             exponential_value: f32,
             expected_value: ExpectedValue,
@@ -498,7 +559,8 @@ pub mod test_vote {
                 decimals: 6,
                 salt_true: "a23sw23".to_string(),
                 salt_provided: "a23sw23".to_string(),
-                proposal: test_propose_vote::create_test_proposal().unwrap(),
+                start_time: START_TIME,
+                proposal: test_proposal_proto::ProposalProto::initialize(),
                 vote_account: VoteAccount::default(),
                 exponential_value: 1.2,
                 expected_value: ExpectedValue { reward: 3_600_000 },
@@ -511,7 +573,8 @@ pub mod test_vote {
                 decimals: 6,
                 salt_true: "a23sw23".to_string(),
                 salt_provided: "a23sw23".to_string(),
-                proposal: test_propose_vote::create_test_proposal().unwrap(),
+                start_time: START_TIME,
+                proposal: test_proposal_proto::ProposalProto::initialize(),
                 vote_account: VoteAccount::default(),
                 exponential_value: 0.98989898989898,
                 expected_value: ExpectedValue { reward: 2_969_696 },
@@ -524,13 +587,16 @@ pub mod test_vote {
                 .initialize(
                     0,
                     &Pubkey::default(),
+                    &Pubkey::default(),
                     &vote_hash,
                     test.vote_power,
                     test.decimals,
                 )
                 .unwrap();
+            let reveal_time = test.proposal.get_reveal_time();
+            let proposal = test.proposal.set_in_reveal_state().build();
             vote_account
-                .reveal_vote(&test.salt_true, test.vote)
+                .reveal_vote(&proposal, &test.salt_true, test.vote, reveal_time)
                 .unwrap();
             let reward = vote_account
                 .calculate_token_reward_(

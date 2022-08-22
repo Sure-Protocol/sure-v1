@@ -15,6 +15,7 @@ pub const NUM_VOTES_IN_ARRAY: u16 = 1240;
 #[repr(packed)]
 #[derive(Debug, PartialEq)]
 pub struct RevealedVoteArray {
+    pub bump: u8,
     pub proposal: Pubkey, // 32
     /// Q32.32
     pub weighted_votes: [i64; NUM_VOTES_IN_ARRAY_USIZE], // 8*
@@ -25,6 +26,7 @@ impl Default for RevealedVoteArray {
     #[inline]
     fn default() -> Self {
         Self {
+            bump: 0,
             proposal: Pubkey::default(),
             weighted_votes: [0; NUM_VOTES_IN_ARRAY_USIZE],
             last_index: -1,
@@ -35,14 +37,15 @@ impl Default for RevealedVoteArray {
 impl RevealedVoteArray {
     pub const SPACE: usize = 32 + 8 * NUM_VOTES_IN_ARRAY_USIZE + 2;
 
-    pub fn initialize(&mut self, proposal: Pubkey) {
+    pub fn initialize(&mut self, proposal: Pubkey, bump: u8) {
+        self.bump = bump;
         self.proposal = proposal;
         self.last_index = 0;
     }
 
     /// Reveal the vote and store the result in the array
     /// NOTE: tested
-    pub fn reveal_vote(&mut self, vote: VoteAccount) -> Result<()> {
+    pub fn reveal_vote(&mut self, vote: &VoteAccount) -> Result<()> {
         let next_index = self.last_index + 1;
         if next_index.abs() as u16 > NUM_VOTES_IN_ARRAY {
             return Err(SureError::FullRevealList.into());
@@ -170,7 +173,7 @@ pub mod test_revealed_vote_array {
         for test in test_data {
             let mut vote_array = RevealedVoteArray::default();
             for vote in test.votes {
-                vote_array.reveal_vote(vote).unwrap();
+                vote_array.reveal_vote(&vote).unwrap();
             }
 
             assert_eq!(

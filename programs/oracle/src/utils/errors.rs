@@ -16,6 +16,9 @@ pub enum SureError {
     #[msg("Voting period for proposal has ended")]
     VotingPeriodEnded,
 
+    #[msg("Currently not in vote reveal period")]
+    RevealPeriodNotActive,
+
     #[msg("Invalid salt resulted in invalid vote_hash")]
     InvalidSalt,
 

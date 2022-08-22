@@ -4,8 +4,8 @@ use anchor_spl::{
     token::{Mint, Token, TokenAccount},
 };
 
-use crate::utils::{SureError, SURE, SURE_ORACLE_SEED};
-use crate::{states::proposal::Proposal, utils::token};
+use crate::{utils::{SureError, SURE, SURE_ORACLE_SEED}, states::ProposeVoteEvent};
+use crate::{states::{proposal::Proposal,RevealedVoteArray}, utils::token};
 
 pub const MINIMUM_STAKE: u64 = 3_000_000;
 // 1/ln(2)
@@ -40,6 +40,17 @@ pub struct ProposeVote<'info> {
     )]
     pub proposal: Box<Account<'info, Proposal>>,
 
+    #[account(
+        init,
+        payer = proposer,
+        seeds = [
+            SURE_ORACLE_SEED.as_bytes().as_ref(),
+            proposal.key().as_ref(),
+        ],
+        bump,
+        space = 8 + RevealedVoteArray::SPACE
+    )]
+    pub reveal_vote_array: AccountLoader<'info,RevealedVoteArray>,
 
     #[account(
         mut, 
@@ -82,6 +93,16 @@ pub struct ProposeVote<'info> {
     pub system_program: Program<'info, System>,
 }
 
+/// Propose vote 
+/// 
+/// proposes a vote or observation that the holder of veSure can 
+/// vote on 
+/// 
+/// # Arguments
+/// * ctx: Context
+/// * name: Name of the observation
+/// * description: Clear description about the event
+/// * stake: The amount staked on event. In BN:  x*10^{decimals}
 pub fn handler(
     ctx: Context<ProposeVote>,
     name: String,
@@ -90,13 +111,15 @@ pub fn handler(
 ) -> Result<()> {
     let proposal = ctx.accounts.proposal.as_mut();
     let proposal_bump = *ctx.bumps.get("proposal").unwrap();
+    let reveal_vote_array_bump = *ctx.bumps.get("reveal_vote_array").unwrap();
     let decimals = ctx.accounts.proposal_vault_mint.decimals;
+    let mut reveal_vote_array = ctx.accounts.reveal_vote_array.load_mut()?;
     let token_supply = ctx.accounts.proposal_vault_mint.supply;
 
     // Initialize state 
     proposal.initialize(
         proposal_bump,
-        name,
+        name.clone(),
         description,
         &ctx.accounts.proposer.key(),
         stake,
@@ -107,9 +130,17 @@ pub fn handler(
         decimals,
     )?;
 
+    // initialize reveal_vote_array
+    reveal_vote_array.initialize(proposal.key(), reveal_vote_array_bump);
+
+
     // deposit stake into vault 
     token::deposit_into_vault(&ctx.accounts.proposer, &ctx.accounts.proposal_vault, &ctx.accounts.proposer_account, &ctx.accounts.token_program, stake)?;
 
+    emit!(ProposeVoteEvent{
+        name: name,
+        proposer: ctx.accounts.proposer.key()
+    });
    
     Ok(())
 }

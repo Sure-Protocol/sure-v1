@@ -22,8 +22,9 @@ pub enum ProposalStatus {
     ReachedQuorum,
     RevealVote,
     VoteRevealFinished,
+    RewardCalculation,
+    RewardPayout,
     Failed,
-    InActive,
 }
 
 impl Default for ProposalStatus {
@@ -83,8 +84,22 @@ pub struct Proposal {
     /// Q16.16
     pub scale_parameter: u32,
 
+    pub scale_parameter_calculated: bool,
+
+    /// when the vote is finished and
+    /// users can reap rewards
+    pub locked: bool,
+
+    pub distribution_sum: u128,
+
     /// Instruction to be exectued if passed
     pub instructions: [VoteInstruction; 32],
+}
+
+#[event]
+pub struct ProposeVoteEvent {
+    pub name: String,
+    pub proposer: Pubkey,
 }
 
 impl Default for Proposal {
@@ -200,8 +215,6 @@ impl Proposal {
     /// - W_N = sum_i^n (w_i)
     pub fn update_running_sum_weighted_vote(&mut self, vote_account: VoteAccount) {
         if vote_account.revealed_vote {
-            println!("vote power: {}", vote_account.vote_power);
-            println!("vote: {}", vote_account.vote);
             // u32.0 x q32.32 -> q64.32
             let update_x64 =
                 (vote_account.vote_power as u64).mul(vote_account.vote.abs() as u64) as u128;
@@ -352,6 +365,27 @@ impl Proposal {
         Ok(())
     }
 
+    /// try to finalize the vote after reveal
+    ///
+    pub fn try_finalize_vote(
+        &mut self,
+        revealed_votes: RevealedVoteArray,
+        time: i64,
+    ) -> Result<()> {
+        if self.get_status(time).unwrap() == ProposalStatus::VoteRevealFinished {
+            // distribute reward to proposer
+            let rewards = self.calculate_proposer_reward();
+            self.earned_rewards = rewards;
+
+            // calculate scale parameter
+            self.update_scale_parameter(revealed_votes)?;
+
+            let vote_instruction = self.instructions[0];
+            vote_instruction.invoke_proposal()?;
+        }
+        Ok(())
+    }
+
     /// try finalize vote
     /// Only finalize vote if either the
     /// quorum is reached or if it timed out
@@ -424,8 +458,133 @@ impl Proposal {
             return Some(ProposalStatus::RevealVote);
         } else if self.is_vote_revealed_over(time) {
             return Some(ProposalStatus::VoteRevealFinished);
+        } else if self.scale_parameter_calculated {
+            return Some(ProposalStatus::RewardCalculation);
+        } else if self.locked {
+            return Some(ProposalStatus::RewardPayout);
         } else {
             return Some(ProposalStatus::Failed);
+        }
+    }
+}
+
+// Proto for proposal, a builder
+#[cfg(test)]
+pub mod test_proposal_proto {
+    use anchor_lang::solana_program::vote;
+
+    use super::*;
+
+    #[derive(Default)]
+    pub struct ProposalProto {
+        pub bump: u8, // 1 byte
+        pub bump_array: [u8; 1],
+        /// name of vote
+        pub name: String, // 4 + 64 bytes
+        /// description of vote
+        pub description: String, // 4 + 200 bytes
+
+        /// amount staked by propose Q32.32
+        pub proposed_staked: u64, // 16 bytes
+
+        /// % of ve tokens needed to conclude
+        /// represented as basis points 1% = 100bp
+        pub required_votes: u64,
+
+        /// Current votes given in basis points
+        /// 1 vote = 1 veToken@
+        /// Q64.0
+        pub votes: u64,
+
+        // Q64.0
+        pub running_sum_weighted_vote: i64,
+        // Q64.0
+        pub running_weight: u64,
+
+        /// Start of vote
+        pub vote_start_at: i64,
+        /// Blind vote deadline
+        pub vote_end_at: i64,
+        /// start reveal
+        pub vote_end_reveal_at: i64,
+
+        /// reward earned by propsing vote
+        /// Q64.64
+        pub earned_rewards: u128,
+
+        /// Scale parameter in exp(L)
+        /// Q16.16
+        pub scale_parameter: u32,
+    }
+
+    impl ProposalProto {
+        pub fn initialize() -> Self {
+            Self {
+                bump: 0,
+                bump_array: [0; 1],
+                name: "test".to_string(),
+                description: "test".to_string(),
+                proposed_staked: 1_000_000,
+                required_votes: 10_000_000,
+                votes: 0,
+                running_sum_weighted_vote: 0,
+                running_weight: 0,
+                vote_start_at: TEST_START_TIME,
+                vote_end_at: TEST_START_TIME + 86400,
+                vote_end_reveal_at: TEST_START_TIME + 86400 * 2,
+                earned_rewards: 0,
+                scale_parameter: 0,
+            }
+        }
+
+        pub fn set_scale_parameter(mut self, scale_parameter: f32) -> Self {
+            self.scale_parameter = convert_f32_x16(scale_parameter) as u32;
+            self
+        }
+
+        pub fn set_required_voted(mut self, required_votes: u64) -> Self {
+            self.required_votes = required_votes;
+            self
+        }
+
+        pub fn set_votes(mut self, votes: u64) -> Self {
+            self.votes = votes;
+            self
+        }
+
+        // get the start of the reveal time
+        pub fn get_reveal_time(&self) -> i64 {
+            self.vote_end_at + 1
+        }
+
+        pub fn set_in_reveal_state(mut self) -> Self {
+            // set enough required votes
+            self.votes = self.required_votes + 1;
+            self
+        }
+
+        pub fn build(self) -> Proposal {
+            // checkpoint: fill in ny state variables
+            Proposal {
+                bump: self.bump,
+                bump_array: self.bump_array,
+                name: self.name,
+                description: self.description,
+                proposer: Pubkey::default(),
+                token_mint_reward: Pubkey::default(),
+                proposed_staked: self.proposed_staked,
+                vault: Pubkey::default(),
+                required_votes: self.required_votes,
+                votes: self.votes,
+                running_sum_weighted_vote: self.running_sum_weighted_vote,
+                running_weight: self.running_weight,
+                vote_start_at: self.vote_start_at,
+                vote_end_at: self.vote_end_at,
+                vote_end_reveal_at: self.vote_end_reveal_at,
+                earned_rewards: self.earned_rewards,
+                scale_parameter: self.scale_parameter,
+                instructions: [VoteInstruction::default(); 32],
+            }
         }
     }
 }
@@ -586,7 +745,7 @@ pub mod test_propose_vote {
                     .cast_vote_at_time(RefCell::new(vote).borrow_mut(), current_time)
                     .unwrap();
                 proposal.update_running_sum_weighted_vote(vote);
-                vote_array.reveal_vote(vote).unwrap();
+                vote_array.reveal_vote(&vote).unwrap();
                 current_time += 1; // tick
             }
 

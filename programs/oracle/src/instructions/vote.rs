@@ -6,7 +6,7 @@ use anchor_lang::solana_program::clock;
 use anchor_spl::token::{TokenAccount, Mint, self, Token};
 use locked_voter::{Locker, Escrow};
 
-use crate::utils::{SURE, SureError, deposit_into_vault};
+use crate::utils::{SURE, SureError, deposit_into_vault,SURE_ORACLE_VOTE_SEED};
 use crate::states::{Proposal,VoteAccount, ProposalStatus};
 
 #[derive(Accounts)]
@@ -54,7 +54,7 @@ pub struct VoteOnProposal<'info> {
         init,
         payer = voter,
         seeds = [
-            &"sure-oracle-vote".as_ref(),
+            SURE_ORACLE_VOTE_SEED.as_ref(),
             proposal.key().as_ref(),
             voter.key().as_ref(),
         ],
@@ -84,12 +84,10 @@ pub fn handler(ctx:Context<VoteOnProposal>,vote_hash: String) -> Result<()>{
     let vote_hash_bytes:&[u8;32] = vote_hash.as_bytes().try_into().unwrap();
    
     // Initialize vote account
-    let vote_update = vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), vote_hash_bytes, voting_power,decimals)?;
+    let vote_update = vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), &proposal.key(),vote_hash_bytes, voting_power,decimals)?;
 
-
-    // Update proposal
+    // Update proposal with vote 
     proposal.cast_vote_at_time(vote_account, current_time)?;
-
 
     // deposit Sure tokens into proposal vote 
     deposit_into_vault(&ctx.accounts.voter, &ctx.accounts.proposal_vault, &ctx.accounts.voter_account, &ctx.accounts.token_program, vote_update.stake_change)?;
