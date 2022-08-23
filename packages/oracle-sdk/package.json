@@ -1,0 +1,10 @@
+{
+	"name": "oracle-sdk",
+	"packageManager": "yarn@3.2.1",
+	"dependencies": {
+		"@project-serum/anchor": "^0.25.0"
+	},
+	"scripts": {
+		"build": ""
+	}
+}

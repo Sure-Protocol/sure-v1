@@ -75,7 +75,7 @@ export default class CreateProposal extends Command {
 			skipPreflight: false,
 		});
 		anchor.setProvider(anchorProvider);
-		const provider = saber_contrib.SolanaProvider.load({
+		const provider = saber_contrib.SolanaProvider.init({
 			connection: anchorProvider.connection,
 			wallet: anchorProvider.wallet,
 			opts: anchorProvider.opts,
