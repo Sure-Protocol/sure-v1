@@ -2,6 +2,7 @@ import * as anchor from '@project-serum/anchor';
 import { oracle } from '../idls/oracle.json';
 import { Proposal } from './proposal';
 
+// checkpoint : generate oracle idl and use it in sdk
 export class Provider {
 	constructor(
 		readonly connection: anchor.web3.Connection,
