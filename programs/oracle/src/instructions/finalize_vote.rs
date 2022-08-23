@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program::clock};
 
 use crate::states::{Proposal, VoteAccount};
 
@@ -27,6 +27,11 @@ pub struct FinalizeVote<'info> {
 pub fn handler(ctx: Context<FinalizeVote>) -> Result<()> {
     let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let proposal = ctx.accounts.proposal.as_ref();
+    let time = clock::Clock::get()?.unix_timestamp;
+
+    // check if vote can be finalized
+    proposal.can_finalize_vote(time)?;
+
     vote_account.calculate_vote_factor(proposal)?;
     Ok(())
 }

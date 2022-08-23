@@ -37,9 +37,12 @@ pub struct UpdateVote<'info> {
 pub fn handler(ctx: Context<UpdateVote>, vote_hash: String) -> Result<()> {
     let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let proposal = ctx.accounts.proposal.as_ref();
-    let current_time = clock::Clock::get()?.unix_timestamp;
+    let time = clock::Clock::get()?.unix_timestamp;
     let vote_hash_bytes: &[u8; 32] = vote_hash.as_bytes().try_into().unwrap();
 
-    vote_account.update_vote_at_time(proposal, vote_hash_bytes, current_time)?;
+    // check if user can update vote
+    proposal.can_submit_vote(time)?;
+
+    vote_account.update_vote_at_time(proposal, vote_hash_bytes, time)?;
     Ok(())
 }

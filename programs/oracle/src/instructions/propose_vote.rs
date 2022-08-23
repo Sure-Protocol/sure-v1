@@ -133,7 +133,6 @@ pub fn handler(
     // initialize reveal_vote_array
     reveal_vote_array.initialize(proposal.key(), reveal_vote_array_bump);
 
-
     // deposit stake into vault 
     token::deposit_into_vault(&ctx.accounts.proposer, &ctx.accounts.proposal_vault, &ctx.accounts.proposer_account, &ctx.accounts.token_program, stake)?;
 

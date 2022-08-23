@@ -47,10 +47,13 @@ pub fn handler(ctx: Context<RevealVote>, salt: String, vote: i64) -> Result<()> 
     let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let mut reveal_vote_array = ctx.accounts.reveal_vote_array.load_mut()?;
     let proposal = ctx.accounts.proposal.as_ref();
-    let current_time = clock::Clock::get()?.unix_timestamp;
+    let time = clock::Clock::get()?.unix_timestamp;
+
+    // check if can reveal vote
+    proposal.can_reveal_vote(time)?;
 
     // reveal vote in vote account
-    vote_account.reveal_vote(proposal, &salt, vote, current_time)?;
+    vote_account.reveal_vote(proposal, &salt, vote, time)?;
 
     // reveal vote in reveal vote list
     reveal_vote_array.reveal_vote(&vote_account)?;

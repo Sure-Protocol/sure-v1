@@ -18,6 +18,7 @@ use super::{RevealedVoteArray, VoteAccount};
 #[repr(C)]
 pub enum ProposalStatus {
     /// A vote has been proposed
+    Failed = 0,
     Proposed = 1,
     Voting = 2,
     ReachedQuorum = 3,
@@ -25,7 +26,6 @@ pub enum ProposalStatus {
     VoteRevealFinished = 5,
     RewardCalculation = 6,
     RewardPayout = 7,
-    Failed = 8,
 }
 
 impl Default for ProposalStatus {
@@ -97,6 +97,8 @@ pub struct Proposal {
     pub vote_factor_sum: u64,
     pub distribution_sum: u128,
 
+    pub consensus: i64,
+
     /// Instruction to be exectued if passed
     pub instructions: [VoteInstruction; 32],
 }
@@ -134,6 +136,7 @@ impl Default for Proposal {
             locked: false,
             distribution_sum: 0,
             vote_factor_sum: 0,
+            consensus: 0,
             instructions: [VoteInstruction::default(); 32],
         }
     }
@@ -278,9 +281,11 @@ impl Proposal {
     /// exponential model
     /// Estimate:
     ///     L_n = W_N / sum_i^n (w_i x v_i - X_n)^2
-    pub fn estimate_scale_parameter(&self, revealed_votes: &RevealedVoteArray) -> u32 {
-        // i32.32
-        let consensus = self.calculate_consensus();
+    pub fn estimate_scale_parameter(
+        &self,
+        consensus: i64,
+        revealed_votes: &RevealedVoteArray,
+    ) -> u32 {
         let sum_squared = revealed_votes.calculate_sum_squared_difference(consensus);
 
         // Q32.32 -> Q64.64
@@ -385,7 +390,9 @@ impl Proposal {
 
     /// Calculate and update the scale parameter
     pub fn update_scale_parameter(&mut self, revealed_votes: &RevealedVoteArray) -> Result<()> {
-        self.scale_parameter = self.estimate_scale_parameter(revealed_votes);
+        let consensus = self.calculate_consensus();
+        self.scale_parameter = self.estimate_scale_parameter(consensus, revealed_votes);
+        self.consensus = consensus;
         Ok(())
     }
 
@@ -510,18 +517,54 @@ impl Proposal {
         }
     }
 
+    /// checks if a user can submit a vote
+    pub fn can_submit_vote(&self, time: i64) -> Result<()> {
+        if self.get_status(time).unwrap() > ProposalStatus::Voting {
+            return Err(SureError::VotingPeriodEnded.into());
+        }
+        Ok(())
+    }
+
+    pub fn can_reveal_vote(&self, time: i64) -> Result<()> {
+        if self.get_status(time).unwrap() != ProposalStatus::RevealVote {
+            return Err(SureError::RevealPeriodNotActive.into());
+        }
+        Ok(())
+    }
+
+    pub fn can_finalize_vote(&self, time: i64) -> Result<()> {
+        if self.get_status(time).unwrap() != ProposalStatus::RewardCalculation {
+            return Err(SureError::FailedToFinalizeVote.into());
+        }
+        Ok(())
+    }
+
+    pub fn can_finalize_vote_results(&self, time: i64) -> Result<()> {
+        if self.get_status(time).unwrap() != ProposalStatus::VoteRevealFinished {
+            return Err(SureError::FailedToFinalizeVoteResult.into());
+        }
+        Ok(())
+    }
+
     /// Check if the proposer can claim reward
     ///
     /// a proposer can claim reward after the reveal period
     /// and the parameter is calculated
-    pub fn can_payout_proposer_rewards(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() > ProposalStatus::VoteRevealFinished
+    pub fn can_collect_proposer_rewards(&self, time: i64) -> Result<()> {
+        if self.get_status(time).unwrap() >= ProposalStatus::RewardCalculation
             && self.scale_parameter_calculated
         {
             return Ok(());
         } else {
-            return Err(SureError::NotPossibleToPayoutProposerReward.into());
+            return Err(SureError::NotPossibleToCollectProposerReward.into());
         }
+    }
+
+    pub fn can_collect_voter_reward(&self, time: i64) -> Result<()> {
+        if self.get_status(time).unwrap() != ProposalStatus::RewardPayout {
+            return Err(SureError::NotPossibleToCollectVoterReward.into());
+        }
+        Ok(())
     }
 
     /// can a vote be cancelled
@@ -592,6 +635,7 @@ pub mod test_proposal_proto {
         pub locked: bool,
 
         pub vote_factor_sum: u64,
+        pub consensus: i64,
 
         pub distribution_sum: u128,
     }
@@ -618,6 +662,7 @@ pub mod test_proposal_proto {
                 scale_parameter_calculated: false,
                 distribution_sum: 0,
                 locked: false,
+                consensus: 0,
                 vote_factor_sum: 0,
             }
         }
@@ -672,6 +717,7 @@ pub mod test_proposal_proto {
                 scale_parameter: self.scale_parameter,
                 scale_parameter_calculated: self.scale_parameter_calculated,
                 locked: self.locked,
+                consensus: self.consensus,
                 distribution_sum: self.distribution_sum,
                 vote_factor_sum: self.vote_factor_sum,
                 instructions: [VoteInstruction::default(); 32],

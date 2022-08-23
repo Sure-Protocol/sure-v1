@@ -47,6 +47,9 @@ pub fn handler(ctx: Context<CollectVoteReward>) -> Result<()> {
     let time = clock::Clock::get()?.unix_timestamp;
     let mint_decimals = ctx.accounts.proposal_vault_mint.decimals;
 
+    // check if it is possible to collect rewards
+    proposal.can_collect_voter_reward(time)?;
+
     // get the user vote reward
     let reward = vote_account.calculate_token_reward_at_time(proposal, mint_decimals, time)?;
 

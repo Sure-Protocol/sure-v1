@@ -37,11 +37,20 @@ pub enum SureError {
     #[msg("U32 overflow")]
     OverflowU32,
 
-    #[msg("Could not calculate the vote reward at this point")]
+    #[msg("Could not calculate the vote reward at this time")]
     NotPossibleToCalculateVoteReward,
 
     #[msg("Cannot payout the proposer reward at this time")]
-    NotPossibleToPayoutProposerReward,
+    NotPossibleToCollectProposerReward,
+
+    #[msg("Cannot payout the voter reward at this time")]
+    NotPossibleToCollectVoterReward,
+
+    #[msg("Cannot finalize user vote at this time")]
+    FailedToFinalizeVote,
+
+    #[msg("Cannot finalize vote result at this time")]
+    FailedToFinalizeVoteResult,
 
     #[msg("Too late to cancel vote")]
     FailedToCancelVote,

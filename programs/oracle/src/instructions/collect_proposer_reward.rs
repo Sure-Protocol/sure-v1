@@ -30,7 +30,7 @@ pub fn handler(ctx: Context<CollectProposerReward>) -> Result<()> {
     let time = clock::Clock::get()?.unix_timestamp;
 
     // check if the proposer can claim payout
-    proposal.can_payout_proposer_rewards(time)?;
+    proposal.can_collect_proposer_rewards(time)?;
 
     // get reward
     let reward = proposal.payout_earned_rewards_at_time(decimals, time)?;

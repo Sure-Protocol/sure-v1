@@ -69,15 +69,15 @@ pub struct SubmitVote<'info> {
 
 
 pub fn handler(ctx:Context<SubmitVote>,vote_hash: String) -> Result<()>{
-    let current_time = Clock::get()?.unix_timestamp;
+    let time = Clock::get()?.unix_timestamp;
     let proposal =  &mut ctx.accounts.proposal;
-    if !(proposal.get_status(current_time).unwrap() == ProposalStatus::Voting) {
-        return Err(SureError::VotingPeriodEnded.into())
-    }
     let locker =&ctx.accounts.locker;
     let voting_power = ctx.accounts.user_escrow.voting_power(&locker.params)?;
     let decimals = ctx.accounts.proposal_vault_mint.decimals;
     
+    // check if proposal accepts votes
+    proposal.can_submit_vote(time)?;
+
     //initialize vote account
     let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let vote_account_bump = *ctx.bumps.get("vote_account").unwrap();
@@ -87,7 +87,7 @@ pub fn handler(ctx:Context<SubmitVote>,vote_hash: String) -> Result<()>{
     let vote_update = vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), &proposal.key(),vote_hash_bytes, voting_power,decimals)?;
 
     // Update proposal with vote 
-    proposal.cast_vote_at_time(vote_account, current_time)?;
+    proposal.cast_vote_at_time(vote_account, time)?;
 
     // deposit Sure tokens into proposal vote 
     deposit_into_vault(&ctx.accounts.voter, &ctx.accounts.proposal_vault, &ctx.accounts.voter_account, &ctx.accounts.token_program, vote_update.stake_change)?;

@@ -29,6 +29,10 @@ pub fn handler(ctx: Context<FinalizeVoteResults>) -> Result<()> {
 
     let revealed_votes = ctx.accounts.revealed_votes.load()?;
     let time = clock::Clock::get()?.unix_timestamp;
+
+    // check if it's possible to finalie vote result
+    proposal.can_finalize_vote_results(time)?;
+
     proposal.try_finalize_vote_after_reveal(&revealed_votes, time)?;
 
     Ok(())
