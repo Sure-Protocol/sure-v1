@@ -1,11 +1,19 @@
+pub mod cancel_vote;
+pub mod collect_proposer_reward;
+pub mod collect_vote_reward;
 pub mod finalize_vote;
+pub mod finalize_vote_results;
 pub mod propose_vote;
 pub mod reveal_vote;
+pub mod submit_vote;
 pub mod update_vote;
-pub mod vote;
 
+pub use cancel_vote::*;
+pub use collect_proposer_reward::*;
+pub use collect_vote_reward::*;
 pub use finalize_vote::*;
+pub use finalize_vote_results::*;
 pub use propose_vote::*;
 pub use reveal_vote::*;
+pub use submit_vote::*;
 pub use update_vote::*;
-pub use vote::*;

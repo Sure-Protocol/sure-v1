@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::{
+    factory::{calculate_stake, calculate_stake_x32},
     instructions::validate_stake,
     states::VoteInstruction,
     utils::{uint::U256, *},
@@ -13,18 +14,18 @@ use anchor_lang::{prelude::*, solana_program::clock};
 
 use super::{RevealedVoteArray, VoteAccount};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, PartialOrd)]
 #[repr(C)]
 pub enum ProposalStatus {
     /// A vote has been proposed
-    Proposed,
-    Voting,
-    ReachedQuorum,
-    RevealVote,
-    VoteRevealFinished,
-    RewardCalculation,
-    RewardPayout,
-    Failed,
+    Proposed = 1,
+    Voting = 2,
+    ReachedQuorum = 3,
+    RevealVote = 4,
+    VoteRevealFinished = 5,
+    RewardCalculation = 6,
+    RewardPayout = 7,
+    Failed = 8,
 }
 
 impl Default for ProposalStatus {
@@ -43,6 +44,8 @@ pub struct Proposal {
     pub name: String, // 4 + 64 bytes
     /// description of vote
     pub description: String, // 4 + 200 bytes
+    /// Proposed result
+    pub proposed_result: i64,
     /// user who proposed the vote
     pub proposer: Pubkey, // 32 bytes
 
@@ -63,6 +66,7 @@ pub struct Proposal {
     /// 1 vote = 1 veToken@
     /// Q64.0
     pub votes: u64,
+    pub revealed_votes: u64,
 
     // Q64.0
     pub running_sum_weighted_vote: i64,
@@ -90,6 +94,7 @@ pub struct Proposal {
     /// users can reap rewards
     pub locked: bool,
 
+    pub vote_factor_sum: u64,
     pub distribution_sum: u128,
 
     /// Instruction to be exectued if passed
@@ -110,12 +115,14 @@ impl Default for Proposal {
             bump_array: [0; 1],
             name: "test proposal".to_string(),
             description: "test descr".to_string(),
+            proposed_result: 0,
             proposer: Pubkey::default(),
             token_mint_reward: Pubkey::default(),
             proposed_staked: 0,
             vault: Pubkey::default(),
             required_votes: 100_000,
             votes: 0,
+            revealed_votes: 0,
             running_sum_weighted_vote: 0,
             running_weight: 0,
             vote_end_at: 0,
@@ -123,6 +130,10 @@ impl Default for Proposal {
             vote_end_reveal_at: 0,
             earned_rewards: 0,
             scale_parameter: 0,
+            scale_parameter_calculated: false,
+            locked: false,
+            distribution_sum: 0,
+            vote_factor_sum: 0,
             instructions: [VoteInstruction::default(); 32],
         }
     }
@@ -165,7 +176,7 @@ impl Proposal {
 
         // convert to Q32.32
         let proposed_stake_proto = (proposed_staked as f64).div(10_u64.pow(decimals as u32) as f64);
-        self.proposed_staked = (proposed_stake_proto.floor() as u64) << 32;
+        self.proposed_staked = (proposed_stake_proto.floor() as u64) << 32; // Q32.32
         self.vault = *vault;
         self.token_mint_reward = *token_mint;
 
@@ -195,6 +206,13 @@ impl Proposal {
     pub fn cast_vote_at_time(&mut self, vote: RefMut<VoteAccount>, time: i64) -> Result<()> {
         if self.get_status(time).unwrap() == ProposalStatus::Voting {
             self.votes += vote.vote_power as u64;
+        }
+        Ok(())
+    }
+
+    pub fn cancel_vote_at_time(&mut self, vote: RefMut<VoteAccount>, time: i64) -> Result<()> {
+        if self.get_status(time).unwrap() == ProposalStatus::Voting {
+            self.votes -= vote.vote_power as u64;
         }
         Ok(())
     }
@@ -260,7 +278,7 @@ impl Proposal {
     /// exponential model
     /// Estimate:
     ///     L_n = W_N / sum_i^n (w_i x v_i - X_n)^2
-    pub fn estimate_scale_parameter(&self, revealed_votes: RevealedVoteArray) -> u32 {
+    pub fn estimate_scale_parameter(&self, revealed_votes: &RevealedVoteArray) -> u32 {
         // i32.32
         let consensus = self.calculate_consensus();
         let sum_squared = revealed_votes.calculate_sum_squared_difference(consensus);
@@ -310,7 +328,7 @@ impl Proposal {
     pub fn calculate_vote_factor(&self, vote_account: &VoteAccount) -> Result<u64> {
         // validate that voting is done
         // Q64.0
-        let proposer_reward = self.get_proposer_reward();
+        let proposer_reward = self.calculate_proposer_reward();
         println!("proposer_reward: {}", proposer_reward);
         // Q64.64
         let reward_pool = self.calculate_reward_pool_remainder(proposer_reward);
@@ -359,17 +377,22 @@ impl Proposal {
         Ok(exp_factor)
     }
 
+    /// Updates the vote factor sum
+    ///
+    pub fn update_vote_factor_sum(&mut self, vote_factor: u64) {
+        self.vote_factor_sum += vote_factor;
+    }
+
     /// Calculate and update the scale parameter
-    pub fn update_scale_parameter(&mut self, revealed_votes: RevealedVoteArray) -> Result<()> {
+    pub fn update_scale_parameter(&mut self, revealed_votes: &RevealedVoteArray) -> Result<()> {
         self.scale_parameter = self.estimate_scale_parameter(revealed_votes);
         Ok(())
     }
 
     /// try to finalize the vote after reveal
-    ///
-    pub fn try_finalize_vote(
+    pub fn try_finalize_vote_after_reveal(
         &mut self,
-        revealed_votes: RevealedVoteArray,
+        revealed_votes: &RevealedVoteArray,
         time: i64,
     ) -> Result<()> {
         if self.get_status(time).unwrap() == ProposalStatus::VoteRevealFinished {
@@ -379,9 +402,12 @@ impl Proposal {
 
             // calculate scale parameter
             self.update_scale_parameter(revealed_votes)?;
+            self.scale_parameter_calculated = true;
 
             let vote_instruction = self.instructions[0];
             vote_instruction.invoke_proposal()?;
+        } else {
+            return Err(SureError::RevealPeriodNotActive.into());
         }
         Ok(())
     }
@@ -404,17 +430,34 @@ impl Proposal {
         Ok(0)
     }
 
+    /// get the payout earned by the proposer
+    ///
+    /// ### Arguments
+    /// * decimals: number of decimals in the mint
+    /// * time: current time used to check if it's possible to payout
+    pub fn payout_earned_rewards_at_time(&mut self, decimals: u8, time: i64) -> Result<u64> {
+        if self.get_status(time).unwrap() > ProposalStatus::RevealVote {
+            // Q64.64 -> Q64.32
+            let rewards_x32 = self.earned_rewards >> 32;
+            if rewards_x32 > u64::MAX as u128 {
+                return Err(SureError::OverflowU64.into());
+            }
+
+            self.earned_rewards = 0;
+
+            return Ok(convert_x32_to_u64(rewards_x32 as u64, decimals));
+        } else {
+            return Err(SureError::RevealPeriodIsNotFinished.into());
+        }
+    }
+
     /// Calculate the reward from the votes
     ///
     /// 0.1% = 10bp of the total votes
     ///
     /// Returns Q64.64
-    fn get_proposer_reward(&self) -> u128 {
-        // Convert votes to Q64.64
-        let votes_x64 = (self.votes as u128) << 64;
-        // Reward as Q64.64
-        let reward_x64 = votes_x64.div(1_000 as u128);
-        reward_x64
+    fn calculate_reward_from_revealed_votes(&self) -> u128 {
+        (calculate_stake_x32(self.revealed_votes) as u128) << 64
     }
 
     /// Calculate reward for proposing vote
@@ -423,9 +466,9 @@ impl Proposal {
     ///
     /// Returns
     /// - proposer reward as Q64.64
-    pub fn calculate_proposer_reward(&mut self) -> u128 {
+    pub fn calculate_proposer_reward(&self) -> u128 {
         // if vote is successful
-        return (self.proposed_staked as u128) << 64 + self.get_proposer_reward();
+        return (self.proposed_staked as u128) << 64 + self.calculate_reward_from_revealed_votes();
     }
 
     pub fn is_blind_vote_ongoing_at_time(&self, time: i64) -> bool {
@@ -466,6 +509,30 @@ impl Proposal {
             return Some(ProposalStatus::Failed);
         }
     }
+
+    /// Check if the proposer can claim reward
+    ///
+    /// a proposer can claim reward after the reveal period
+    /// and the parameter is calculated
+    pub fn can_payout_proposer_rewards(&self, time: i64) -> Result<()> {
+        if self.get_status(time).unwrap() > ProposalStatus::VoteRevealFinished
+            && self.scale_parameter_calculated
+        {
+            return Ok(());
+        } else {
+            return Err(SureError::NotPossibleToPayoutProposerReward.into());
+        }
+    }
+
+    /// can a vote be cancelled
+    ///
+    /// a vote can be cancelled when in voting period
+    pub fn can_cancel_vote(&self, time: i64) -> Result<()> {
+        if !(self.get_status(time).unwrap() == ProposalStatus::Voting) {
+            return Err(SureError::FailedToCancelVote.into());
+        }
+        Ok(())
+    }
 }
 
 // Proto for proposal, a builder
@@ -486,6 +553,7 @@ pub mod test_proposal_proto {
 
         /// amount staked by propose Q32.32
         pub proposed_staked: u64, // 16 bytes
+        proposed_result: i64,
 
         /// % of ve tokens needed to conclude
         /// represented as basis points 1% = 100bp
@@ -495,6 +563,7 @@ pub mod test_proposal_proto {
         /// 1 vote = 1 veToken@
         /// Q64.0
         pub votes: u64,
+        pub revealed_votes: u64,
 
         // Q64.0
         pub running_sum_weighted_vote: i64,
@@ -515,6 +584,16 @@ pub mod test_proposal_proto {
         /// Scale parameter in exp(L)
         /// Q16.16
         pub scale_parameter: u32,
+
+        pub scale_parameter_calculated: bool,
+
+        /// when the vote is finished and
+        /// users can reap rewards
+        pub locked: bool,
+
+        pub vote_factor_sum: u64,
+
+        pub distribution_sum: u128,
     }
 
     impl ProposalProto {
@@ -524,9 +603,11 @@ pub mod test_proposal_proto {
                 bump_array: [0; 1],
                 name: "test".to_string(),
                 description: "test".to_string(),
+                proposed_result: 0,
                 proposed_staked: 1_000_000,
                 required_votes: 10_000_000,
                 votes: 0,
+                revealed_votes: 0,
                 running_sum_weighted_vote: 0,
                 running_weight: 0,
                 vote_start_at: TEST_START_TIME,
@@ -534,6 +615,10 @@ pub mod test_proposal_proto {
                 vote_end_reveal_at: TEST_START_TIME + 86400 * 2,
                 earned_rewards: 0,
                 scale_parameter: 0,
+                scale_parameter_calculated: false,
+                distribution_sum: 0,
+                locked: false,
+                vote_factor_sum: 0,
             }
         }
 
@@ -571,11 +656,13 @@ pub mod test_proposal_proto {
                 name: self.name,
                 description: self.description,
                 proposer: Pubkey::default(),
+                proposed_result: self.proposed_result,
                 token_mint_reward: Pubkey::default(),
                 proposed_staked: self.proposed_staked,
                 vault: Pubkey::default(),
                 required_votes: self.required_votes,
                 votes: self.votes,
+                revealed_votes: self.revealed_votes,
                 running_sum_weighted_vote: self.running_sum_weighted_vote,
                 running_weight: self.running_weight,
                 vote_start_at: self.vote_start_at,
@@ -583,6 +670,10 @@ pub mod test_proposal_proto {
                 vote_end_reveal_at: self.vote_end_reveal_at,
                 earned_rewards: self.earned_rewards,
                 scale_parameter: self.scale_parameter,
+                scale_parameter_calculated: self.scale_parameter_calculated,
+                locked: self.locked,
+                distribution_sum: self.distribution_sum,
+                vote_factor_sum: self.vote_factor_sum,
                 instructions: [VoteInstruction::default(); 32],
             }
         }
@@ -660,7 +751,7 @@ pub mod test_propose_vote {
             }
 
             // test calculations
-            let proposal_rewards = proposal.get_proposer_reward();
+            let proposal_rewards = proposal.calculate_proposer_reward();
             assert_eq!(
                 convert_q64_to_f64(proposal_rewards),
                 test.expected_result.reward,

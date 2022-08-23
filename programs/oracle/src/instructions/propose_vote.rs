@@ -107,7 +107,7 @@ pub fn handler(
     ctx: Context<ProposeVote>,
     name: String,
     description: String,
-    stake: u64,
+    stake: u64, //Q64.0
 ) -> Result<()> {
     let proposal = ctx.accounts.proposal.as_mut();
     let proposal_bump = *ctx.bumps.get("proposal").unwrap();

@@ -36,27 +36,27 @@ pub fn deposit_into_vault<'info>(
     )
 }
 
-// /// Withdraw from a vault
-// pub fn withdraw_from_vault<'info>(
-//     authority: &Account<'info, Locker>,
-//     vault: &Account<'info, TokenAccount>,
-//     destination_account: &Account<'info, TokenAccount>,
-//     token_program: &Program<'info, Token>,
-//     amount: u64,
-// ) -> Result<()> {
-//     transfer(
-//         CpiContext::new_with_signer(
-//             token_program.to_account_info(),
-//             Transfer {
-//                 from: vault.to_account_info(),
-//                 to: destination_account.to_account_info(),
-//                 authority: authority.to_account_info(),
-//             },
-//             &[&authority.],
-//         ),
-//         amount,
-//     )
-// }
+/// Withdraw from a vault
+pub fn withdraw_from_vault<'info>(
+    authority: &Account<'info, Proposal>,
+    vault: &Account<'info, TokenAccount>,
+    destination_account: &Account<'info, TokenAccount>,
+    token_program: &Program<'info, Token>,
+    amount: u64,
+) -> Result<()> {
+    transfer(
+        CpiContext::new_with_signer(
+            token_program.to_account_info(),
+            Transfer {
+                from: vault.to_account_info(),
+                to: destination_account.to_account_info(),
+                authority: authority.to_account_info(),
+            },
+            &[&authority.seeds()],
+        ),
+        amount,
+    )
+}
 
 // /// Burn the NFT and close the nft token account
 // pub fn burn_liquidity_position_nft<'info>(

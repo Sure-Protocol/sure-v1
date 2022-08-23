@@ -10,7 +10,7 @@ use crate::utils::{SURE, SureError, deposit_into_vault,SURE_ORACLE_VOTE_SEED};
 use crate::states::{Proposal,VoteAccount, ProposalStatus};
 
 #[derive(Accounts)]
-pub struct VoteOnProposal<'info> {
+pub struct SubmitVote<'info> {
     #[account(mut)]
     pub voter: Signer<'info>,
 
@@ -68,7 +68,7 @@ pub struct VoteOnProposal<'info> {
 }
 
 
-pub fn handler(ctx:Context<VoteOnProposal>,vote_hash: String) -> Result<()>{
+pub fn handler(ctx:Context<SubmitVote>,vote_hash: String) -> Result<()>{
     let current_time = Clock::get()?.unix_timestamp;
     let proposal =  &mut ctx.accounts.proposal;
     if !(proposal.get_status(current_time).unwrap() == ProposalStatus::Voting) {

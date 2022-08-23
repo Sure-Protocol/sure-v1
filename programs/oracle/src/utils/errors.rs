@@ -19,6 +19,9 @@ pub enum SureError {
     #[msg("Currently not in vote reveal period")]
     RevealPeriodNotActive,
 
+    #[msg("Reveal period is not over")]
+    RevealPeriodIsNotFinished,
+
     #[msg("Invalid salt resulted in invalid vote_hash")]
     InvalidSalt,
 
@@ -33,6 +36,15 @@ pub enum SureError {
 
     #[msg("U32 overflow")]
     OverflowU32,
+
+    #[msg("Could not calculate the vote reward at this point")]
+    NotPossibleToCalculateVoteReward,
+
+    #[msg("Cannot payout the proposer reward at this time")]
+    NotPossibleToPayoutProposerReward,
+
+    #[msg("Too late to cancel vote")]
+    FailedToCancelVote,
 }
 
 impl From<TryFromIntError> for SureError {

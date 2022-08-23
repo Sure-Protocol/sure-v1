@@ -1,4 +1,7 @@
-use crate::utils::{convert_x32_to_u64, SureError, SURE_ORACLE_VOTE_SEED, VOTE_STAKE_RATE};
+use crate::{
+    factory::calculate_stake,
+    utils::{convert_x32_to_u64, SureError, SURE_ORACLE_VOTE_SEED, VOTE_STAKE_RATE},
+};
 
 use super::{Proposal, ProposalStatus};
 use anchor_lang::{prelude::*, solana_program::pubkey};
@@ -41,6 +44,8 @@ pub struct VoteAccount {
     pub vote_power: u32, // 8  bytes
 
     pub revealed_vote: bool, // 1 bytes
+
+    pub locked: bool,
 }
 
 impl Default for VoteAccount {
@@ -57,6 +62,7 @@ impl Default for VoteAccount {
             earned_rewards: 0,
             vote_power: 0,
             revealed_vote: false,
+            locked: false,
         }
     }
 }
@@ -86,10 +92,13 @@ impl VoteAccount {
 
         self.bump = bump;
         self.vote_hash = *vote_hash;
-        let stake = (vote_power as f64).div(VOTE_STAKE_RATE) as u64;
+
+        // f64
         let vote_power_proto: f64 = (vote_power as f64).div(10_u64.pow(decimals as u32) as f64);
-        // convert to Q32.32
-        self.vote_power = vote_power_proto.floor() as u32;
+        // convert to Q32.0
+        let vote_power = vote_power_proto.floor() as u32;
+        self.vote_power = vote_power;
+        let stake = calculate_stake((vote_power as u64) << 32, decimals);
         self.vote = 0;
         self.earned_rewards = 0;
         self.owner = *owner;
@@ -152,6 +161,24 @@ impl VoteAccount {
         Ok(())
     }
 
+    pub fn cancel_vote(&mut self, decimals: u8) -> Result<u64> {
+        // lock vote
+        self.locked = true;
+
+        // get refund stake
+        Ok(calculate_stake(self.vote_power as u64, decimals))
+    }
+
+    /// Calculate the vote factor
+    ///
+    /// when votes are revealed the vote factor can be calculated
+    /// calculates and sets V = l*exp(-l*x)
+    pub fn calculate_vote_factor(&mut self, proposal: &Proposal) -> Result<u64> {
+        let vote_factor = proposal.calculate_vote_factor(&self)?;
+        self.vote_factor = vote_factor;
+        Ok(vote_factor)
+    }
+
     /// Calculate expected reward
     /// Upon an ended vote the voters should
     /// get rewarded or slashed
@@ -163,11 +190,22 @@ impl VoteAccount {
     ///
     /// ### Returns
     /// - mint reward in Q32.32
-    pub fn calculate_token_reward(&self, proposal: Proposal, mint_decimals: u8) -> Result<u64> {
-        self.calculate_token_reward_(
-            proposal.calculate_vote_factor(&self).unwrap(),
-            mint_decimals,
-        )
+    pub fn calculate_token_reward_at_time(
+        &self,
+        proposal: &Proposal,
+        mint_decimals: u8,
+        time: i64,
+    ) -> Result<u64> {
+        if self.revealed_vote
+            && self.vote_factor > 0
+            && proposal.get_status(time).unwrap() == ProposalStatus::RewardCalculation
+        {
+            self.calculate_token_reward_(self.vote_factor, mint_decimals)
+        } else if !self.revealed_vote {
+            return Ok(calculate_stake(self.vote_power as u64, mint_decimals));
+        } else {
+            return Err(SureError::NotPossibleToCalculateVoteReward.into());
+        }
     }
 
     /// helper for the calculate_token_rewards method
@@ -185,7 +223,7 @@ impl VoteAccount {
             let reward_x32 = reward_x64 as u64;
 
             // convert to token mint
-            let reward_10 = convert_x32_to_u64(reward_x32, mint_decimals as u32);
+            let reward_10 = convert_x32_to_u64(reward_x32, mint_decimals);
             Ok(reward_10)
         } else {
             return Err(SureError::VoteNotRevealed.into());
@@ -245,6 +283,8 @@ pub mod vote_account_proto {
         pub vote_power: u32, // 8  bytes
 
         pub revealed_vote: bool, // 1 bytes
+
+        pub locked: bool,
     }
     impl VoteAccountProto {
         pub fn initialize() -> Self {
@@ -256,6 +296,7 @@ pub mod vote_account_proto {
                 earned_rewards: 0,
                 vote_power: 0,
                 revealed_vote: false,
+                locked: false,
             }
         }
 
@@ -292,6 +333,7 @@ pub mod vote_account_proto {
                 revealed_vote: self.revealed_vote,
                 owner: Pubkey::default(),
                 proposal: Pubkey::default(),
+                locked: self.locked,
             }
         }
     }

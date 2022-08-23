@@ -3,14 +3,14 @@ use std::ops::{BitAnd, BitOr, Div, Mul};
 /// Convert from Q64.64 -> Q64
 ///
 /// TODO: move to common lib
-pub fn convert_x64_to_u64(reward: u128, decimals: u32) -> u64 {
+pub fn convert_x64_to_u64(reward: u128, decimals: u8) -> u64 {
     let reward_f = convert_q64_to_f64(reward);
-    reward_f.mul(10_u64.pow(decimals) as f64).floor() as u64
+    reward_f.mul(10_u64.pow(decimals as u32) as f64).floor() as u64
 }
 
-pub fn convert_x32_to_u64(reward: u64, decimals: u32) -> u64 {
+pub fn convert_x32_to_u64(reward: u64, decimals: u8) -> u64 {
     let reward_f = convert_ix32_f64(reward as i64);
-    reward_f.mul(10_u64.pow(decimals) as f64).floor() as u64
+    reward_f.mul(10_u64.pow(decimals as u32) as f64).floor() as u64
 }
 
 pub fn convert_q64_to_f64(num: u128) -> f64 {
@@ -82,7 +82,7 @@ pub mod test_convert_binary_representation {
             // Q64.64
             reward_x64: u128,
             // Q32.0
-            decimals: u32,
+            decimals: u8,
             expected_res: u64,
         }
 
