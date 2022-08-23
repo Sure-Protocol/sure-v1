@@ -1,5 +1,6 @@
 import * as anchor from '@project-serum/anchor';
-import { oracle } from '../idls/oracle.json';
+import { OracleIDL, OracleJSON } from '../../idls/oracle';
+import { SURE_ADDRESSES } from './constants';
 import { Proposal } from './proposal';
 
 // checkpoint : generate oracle idl and use it in sdk
@@ -12,10 +13,18 @@ export class Provider {
 }
 
 export class SureOracleSDK {
-	constructor(readonly provider: Provider, readonly Oracle: anchor.Idl) {}
+	constructor(
+		readonly provider: Provider,
+		readonly Oracle: anchor.Program<OracleIDL>
+	) {}
 
 	static init({ provider }: { provider: Provider }): SureOracleSDK {
-		return new SureOracleSDK(provider, oracle);
+		const oracleProgram = new anchor.Program<OracleIDL>(
+			OracleJSON,
+			SURE_ADDRESSES.Oracle,
+			provider
+		);
+		return new SureOracleSDK(provider, oracleProgram);
 	}
 
 	proposal(): Proposal {

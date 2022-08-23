@@ -32,7 +32,7 @@
 		"postversionup:major": "npm run commit-version",
 		"commit-version": "git add . && git commit -m \"chore(release): publish `node -p 'require(\"./lerna.json\").version'`\"",
 		"lerna:bootstrap": "lerna bootstrap",
-		"idl:generate": "./scripts/generate_idl.sh oracle",
+		"idl:generate": "./scripts/generate_idl.sh oracle && ./scripts/generate_idl_types.sh",
 		"dev": "lerna run dev",
 		"build": "lerna run build",
 		"init:sure": "lerna run sure:init",
