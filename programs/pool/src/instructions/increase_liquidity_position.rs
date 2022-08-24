@@ -1,8 +1,6 @@
-use crate::{
-    seeds::*,
-    states::{owner::ProtocolOwner, pool::Pool},
-    LiquidityPosition,
-};
+use crate::states::pool::Pool;
+use crate::states::*;
+use crate::utils::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 

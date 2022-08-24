@@ -3,7 +3,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::{
     states::{Proposal, VoteAccount},
-    utils::token,
+    utils::tokenTx,
 };
 
 #[derive(Accounts)]
@@ -53,7 +53,7 @@ pub fn handler(ctx: Context<CollectVoteReward>) -> Result<()> {
     // get the user vote reward
     let reward = vote_account.calculate_token_reward_at_time(proposal, mint_decimals, time)?;
 
-    token::withdraw_from_vault(
+    tokenTx::withdraw_from_vault(
         proposal,
         &ctx.accounts.proposal_vault,
         &ctx.accounts.voter_account,

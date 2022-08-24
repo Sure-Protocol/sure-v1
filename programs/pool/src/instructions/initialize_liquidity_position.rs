@@ -1,7 +1,8 @@
-use crate::seeds::*;
 use crate::states::liquidity::*;
 use crate::states::pool::*;
 use crate::utils::SURE_NFT_UPDATE_AUTH;
+use crate::utils::*;
+use anchor_lang::prelude::*;
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,

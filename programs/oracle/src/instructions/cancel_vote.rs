@@ -6,7 +6,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::{
     states::{Proposal, VoteAccount},
-    utils::token,
+    utils::tokenTx,
 };
 
 #[derive(Accounts)]
@@ -63,7 +63,7 @@ pub fn handler(ctx: Context<CancelVote>) -> Result<()> {
     proposal.cancel_vote_at_time(vote_account, time)?;
 
     // refund
-    token::withdraw_from_vault(
+    tokenTx::withdraw_from_vault(
         proposal,
         &ctx.accounts.proposal_vault,
         &ctx.accounts.voter_account,

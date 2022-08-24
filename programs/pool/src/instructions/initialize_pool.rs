@@ -1,7 +1,6 @@
 use crate::states::fee_package::FeePackage;
-use crate::states::owner::*;
 use crate::states::pool::*;
-use crate::states::seeds::*;
+use crate::utils::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::Token;
 use anchor_spl::{token::Mint, token::TokenAccount};
@@ -90,7 +89,7 @@ pub fn handler(ctx: Context<InitializePool>, name: String, tick_spacing: u16) ->
     let pool = &mut ctx.accounts.pool;
     pool.initialize(
         *ctx.bumps.get("pool").unwrap(),
-        name,
+        name.clone(),
         ctx.accounts.creator.key(),
         tick_spacing,
         &ctx.accounts.fee_package,

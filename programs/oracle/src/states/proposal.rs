@@ -6,7 +6,6 @@ use std::{
 use crate::{
     factory::{calculate_stake, calculate_stake_x32},
     instructions::validate_stake,
-    states::VoteInstruction,
     utils::{uint::U256, *},
 };
 
@@ -34,73 +33,66 @@ impl Default for ProposalStatus {
         Self::Proposed
     }
 }
-
 #[account]
 pub struct Proposal {
     /// bump for verification
     pub bump: u8, // 1 byte
-    pub bump_array: [u8; 1],
+    pub bump_array: [u8; 1], // 1 byte
     /// name of vote
     pub name: String, // 4 + 64 bytes
     /// description of vote
     pub description: String, // 4 + 200 bytes
     /// Proposed result
-    pub proposed_result: i64,
+    pub proposed_result: i64, // 8
     /// user who proposed the vote
     pub proposer: Pubkey, // 32 bytes
 
-    /// Token mint to distribute rewards
-    pub token_mint_reward: Pubkey,
-
     /// amount staked by propose Q32.32
-    pub proposed_staked: u64, // 16 bytes
+    pub proposed_staked: u64, // 8 bytes
 
     /// vault for storing stake and votes
     pub vault: Pubkey, // 32 bytes
 
     /// % of ve tokens needed to conclude
     /// represented as basis points 1% = 100bp
-    pub required_votes: u64,
+    pub required_votes: u64, // 8
 
     /// Current votes given in basis points
     /// 1 vote = 1 veToken@
     /// Q64.0
-    pub votes: u64,
-    pub revealed_votes: u64,
+    pub votes: u64, // 8
+    pub revealed_votes: u64, // 8
 
     // Q64.0
-    pub running_sum_weighted_vote: i64,
+    pub running_sum_weighted_vote: i64, // 8
     // Q64.0
-    pub running_weight: u64,
+    pub running_weight: u64, // 8
 
     /// Start of vote
-    pub vote_start_at: i64,
+    pub vote_start_at: i64, // 8
     /// Blind vote deadline
-    pub vote_end_at: i64,
+    pub vote_end_at: i64, // 8
     /// start reveal
-    pub vote_end_reveal_at: i64,
+    pub vote_end_reveal_at: i64, // 8
 
     /// reward earned by propsing vote
     /// Q64.64
-    pub earned_rewards: u128,
+    pub earned_rewards: u128, // 8
 
     /// Scale parameter in exp(L)
     /// Q16.16
-    pub scale_parameter: u32,
+    pub scale_parameter: u32, // 8
 
-    pub scale_parameter_calculated: bool,
+    pub scale_parameter_calculated: bool, // 1
 
     /// when the vote is finished and
     /// users can reap rewards
-    pub locked: bool,
+    pub locked: bool, // 1
 
-    pub vote_factor_sum: u64,
-    pub distribution_sum: u128,
+    pub vote_factor_sum: u64,   // 8
+    pub distribution_sum: u128, // 16
 
-    pub consensus: i64,
-
-    /// Instruction to be exectued if passed
-    pub instructions: [VoteInstruction; 32],
+    pub consensus: i64, // 8
 }
 
 #[event]
@@ -119,7 +111,6 @@ impl Default for Proposal {
             description: "test descr".to_string(),
             proposed_result: 0,
             proposer: Pubkey::default(),
-            token_mint_reward: Pubkey::default(),
             proposed_staked: 0,
             vault: Pubkey::default(),
             required_votes: 100_000,
@@ -137,7 +128,6 @@ impl Default for Proposal {
             distribution_sum: 0,
             vote_factor_sum: 0,
             consensus: 0,
-            instructions: [VoteInstruction::default(); 32],
         }
     }
 }
@@ -145,7 +135,8 @@ impl Default for Proposal {
 pub struct FinalizeVoteResult {}
 
 impl Proposal {
-    pub const SPACE: usize = 1 + 1 + 4 + 64 + 4 + 200 + 32 + 16 + 32;
+    pub const SPACE: usize =
+        1 + 1 + 4 + 64 + 4 + 200 + 8 + 32 + 8 + 32 + 10 * 8 + 1 + 1 + 8 + 16 + 8;
 
     pub fn seeds(&self) -> [&[u8]; 3] {
         [
@@ -162,7 +153,6 @@ impl Proposal {
         description: String,
         proposer: &Pubkey,
         proposed_staked: u64,
-        token_mint: &Pubkey,
         token_supply: u64,
         vault: &Pubkey,
         end_time_ts: Option<i64>,
@@ -178,10 +168,9 @@ impl Proposal {
         self.proposer = *proposer;
 
         // convert to Q32.32
-        let proposed_stake_proto = (proposed_staked as f64).div(10_u64.pow(decimals as u32) as f64);
-        self.proposed_staked = (proposed_stake_proto.floor() as u64) << 32; // Q32.32
+        let proposed_stake_proto = (proposed_staked).div(10_u64.pow(decimals as u32));
+        self.proposed_staked = (proposed_stake_proto as u64) << 32; // Q32.32
         self.vault = *vault;
-        self.token_mint_reward = *token_mint;
 
         // set end of
         let current_time = Clock::get()?.unix_timestamp;
@@ -410,9 +399,6 @@ impl Proposal {
             // calculate scale parameter
             self.update_scale_parameter(revealed_votes)?;
             self.scale_parameter_calculated = true;
-
-            let vote_instruction = self.instructions[0];
-            vote_instruction.invoke_proposal()?;
         } else {
             return Err(SureError::RevealPeriodNotActive.into());
         }
@@ -429,8 +415,6 @@ impl Proposal {
             self.earned_rewards = rewards;
 
             // Initiate instruction
-            let vote_instruction = self.instructions[0];
-            vote_instruction.invoke_proposal()?;
             return Ok(rewards);
         }
 
@@ -702,7 +686,6 @@ pub mod test_proposal_proto {
                 description: self.description,
                 proposer: Pubkey::default(),
                 proposed_result: self.proposed_result,
-                token_mint_reward: Pubkey::default(),
                 proposed_staked: self.proposed_staked,
                 vault: Pubkey::default(),
                 required_votes: self.required_votes,
@@ -720,7 +703,6 @@ pub mod test_proposal_proto {
                 consensus: self.consensus,
                 distribution_sum: self.distribution_sum,
                 vote_factor_sum: self.vote_factor_sum,
-                instructions: [VoteInstruction::default(); 32],
             }
         }
     }
@@ -747,7 +729,6 @@ pub mod test_propose_vote {
             "protocol lost 25%".to_string(),
             &proposer,
             stake,
-            &Pubkey::default(),
             100_000_000_000,
             &Pubkey::default(),
             Some(end_time_ts),

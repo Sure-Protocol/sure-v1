@@ -35,7 +35,7 @@ impl Default for RevealedVoteArray {
 }
 
 impl RevealedVoteArray {
-    pub const SPACE: usize = 32 + 8 * NUM_VOTES_IN_ARRAY_USIZE + 2;
+    pub const SPACE: usize = 1 + 32 + 8 * NUM_VOTES_IN_ARRAY_USIZE + 2;
 
     pub fn initialize(&mut self, proposal: Pubkey, bump: u8) {
         self.bump = bump;

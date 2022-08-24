@@ -5,14 +5,16 @@ use std::ops::{BitAnd, BitOr, Div, Mul};
 /// TODO: move to common lib
 pub fn convert_x64_to_u64(reward: u128, decimals: u8) -> u64 {
     let reward_f = convert_q64_to_f64(reward);
-    reward_f.mul(10_u64.pow(decimals as u32) as f64).floor() as u64
+    reward_f.mul(10_u64.pow(decimals as u32) as f64) as u64
 }
 
+/// Convert Q32.32 -> Q64 as 10^decimals
 pub fn convert_x32_to_u64(reward: u64, decimals: u8) -> u64 {
     let reward_f = convert_ix32_f64(reward as i64);
-    reward_f.mul(10_u64.pow(decimals as u32) as f64).floor() as u64
+    reward_f.mul(10_u64.pow(decimals as u32) as f64) as u64
 }
 
+/// Q64.64 -> f64
 pub fn convert_q64_to_f64(num: u128) -> f64 {
     let fractional_part = num.bitand(u64::MAX as u128) as u128;
     let integer_part = num.bitor(u64::MAX as u128) as u128;
@@ -23,6 +25,19 @@ pub fn convert_q64_to_f64(num: u128) -> f64 {
     let integer = integer_part >> 64;
     (integer as f64) + fraction
 }
+
+/// Q64.64 -> f64
+pub fn convert_q64_to_u64(num: u128) -> u64 {
+    // Q64.64 _> Q0.64
+    let fractional_part = num.bitand(u64::MAX as u128) as u64;
+    // Q64.64 -> Q64.0
+    let integer_part = num.bitor(u64::MAX as u128) as u128;
+
+    let fraction = (fractional_part).div(2_u64.pow(32)).div(2_u64.pow(32));
+    let integer = (integer_part >> 64) as u64;
+    (integer) + (fraction)
+}
+
 /// Convert a f64 to Q64.64
 pub fn convert_f64_q64(float: f64) -> u128 {
     float

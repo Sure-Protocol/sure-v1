@@ -1,11 +1,9 @@
 use std::borrow::Borrow;
 
+use crate::states::coverage::CoveragePosition;
 use crate::states::pool::Pool;
 use crate::states::tick_array::{TickArray, TickArrayPool};
 use crate::utils::*;
-use crate::states::{
-    CoveragePosition,
-};
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount, ID};
 

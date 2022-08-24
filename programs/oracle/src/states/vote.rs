@@ -94,9 +94,12 @@ impl VoteAccount {
         self.vote_hash = *vote_hash;
 
         // f64
-        let vote_power_proto: f64 = (vote_power as f64).div(10_u64.pow(decimals as u32) as f64);
+        let vote_power_proto = (vote_power).div(10_u64.pow(decimals as u32));
+        if vote_power_proto > u32::MAX as u64 {
+            return Err(SureError::OverflowU32.into());
+        }
         // convert to Q32.0
-        let vote_power = vote_power_proto.floor() as u32;
+        let vote_power = vote_power_proto as u32;
         self.vote_power = vote_power;
         let stake = calculate_stake((vote_power as u64) << 32, decimals);
         self.vote = 0;
@@ -111,16 +114,19 @@ impl VoteAccount {
 
     /// Returns vote_power Q32.0
     /// NOTE: consider to be external
-    pub fn calculate_vote_power_x32_from_tokens(amount: u64, decimals: u32) -> u32 {
-        let vote_power_proto = (amount as f64).div(10_u64.pow(decimals) as f64);
-        vote_power_proto.floor() as u32
+    pub fn calculate_vote_power_x32_from_tokens(amount: u64, decimals: u32) -> Result<u32> {
+        let vote_power_proto = amount.div(10_u64.pow(decimals));
+        if vote_power_proto > u32::MAX as u64 {
+            return Err(SureError::OverflowU32.into());
+        }
+        Ok(vote_power_proto as u32)
     }
 
     /// Returns vote_power Q32.32
     /// NOTE: consider to be external
     pub fn calculate_vote_power_x64_from_tokens(amount: u64, decimals: u32) -> u64 {
-        let vote_power_proto = (amount as f64).div(10_u64.pow(decimals) as f64);
-        (vote_power_proto.floor() as u64) << 32
+        let vote_power_proto = (amount).div(10_u64.pow(decimals));
+        vote_power_proto << 32
     }
 
     pub fn update_vote_at_time(
@@ -301,7 +307,8 @@ pub mod vote_account_proto {
         }
 
         pub fn set_vote_power(mut self, amount: u64, decimals: u32) -> Self {
-            self.vote_power = VoteAccount::calculate_vote_power_x32_from_tokens(amount, decimals);
+            self.vote_power =
+                VoteAccount::calculate_vote_power_x32_from_tokens(amount, decimals).unwrap();
             self
         }
 

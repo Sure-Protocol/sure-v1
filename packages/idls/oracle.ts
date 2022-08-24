@@ -50,13 +50,12 @@ export type OracleIDL = {
 							{
 								kind: 'const';
 								type: 'string';
-								value: 'sure-oracle';
+								value: 'sure-oracle-reveal-array';
 							},
 							{
-								kind: 'account';
-								type: 'publicKey';
-								account: 'Proposal';
-								path: 'proposal';
+								kind: 'arg';
+								type: 'string';
+								path: 'name';
 							}
 						];
 					};
@@ -75,12 +74,6 @@ export type OracleIDL = {
 					name: 'proposalVault';
 					isMut: true;
 					isSigner: false;
-				},
-				{
-					name: 'tokenRewardMint';
-					isMut: true;
-					isSigner: false;
-					docs: ['Token minted to represent rewards'];
 					pda: {
 						seeds: [
 							{
@@ -89,9 +82,10 @@ export type OracleIDL = {
 								value: 'sure-oracle';
 							},
 							{
-								kind: 'arg';
-								type: 'string';
-								path: 'name';
+								kind: 'account';
+								type: 'publicKey';
+								account: 'Mint';
+								path: 'proposal_vault_mint';
 							}
 						];
 					};
@@ -646,11 +640,6 @@ export type OracleIDL = {
 						type: 'publicKey';
 					},
 					{
-						name: 'tokenMintReward';
-						docs: ['Token mint to distribute rewards'];
-						type: 'publicKey';
-					},
-					{
 						name: 'proposedStaked';
 						docs: ['amount staked by propose Q32.32'];
 						type: 'u64';
@@ -734,18 +723,6 @@ export type OracleIDL = {
 					{
 						name: 'consensus';
 						type: 'i64';
-					},
-					{
-						name: 'instructions';
-						docs: ['Instruction to be exectued if passed'];
-						type: {
-							array: [
-								{
-									defined: 'VoteInstruction';
-								},
-								32
-							];
-						};
 					}
 				];
 			};
@@ -773,56 +750,6 @@ export type OracleIDL = {
 					{
 						name: 'lastIndex';
 						type: 'i16';
-					}
-				];
-			};
-		},
-		{
-			name: 'VoteInstruction';
-			docs: ['Invoked if a vote is successful'];
-			type: {
-				kind: 'struct';
-				fields: [
-					{
-						name: 'programId';
-						type: 'publicKey';
-					},
-					{
-						name: 'keys';
-						type: {
-							array: [
-								{
-									defined: 'AccountKeys';
-								},
-								24
-							];
-						};
-					},
-					{
-						name: 'data';
-						type: {
-							array: ['u8', 24];
-						};
-					}
-				];
-			};
-		},
-		{
-			name: 'AccountKeys';
-			type: {
-				kind: 'struct';
-				fields: [
-					{
-						name: 'accountPubkey';
-						type: 'publicKey';
-					},
-					{
-						name: 'isSigner';
-						type: 'bool';
-					},
-					{
-						name: 'isWritable';
-						type: 'bool';
 					}
 				];
 			};
@@ -1103,13 +1030,12 @@ export const OracleJSON: OracleIDL = {
 							{
 								kind: 'const',
 								type: 'string',
-								value: 'sure-oracle',
+								value: 'sure-oracle-reveal-array',
 							},
 							{
-								kind: 'account',
-								type: 'publicKey',
-								account: 'Proposal',
-								path: 'proposal',
+								kind: 'arg',
+								type: 'string',
+								path: 'name',
 							},
 						],
 					},
@@ -1128,12 +1054,6 @@ export const OracleJSON: OracleIDL = {
 					name: 'proposalVault',
 					isMut: true,
 					isSigner: false,
-				},
-				{
-					name: 'tokenRewardMint',
-					isMut: true,
-					isSigner: false,
-					docs: ['Token minted to represent rewards'],
 					pda: {
 						seeds: [
 							{
@@ -1142,9 +1062,10 @@ export const OracleJSON: OracleIDL = {
 								value: 'sure-oracle',
 							},
 							{
-								kind: 'arg',
-								type: 'string',
-								path: 'name',
+								kind: 'account',
+								type: 'publicKey',
+								account: 'Mint',
+								path: 'proposal_vault_mint',
 							},
 						],
 					},
@@ -1699,11 +1620,6 @@ export const OracleJSON: OracleIDL = {
 						type: 'publicKey',
 					},
 					{
-						name: 'tokenMintReward',
-						docs: ['Token mint to distribute rewards'],
-						type: 'publicKey',
-					},
-					{
 						name: 'proposedStaked',
 						docs: ['amount staked by propose Q32.32'],
 						type: 'u64',
@@ -1788,18 +1704,6 @@ export const OracleJSON: OracleIDL = {
 						name: 'consensus',
 						type: 'i64',
 					},
-					{
-						name: 'instructions',
-						docs: ['Instruction to be exectued if passed'],
-						type: {
-							array: [
-								{
-									defined: 'VoteInstruction',
-								},
-								32,
-							],
-						},
-					},
 				],
 			},
 		},
@@ -1826,56 +1730,6 @@ export const OracleJSON: OracleIDL = {
 					{
 						name: 'lastIndex',
 						type: 'i16',
-					},
-				],
-			},
-		},
-		{
-			name: 'VoteInstruction',
-			docs: ['Invoked if a vote is successful'],
-			type: {
-				kind: 'struct',
-				fields: [
-					{
-						name: 'programId',
-						type: 'publicKey',
-					},
-					{
-						name: 'keys',
-						type: {
-							array: [
-								{
-									defined: 'AccountKeys',
-								},
-								24,
-							],
-						},
-					},
-					{
-						name: 'data',
-						type: {
-							array: ['u8', 24],
-						},
-					},
-				],
-			},
-		},
-		{
-			name: 'AccountKeys',
-			type: {
-				kind: 'struct',
-				fields: [
-					{
-						name: 'accountPubkey',
-						type: 'publicKey',
-					},
-					{
-						name: 'isSigner',
-						type: 'bool',
-					},
-					{
-						name: 'isWritable',
-						type: 'bool',
 					},
 				],
 			},

@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, solana_program::clock};
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{states::Proposal, utils::token};
+use crate::{states::Proposal, utils::tokenTx};
 
 #[derive(Accounts)]
 pub struct CollectProposerReward<'info> {
@@ -36,7 +36,7 @@ pub fn handler(ctx: Context<CollectProposerReward>) -> Result<()> {
     let reward = proposal.payout_earned_rewards_at_time(decimals, time)?;
 
     // payout
-    token::withdraw_from_vault(
+    tokenTx::withdraw_from_vault(
         &proposal,
         &ctx.accounts.proposal_vault,
         &ctx.accounts.proposer_account,

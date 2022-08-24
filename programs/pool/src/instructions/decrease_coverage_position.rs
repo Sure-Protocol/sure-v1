@@ -1,8 +1,6 @@
 use std::borrow::Borrow;
 
 use super::increase_coverage_position::*;
-use crate::common::{account, token_tx::deposit_into_vault};
-use crate::states::tick_v2::TickArrayPool;
 use anchor_lang::prelude::*;
 
 /// Decrease Coverage Position handler

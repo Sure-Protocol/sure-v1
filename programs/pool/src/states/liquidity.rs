@@ -2,12 +2,8 @@
 ///!
 use anchor_lang::prelude::*;
 
-use crate::states::{
-    bitmap::BitMap,
-    owner::ProtocolOwner,
-    seeds::{SURE_LIQUIDITY_POSITION, SURE_NFT_MINT_SEED, SURE_TOKEN_ACCOUNT_SEED},
-    tick::Tick,
-};
+use crate::states::*;
+use crate::utils::*;
 
 use anchor_spl::{
     associated_token::AssociatedToken,

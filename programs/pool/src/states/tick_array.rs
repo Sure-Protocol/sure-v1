@@ -4,7 +4,7 @@ use super::*;
 use crate::pool::*;
 use crate::utils::product::ProductType;
 use crate::utils::tick_math::{get_sqrt_ratio_at_tick, MAX_TICK_INDEX, MIN_TICK_INDEX};
-use crate::SureError;
+use crate::utils::*;
 
 use std::cell::RefMut;
 use std::mem::size_of;

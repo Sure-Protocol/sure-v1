@@ -3,14 +3,8 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 
-use crate::states::{
-    seeds::{
-        SURE_INSURANCE_CONTRACT, SURE_INSURANCE_CONTRACTS, SURE_INSURANCE_CONTRACTS_BITMAP,
-        SURE_INSURANCE_CONTRACTS_INFO,
-    },
-    tick::Tick,
-};
-
+use crate::states::*;
+use crate::utils::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use vipers::{assert_is_ata, prelude::*};

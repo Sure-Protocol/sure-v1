@@ -1,5 +1,5 @@
-use crate::context::SURE_PREMIUM_POOL_SEED;
 use crate::states::fee_package::*;
+use crate::utils::*;
 use anchor_lang::prelude::*;
 
 /// Account describing the pool manager
