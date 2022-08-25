@@ -9,7 +9,7 @@ import {
 	Transaction,
 	TransactionInstruction,
 } from '@solana/web3.js';
-import { OracleIDL, OracleJSON } from '../../idls/oracle';
+import * as oracleIDL from '../../idls/oracle';
 import {
 	SURE_ADDRESSES,
 	SURE_ORACLE_REVEAL_ARRAY_SEED,
@@ -68,9 +68,9 @@ export const findProposalVault = async (
 };
 
 export class Proposal {
-	readonly program: anchor.Program<OracleIDL>;
+	readonly program: anchor.Program<oracleIDL.Oracle>;
 	constructor(readonly sdk: SureOracleSDK) {
-		this.program = sdk.oracle;
+		this.program = sdk.program;
 	}
 
 	/**

@@ -54,6 +54,10 @@ pub enum SureError {
 
     #[msg("Too late to cancel vote")]
     FailedToCancelVote,
+
+    // account constraints
+    #[msg("The owner of the vote account is not the signer")]
+    InvalidOwnerOfVoteAccount,
 }
 
 impl From<TryFromIntError> for SureError {

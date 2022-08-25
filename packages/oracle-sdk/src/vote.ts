@@ -3,8 +3,12 @@ import { SHA3 } from 'sha3';
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 import * as solana_contrib from '@saberhq/solana-contrib';
 import * as token_utils from '@saberhq/token-utils';
-import { PublicKey, TransactionInstruction } from '@solana/web3.js';
-import { OracleIDL } from '../../idls/oracle';
+import {
+	PublicKey,
+	Transaction,
+	TransactionInstruction,
+} from '@solana/web3.js';
+import * as oracleIDL from '../../idls/oracle';
 import { randomBytes } from 'crypto';
 import {
 	SURE_ADDRESSES,
@@ -16,6 +20,7 @@ import { OracleProgram } from './program';
 import { findProposalVault } from './proposal';
 import { Provider, SureOracleSDK } from './sdk';
 import { validateKeys } from './utils';
+import { TransactionEnvelope } from '@saberhq/solana-contrib';
 
 type SubmitVote = {
 	vote: anchor.BN;
@@ -25,34 +30,51 @@ type SubmitVote = {
 	proposal: PublicKey;
 };
 
-export const findVoteAccount = async ({
-	proposal,
-	voter,
-}: {
+type UpdateVote = {
+	vote: anchor.BN;
 	proposal: PublicKey;
-	voter: PublicKey;
-}) => {
-	return await findProgramAddressSync(
-		[SURE_ORACLE_VOTE_SEED, proposal.toBuffer(), voter.toBuffer()],
-		SURE_ADDRESSES.Oracle
-	);
 };
 
-export const createVoteHash = ({ vote }: { vote: anchor.BN }): Buffer => {
+type VoteTransactionEnvelope = {
+	salt: Buffer;
+	transactionEnvelope: TransactionEnvelope;
+};
+
+export const createVoteHash = ({
+	vote,
+	salt,
+}: {
+	vote: anchor.BN;
+	salt: Buffer;
+}): Buffer => {
 	const hash = new SHA3(256);
-	const salt = randomBytes(16);
 	const voteCandidate = vote.toString() + salt.toString('utf8');
 	hash.update(voteCandidate);
 	return hash.digest();
 };
 
+export const revealVote = ({
+	expectedVoteHash,
+	vote,
+	salt,
+}: {
+	expectedVoteHash: number[];
+	vote: anchor.BN;
+	salt: Buffer;
+}): Boolean => {
+	const expectedVoteHashB = Buffer.from(expectedVoteHash);
+	const voteHash = createVoteHash({ vote, salt });
+	return voteHash.equals(expectedVoteHashB);
+};
+
 export class Vote {
-	readonly program: anchor.Program<OracleIDL>;
+	readonly program: anchor.Program<oracleIDL.Oracle>;
 	constructor(readonly sdk: SureOracleSDK) {
-		this.program = sdk.oracle;
+		this.program = sdk.program;
 	}
 
 	/**
+	 * submit a vote to a proposal
 	 *
 	 * @param mint - mint of proposal vault
 	 * @param proposal - the proposal to vote on
@@ -66,7 +88,7 @@ export class Vote {
 		proposal,
 		locker,
 		userEscrow,
-	}: SubmitVote): Promise<solana_contrib.TransactionEnvelope> {
+	}: SubmitVote): Promise<VoteTransactionEnvelope> {
 		const tokenMint = mint ?? SURE_TOKEN;
 		validateKeys([
 			{ v: tokenMint, n: 'tokenMint' },
@@ -75,10 +97,8 @@ export class Vote {
 			{ v: userEscrow, n: 'escrow' },
 		]);
 
-		const voteHash = createVoteHash({ vote });
-		console.log('byte length: ', voteHash.byteLength);
-		console.log('', voteHash.toLocaleString().length);
-		console.log('', voteHash.toString().length);
+		const salt = randomBytes(16);
+		const voteHash = createVoteHash({ vote, salt });
 		let ixs: TransactionInstruction[] = [];
 		const createATA = await token_utils.getOrCreateATA({
 			provider: this.sdk.provider,
@@ -99,6 +119,46 @@ export class Vote {
 				})
 				.instruction()
 		);
-		return this.sdk.provider.newTX(ixs);
+		return {
+			salt: salt,
+			transactionEnvelope: this.sdk.provider.newTX(ixs),
+		};
+	}
+
+	/**
+	 * update vote
+	 *
+	 * @param mint - mint of proposal vault
+	 * @param proposal - the proposal to vote on
+	 * @returns
+	 */
+	async updateVote({
+		vote,
+		proposal,
+	}: UpdateVote): Promise<VoteTransactionEnvelope> {
+		validateKeys([{ v: proposal, n: 'proposal' }]);
+		const salt = randomBytes(16);
+		const voteHash = createVoteHash({ vote, salt });
+
+		const voter = this.sdk.provider.wallet.publicKey;
+
+		const [voteAccount] = await this.sdk.pda.findVoteAccount({
+			proposal,
+			voter,
+		});
+		let ixs: TransactionInstruction[] = [];
+		ixs.push(
+			await this.program.methods
+				.updateVote(voteHash)
+				.accounts({
+					proposal,
+					voteAccount,
+				})
+				.instruction()
+		);
+		return {
+			salt: salt,
+			transactionEnvelope: this.sdk.provider.newTX(ixs),
+		};
 	}
 }

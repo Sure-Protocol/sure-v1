@@ -1,8 +1,8 @@
 import * as anchor_contrib from '@saberhq/anchor-contrib';
-import { OracleIDL } from '../../idls/oracle';
+import * as oracle from '../../idls/oracle';
 
 export type OracleTypes = anchor_contrib.AnchorTypes<
-	OracleIDL,
+	oracle.Oracle,
 	{
 		proposal: ProposalType;
 		revealedVoteArray: RevealedVoteArray;
@@ -11,7 +11,7 @@ export type OracleTypes = anchor_contrib.AnchorTypes<
 >;
 
 type Accounts = OracleTypes['Accounts'];
-export type ProposalType = Accounts['Proposal'];
-export type RevealedVoteArray = Accounts['RevealedVoteArray'];
-export type VoteAccount = Accounts['VoteAccount'];
+export type ProposalType = Accounts['proposal'];
+export type RevealedVoteArray = Accounts['revealedVoteArray'];
+export type VoteAccount = Accounts['voteAccount'];
 export type OracleProgram = OracleTypes['Program'];

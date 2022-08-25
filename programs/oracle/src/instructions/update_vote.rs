@@ -1,5 +1,5 @@
 use crate::states::{Proposal, VoteAccount};
-use crate::utils::SURE_ORACLE_VOTE_SEED;
+use crate::utils::{self, SureError, SURE_ORACLE_VOTE_SEED};
 use anchor_lang::{prelude::*, solana_program::clock};
 #[derive(Accounts)]
 pub struct UpdateVote<'info> {
@@ -19,7 +19,7 @@ pub struct UpdateVote<'info> {
             voter.key().as_ref(),
         ],
         bump = vote_account.load()?.bump,
-        constraint = *vote_account.to_account_info().owner == voter.key()
+        constraint = vote_account.load()?.owner == voter.key() @ SureError::InvalidOwnerOfVoteAccount
     )]
     pub vote_account: AccountLoader<'info, VoteAccount>,
 
@@ -34,16 +34,15 @@ pub struct UpdateVote<'info> {
 /// * ctx: UpdateVote
 /// * vote_hash: hash as string
 ///
-pub fn handler(ctx: Context<UpdateVote>, vote_hash: String) -> Result<()> {
+pub fn handler(ctx: Context<UpdateVote>, vote_hash: Vec<u8>) -> Result<()> {
     let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let proposal = ctx.accounts.proposal.as_ref();
     let time = clock::Clock::get()?.unix_timestamp;
-    msg!("vote_hash {}", vote_hash);
-    let vote_hash_bytes: &[u8; 32] = vote_hash.as_bytes().try_into().unwrap();
+    let vote_hash_bytes: [u8; 32] = vote_hash.try_into().unwrap();
 
     // check if user can update vote
     proposal.can_submit_vote(time)?;
 
-    vote_account.update_vote_at_time(proposal, vote_hash_bytes, time)?;
+    vote_account.update_vote_at_time(proposal, &vote_hash_bytes, time)?;
     Ok(())
 }

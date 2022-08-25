@@ -38,6 +38,7 @@
 		"commit-version": "git add . && git commit -m \"chore(release): publish `node -p 'require(\"./lerna.json\").version'`\"",
 		"lerna:bootstrap": "lerna bootstrap",
 		"idl:generate": "anchor build && ./scripts/generate_idl.sh oracle && ./scripts/generate_idl_types.sh",
+		"idl:build": "./scripts/build_and_move.sh oracle",
 		"dev": "lerna run dev",
 		"build": "lerna run build",
 		"init:sure": "lerna run sure:init",

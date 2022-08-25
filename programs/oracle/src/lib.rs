@@ -49,7 +49,7 @@ pub mod oracle {
     /// ### parameters
     /// * `ctx` - context
     /// * `vote_hash` - hash of vote with secret salt
-    pub fn update_vote(ctx: Context<UpdateVote>, vote_hash: String) -> Result<()> {
+    pub fn update_vote(ctx: Context<UpdateVote>, vote_hash: Vec<u8>) -> Result<()> {
         instructions::update_vote::handler(ctx, vote_hash)
     }
 

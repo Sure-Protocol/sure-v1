@@ -6,8 +6,12 @@ import * as token_utils from '@saberhq/token-utils';
 import * as web3 from '@solana/web3.js';
 import * as spl from '@solana/spl-token';
 import { Transaction } from '@solana/web3.js';
-import { OracleIDL } from '../packages/idls/oracle';
-import { Provider, SureOracleSDK } from '../packages/oracle-sdk/src';
+import {
+	createVoteHash,
+	Provider,
+	revealVote,
+	SureOracleSDK,
+} from '../packages/oracle-sdk/src';
 import {
 	createAssociatedTokenAccount,
 	transfer,
@@ -20,12 +24,10 @@ import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { createTestProposal } from './setup';
 import { TransactionError } from '@solana/web3.js';
 import { SendTransactionError } from '@solana/web3.js';
-
-const program = anchor.workspace.Oracle as anchor.Program<OracleIDL>;
+import { assert } from 'chai';
 
 describe('Test Sure Oracle', () => {
 	const provider = anchor.AnchorProvider.env();
-	const { wallet } = program.provider as anchor.AnchorProvider;
 	const { connection } = provider;
 	anchor.setProvider(provider);
 	// const anchorProvider = new anchor.AnchorProvider(
@@ -139,9 +141,7 @@ describe('Test Sure Oracle', () => {
 		});
 	it('Vote on proposal', async () => {
 		try {
-			const [proposal] = await SureOracleSDK.pda().findProposalAddress(
-				proposalName
-			);
+			const [proposal] = SureOracleSDK.pda().findProposalAddress(proposalName);
 			const lockerWrapperSDK = new tribeca.LockerWrapper(
 				tribecaSDK,
 				sureLocker,
@@ -157,7 +157,7 @@ describe('Test Sure Oracle', () => {
 
 			const [userEscrow] = await tribeca.findEscrowAddress(
 				sureLocker,
-				wallet.publicKey
+				provider.wallet.publicKey
 			);
 			const voteTx = await oracleSdk.vote().submitVote({
 				vote: new anchor.BN(4.2),
@@ -166,10 +166,42 @@ describe('Test Sure Oracle', () => {
 				locker: sureLocker,
 				userEscrow,
 			});
-			await voteTx.confirm();
+			await voteTx.transactionEnvelope.confirm();
 		} catch (e) {
 			const error = e as SendTransactionError;
 			console.log('error: ', error);
 		}
 	});
+	it('Update vote ', async () => {
+		try {
+			const [proposal] = SureOracleSDK.pda().findProposalAddress(proposalName);
+			const eggVote = new anchor.BN(4.3);
+
+			const voteTx = await oracleSdk.vote().updateVote({
+				vote: eggVote,
+				proposal,
+			});
+			const voteUpdateConfirm = await voteTx.transactionEnvelope.confirm();
+			const [voteAccountPDA] = await SureOracleSDK.pda().findVoteAccount({
+				proposal,
+				voter: provider.wallet.publicKey,
+			});
+			const voteAccount = await oracleSdk.program.account.voteAccount.fetch(
+				voteAccountPDA
+			);
+
+			// validate vote hash
+			const isCorrectVote = revealVote({
+				expectedVoteHash: voteAccount.voteHash,
+				vote: eggVote,
+				salt: voteTx.salt,
+			});
+			assert.equal(isCorrectVote, true, 'vote was not valid');
+		} catch (e) {
+			const error = e as SendTransactionError;
+			console.log(error);
+		}
+	});
+
+	it('');
 });
