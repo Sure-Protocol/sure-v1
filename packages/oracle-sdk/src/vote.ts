@@ -38,6 +38,12 @@ type CancelVote = {
 	voteAccount: PublicKey;
 };
 
+type RevealVote = {
+	voteAccount: PublicKey;
+	vote: anchor.BN;
+	salt: Buffer;
+};
+
 type VoteTransactionEnvelope = {
 	salt: Buffer;
 	transactionEnvelope: TransactionEnvelope;
@@ -168,8 +174,7 @@ export class Vote {
 	/**
 	 * cancel vote
 	 *
-	 * @param mint - mint of proposal vault
-	 * @param proposal - the proposal to vote on
+	 * @param voteAccout - the account used to vote with
 	 * @returns
 	 */
 	async cancelVote({ voteAccount }: CancelVote): Promise<TransactionEnvelope> {
@@ -196,6 +201,44 @@ export class Vote {
 					proposalVault,
 					proposalVaultMint: stakeMint,
 					proposal: voteAccountLoaded.proposal,
+					voteAccount,
+				})
+				.instruction()
+		);
+		return this.sdk.provider.newTX(ixs);
+	}
+
+	/**
+	 * cancel vote
+	 *
+	 * @param voteAccout - the account used to vote with
+	 * @returns
+	 */
+	async revealVote({
+		voteAccount,
+		vote,
+		salt,
+	}: RevealVote): Promise<TransactionEnvelope> {
+		validateKeys([{ v: voteAccount, n: 'voteAccount' }]);
+
+		console.log('voteAccount: ', voteAccount.toString());
+		const voteAccountLoaded = await this.program.account.voteAccount.fetch(
+			voteAccount
+		);
+		const proposal = voteAccountLoaded.proposal;
+
+		const [voteArray] = await this.sdk.pda.findRevealVoteArrayAddress({
+			proposal,
+		});
+		console.log('voteArray: ', voteArray);
+
+		let ixs: TransactionInstruction[] = [];
+		ixs.push(
+			await this.program.methods
+				.revealVote(salt.toString(), vote)
+				.accounts({
+					proposal,
+					revealVoteArray: voteArray,
 					voteAccount,
 				})
 				.instruction()

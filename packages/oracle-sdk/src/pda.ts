@@ -31,12 +31,13 @@ export class PDA {
 		);
 	}
 
-	findRevealVoteArrayAddress(proposal_name: string): [PublicKey, number] {
+	findRevealVoteArrayAddress({
+		proposal,
+	}: {
+		proposal: PublicKey;
+	}): [PublicKey, number] {
 		return findProgramAddressSync(
-			[
-				SURE_ORACLE_REVEAL_ARRAY_SEED,
-				anchor.utils.bytes.utf8.encode(proposal_name),
-			],
+			[SURE_ORACLE_REVEAL_ARRAY_SEED, proposal.toBuffer()],
 			SURE_ADDRESSES.Oracle
 		);
 	}

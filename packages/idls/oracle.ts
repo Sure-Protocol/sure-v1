@@ -53,9 +53,10 @@ export type Oracle = {
                 "value": "sure-oracle-reveal-array"
               },
               {
-                "kind": "arg",
-                "type": "string",
-                "path": "name"
+                "kind": "account",
+                "type": "publicKey",
+                "account": "Proposal",
+                "path": "proposal"
               }
             ]
           }
@@ -383,7 +384,7 @@ export type Oracle = {
               {
                 "kind": "const",
                 "type": "string",
-                "value": "sure-oracle"
+                "value": "sure-oracle-reveal-array"
               },
               {
                 "kind": "account",
@@ -1099,9 +1100,10 @@ export const IDL: Oracle = {
                 "value": "sure-oracle-reveal-array"
               },
               {
-                "kind": "arg",
-                "type": "string",
-                "path": "name"
+                "kind": "account",
+                "type": "publicKey",
+                "account": "Proposal",
+                "path": "proposal"
               }
             ]
           }
@@ -1429,7 +1431,7 @@ export const IDL: Oracle = {
               {
                 "kind": "const",
                 "type": "string",
-                "value": "sure-oracle"
+                "value": "sure-oracle-reveal-array"
               },
               {
                 "kind": "account",

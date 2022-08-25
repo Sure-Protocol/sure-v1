@@ -46,7 +46,7 @@ pub struct ProposeVote<'info> {
         payer = proposer,
         seeds = [
             SURE_ORACLE_REVEAL_ARRAY_SEED.as_bytes().as_ref(),
-            name.as_bytes().as_ref(),
+            proposal.key().as_ref(),
         ],
         bump,
         space = 8 + size_of::<RevealedVoteArray>()

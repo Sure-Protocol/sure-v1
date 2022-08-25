@@ -1,5 +1,5 @@
 use crate::states::{Proposal, RevealedVoteArray, VoteAccount};
-use crate::utils::{SURE_ORACLE_SEED, SURE_ORACLE_VOTE_SEED};
+use crate::utils::{SURE_ORACLE_REVEAL_ARRAY_SEED, SURE_ORACLE_SEED, SURE_ORACLE_VOTE_SEED};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::clock;
 
@@ -21,7 +21,7 @@ pub struct RevealVote<'info> {
     #[account(
         mut,
         seeds = [
-            SURE_ORACLE_SEED.as_bytes().as_ref(),
+            SURE_ORACLE_REVEAL_ARRAY_SEED.as_bytes().as_ref(),
             proposal.key().as_ref(),
         ],
         bump = reveal_vote_array.load()?.bump,
@@ -36,7 +36,7 @@ pub struct RevealVote<'info> {
             voter.key().as_ref(),
         ],
         bump = vote_account.load()?.bump,
-        constraint = *vote_account.to_account_info().owner == voter.key()
+        constraint = vote_account.load()?.owner == voter.key()
     )]
     pub vote_account: AccountLoader<'info, VoteAccount>,
 

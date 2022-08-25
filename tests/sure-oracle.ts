@@ -30,11 +30,7 @@ describe('Test Sure Oracle', () => {
 	const provider = anchor.AnchorProvider.env();
 	const { connection } = provider;
 	anchor.setProvider(provider);
-	// const anchorProvider = new anchor.AnchorProvider(
-	// 	connection,
-	// 	wallet,
-	// 	provider.opts
-	// );
+
 	const oracleProvider = solana_contrib.SolanaProvider.init({
 		connection,
 		wallet: provider.wallet,
@@ -51,6 +47,8 @@ describe('Test Sure Oracle', () => {
 	let proposalName: string;
 	let sureLocker: web3.PublicKey;
 	let governorKey: web3.PublicKey;
+	let eggVote: anchor.BN;
+	let salt: Buffer;
 	before(async () => {
 		proposalName = 'test 1';
 		// load up wallet
@@ -175,7 +173,7 @@ describe('Test Sure Oracle', () => {
 	it('Update vote ', async () => {
 		try {
 			const [proposal] = SureOracleSDK.pda().findProposalAddress(proposalName);
-			const eggVote = new anchor.BN(4.3);
+			eggVote = new anchor.BN(4.3);
 
 			const voteTx = await oracleSdk.vote().updateVote({
 				vote: eggVote,
@@ -196,6 +194,7 @@ describe('Test Sure Oracle', () => {
 				vote: eggVote,
 				salt: voteTx.salt,
 			});
+			salt = voteTx.salt;
 			assert.equal(isCorrectVote, true, 'vote was not valid');
 		} catch (e) {
 			const error = e as SendTransactionError;
@@ -209,7 +208,48 @@ describe('Test Sure Oracle', () => {
 				proposal,
 				voter: provider.wallet.publicKey,
 			});
-			oracleSdk.vote().cancelVote({ voteAccount: voteAccountPDA });
+			const cancelVoteEnvelope = await oracleSdk
+				.vote()
+				.cancelVote({ voteAccount: voteAccountPDA });
+			await cancelVoteEnvelope.confirm();
+		} catch (e) {
+			const error = e as SendTransactionError;
+			console.log(error);
+		}
+	});
+	it('Create and reveal vote', async () => {
+		try {
+			// create a new vote
+			const [proposal] = SureOracleSDK.pda().findProposalAddress(proposalName);
+			const [userEscrow] = await tribeca.findEscrowAddress(
+				sureLocker,
+				provider.wallet.publicKey
+			);
+			const voteTx = await oracleSdk.vote().submitVote({
+				vote: eggVote,
+				mint: mint,
+				proposal,
+				locker: sureLocker,
+				userEscrow,
+			});
+			await voteTx.transactionEnvelope.confirm();
+
+			const [voteAccountPDA] = await SureOracleSDK.pda().findVoteAccount({
+				proposal,
+				voter: provider.wallet.publicKey,
+			});
+			const revealVoteEnvelope = await oracleSdk.vote().revealVote({
+				voteAccount: voteAccountPDA,
+				vote: eggVote,
+				salt: voteTx.salt,
+			});
+			await revealVoteEnvelope.confirm();
+
+			// fetch vote
+			const revealedVote = await oracleSdk.program.account.voteAccount.fetch(
+				voteAccountPDA
+			);
+			console.log('revealedVote: ', revealedVote);
 		} catch (e) {
 			const error = e as SendTransactionError;
 			console.log(error);
