@@ -22,9 +22,9 @@ pub struct VoteAccount {
     pub bump: u8,            // 1 byte
     pub bump_array: [u8; 1], // 1 byte
 
-    pub proposal: Pubkey, // 32
-    pub owner: Pubkey,    // 32
-
+    pub proposal: Pubkey,   // 32
+    pub owner: Pubkey,      // 32
+    pub stake_mint: Pubkey, // 32
     // hash of vote "vote"+"salt"
     pub vote_hash: [u8; 32], // 32 bytes
 
@@ -56,6 +56,7 @@ impl Default for VoteAccount {
             bump_array: [0; 1],
             vote_hash: [0; 32],
             owner: Pubkey::default(),
+            stake_mint: Pubkey::default(),
             proposal: Pubkey::default(),
             vote: 0,
             vote_factor: 0,
@@ -68,7 +69,7 @@ impl Default for VoteAccount {
 }
 
 impl VoteAccount {
-    pub const SPACE: usize = 1 + 1 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1;
+    pub const SPACE: usize = 1 + 1 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1;
 
     pub fn seeds(&self) -> [&[u8]; 4] {
         [
@@ -85,6 +86,7 @@ impl VoteAccount {
         owner: &Pubkey,
         proposal: &Pubkey,
         vote_hash: &[u8; 32],
+        stake_mint: Pubkey,
         vote_power: u64,
         decimals: u8,
     ) -> Result<VoteAccountUpdate> {
@@ -101,6 +103,7 @@ impl VoteAccount {
         // convert to Q32.0
         let vote_power = vote_power_proto as u32;
         self.vote_power = vote_power;
+        self.stake_mint = stake_mint;
         let stake = calculate_stake((vote_power as u64) << 32, decimals);
         self.vote = 0;
         self.earned_rewards = 0;
@@ -335,6 +338,7 @@ pub mod vote_account_proto {
                 vote_hash: self.vote_hash,
                 vote: self.vote,
                 vote_factor: self.vote_factor,
+                stake_mint: Pubkey::default(),
                 earned_rewards: self.earned_rewards,
                 vote_power: self.vote_power,
                 revealed_vote: self.revealed_vote,
@@ -422,6 +426,7 @@ pub mod test_vote {
                     &Pubkey::default(),
                     &Pubkey::default(),
                     &vote_hash,
+                    Pubkey::default(),
                     test.vote_power,
                     test.decimals,
                 )
@@ -486,6 +491,7 @@ pub mod test_vote {
                     &Pubkey::default(),
                     &Pubkey::default(),
                     &vote_hash,
+                    Pubkey::default(),
                     test.vote_power,
                     test.decimals,
                 )
@@ -548,6 +554,7 @@ pub mod test_vote {
                     &Pubkey::default(),
                     &Pubkey::default(),
                     &vote_hash,
+                    Pubkey::default(),
                     test.vote_power,
                     test.decimals,
                 )
@@ -638,6 +645,7 @@ pub mod test_vote {
                     &Pubkey::default(),
                     &Pubkey::default(),
                     &vote_hash,
+                    Pubkey::default(),
                     test.vote_power,
                     test.decimals,
                 )

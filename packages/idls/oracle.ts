@@ -823,6 +823,10 @@ export type Oracle = {
             "type": "publicKey"
           },
           {
+            "name": "stakeMint",
+            "type": "publicKey"
+          },
+          {
             "name": "voteHash",
             "type": {
               "array": [
@@ -1862,6 +1866,10 @@ export const IDL: Oracle = {
           },
           {
             "name": "owner",
+            "type": "publicKey"
+          },
+          {
+            "name": "stakeMint",
             "type": "publicKey"
           },
           {

@@ -181,7 +181,7 @@ describe('Test Sure Oracle', () => {
 				vote: eggVote,
 				proposal,
 			});
-			const voteUpdateConfirm = await voteTx.transactionEnvelope.confirm();
+			await voteTx.transactionEnvelope.confirm();
 			const [voteAccountPDA] = await SureOracleSDK.pda().findVoteAccount({
 				proposal,
 				voter: provider.wallet.publicKey,
@@ -202,6 +202,17 @@ describe('Test Sure Oracle', () => {
 			console.log(error);
 		}
 	});
-
-	it('');
+	it('Cancel vote', async () => {
+		try {
+			const [proposal] = SureOracleSDK.pda().findProposalAddress(proposalName);
+			const [voteAccountPDA] = await SureOracleSDK.pda().findVoteAccount({
+				proposal,
+				voter: provider.wallet.publicKey,
+			});
+			oracleSdk.vote().cancelVote({ voteAccount: voteAccountPDA });
+		} catch (e) {
+			const error = e as SendTransactionError;
+			console.log(error);
+		}
+	});
 });

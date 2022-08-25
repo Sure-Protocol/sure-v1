@@ -17,7 +17,6 @@ import {
 	SURE_TOKEN,
 } from './constants';
 import { OracleProgram } from './program';
-import { findProposalVault } from './proposal';
 import { Provider, SureOracleSDK } from './sdk';
 import { validateKeys } from './utils';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
@@ -33,6 +32,10 @@ type SubmitVote = {
 type UpdateVote = {
 	vote: anchor.BN;
 	proposal: PublicKey;
+};
+
+type CancelVote = {
+	voteAccount: PublicKey;
 };
 
 type VoteTransactionEnvelope = {
@@ -104,7 +107,7 @@ export class Vote {
 			provider: this.sdk.provider,
 			mint,
 		});
-		const [proposalVault] = await findProposalVault(tokenMint);
+		const [proposalVault] = await this.sdk.pda.findProposalVault(tokenMint);
 		ixs.push(createATA.instruction);
 		ixs.push(
 			await this.program.methods
@@ -160,5 +163,43 @@ export class Vote {
 			salt: salt,
 			transactionEnvelope: this.sdk.provider.newTX(ixs),
 		};
+	}
+
+	/**
+	 * cancel vote
+	 *
+	 * @param mint - mint of proposal vault
+	 * @param proposal - the proposal to vote on
+	 * @returns
+	 */
+	async cancelVote({ voteAccount }: CancelVote): Promise<TransactionEnvelope> {
+		validateKeys([{ v: voteAccount, n: 'voteAccount' }]);
+
+		const voter = this.sdk.provider.wallet.publicKey;
+		const voteAccountLoaded = await this.program.account.voteAccount.fetch(
+			voteAccount
+		);
+		const stakeMint = voteAccountLoaded.stakeMint;
+
+		const [proposalVault] = await this.sdk.pda.findProposalVault(stakeMint);
+		const voterAccount = await token_utils.getATAAddressSync({
+			mint: stakeMint,
+			owner: voter,
+		});
+
+		let ixs: TransactionInstruction[] = [];
+		ixs.push(
+			await this.program.methods
+				.cancelVote()
+				.accounts({
+					voterAccount: voterAccount,
+					proposalVault,
+					proposalVaultMint: stakeMint,
+					proposal: voteAccountLoaded.proposal,
+					voteAccount,
+				})
+				.instruction()
+		);
+		return this.sdk.provider.newTX(ixs);
 	}
 }

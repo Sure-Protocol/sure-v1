@@ -36,37 +36,6 @@ type TransactionInformation = {
 	envelope: TransactionEnvelope;
 };
 
-// ================= PDAs ====================
-export const findProposalAddress = async (
-	proposal_name: string
-): Promise<[PublicKey, number]> => {
-	return await findProgramAddressSync(
-		[SURE_ORACLE_SEED, anchor.utils.bytes.utf8.encode(proposal_name)],
-		SURE_ADDRESSES.Oracle
-	);
-};
-
-export const findRevealVoteArrayAddress = async (
-	proposal_name: string
-): Promise<[PublicKey, number]> => {
-	return await findProgramAddressSync(
-		[
-			SURE_ORACLE_REVEAL_ARRAY_SEED,
-			anchor.utils.bytes.utf8.encode(proposal_name),
-		],
-		SURE_ADDRESSES.Oracle
-	);
-};
-
-export const findProposalVault = async (
-	mint: PublicKey
-): Promise<[PublicKey, number]> => {
-	return await findProgramAddressSync(
-		[SURE_ORACLE_SEED, mint.toBuffer()],
-		SURE_ADDRESSES.Oracle
-	);
-};
-
 export class Proposal {
 	readonly program: anchor.Program<oracleIDL.Oracle>;
 	constructor(readonly sdk: SureOracleSDK) {

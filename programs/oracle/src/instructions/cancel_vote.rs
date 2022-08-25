@@ -39,6 +39,7 @@ pub struct CancelVote<'info> {
 
     #[account(
         mut,
+        close = voter,
         constraint = vote_account.load()?.proposal == proposal.key(),
         constraint =  vote_account.load()?.owner == voter.key(),
     )]

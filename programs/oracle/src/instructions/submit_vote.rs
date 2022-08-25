@@ -86,7 +86,7 @@ pub fn handler(ctx:Context<SubmitVote>,vote_hash: Vec<u8>) -> Result<()>{
     let vote_hash_bytes: [u8;32] =vote_hash.try_into().unwrap();
     msg!("vote hash bytes length: {}",vote_hash_bytes.len());
     // Initialize vote account
-    let vote_update = vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), &proposal.key(),&vote_hash_bytes, voting_power,decimals)?;
+    let vote_update = vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), &proposal.key(),&vote_hash_bytes, ctx.accounts.proposal_vault_mint.key(),voting_power,decimals)?;
 
     // Update proposal with vote 
     proposal.cast_vote_at_time(vote_account, time)?;
