@@ -204,6 +204,11 @@ export type OracleIDL = {
 					isSigner: false;
 				},
 				{
+					name: 'rent';
+					isMut: false;
+					isSigner: false;
+				},
+				{
 					name: 'systemProgram';
 					isMut: false;
 					isSigner: false;
@@ -212,7 +217,7 @@ export type OracleIDL = {
 			args: [
 				{
 					name: 'voteHash';
-					type: 'string';
+					type: 'bytes';
 				}
 			];
 		},
@@ -744,7 +749,7 @@ export type OracleIDL = {
 						name: 'weightedVotes';
 						docs: ['Q32.32'];
 						type: {
-							array: ['i64', 1240];
+							array: ['i64', 1024];
 						};
 					},
 					{
@@ -1184,6 +1189,11 @@ export const OracleJSON: OracleIDL = {
 					isSigner: false,
 				},
 				{
+					name: 'rent',
+					isMut: false,
+					isSigner: false,
+				},
+				{
 					name: 'systemProgram',
 					isMut: false,
 					isSigner: false,
@@ -1192,7 +1202,7 @@ export const OracleJSON: OracleIDL = {
 			args: [
 				{
 					name: 'voteHash',
-					type: 'string',
+					type: 'bytes',
 				},
 			],
 		},
@@ -1724,7 +1734,7 @@ export const OracleJSON: OracleIDL = {
 						name: 'weightedVotes',
 						docs: ['Q32.32'],
 						type: {
-							array: ['i64', 1240],
+							array: ['i64', 1024],
 						},
 					},
 					{

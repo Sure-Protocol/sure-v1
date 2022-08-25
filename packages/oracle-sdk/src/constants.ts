@@ -6,6 +6,8 @@ export const SURE_ADDRESSES = {
 
 /// SEEDS
 export const SURE_ORACLE_SEED = anchor.utils.bytes.utf8.encode('sure-oracle');
+export const SURE_ORACLE_VOTE_SEED =
+	anchor.utils.bytes.utf8.encode('sure-oracle-vote');
 export const SURE_ORACLE_REVEAL_ARRAY_SEED = anchor.utils.bytes.utf8.encode(
 	'sure-oracle-reveal-array'
 );

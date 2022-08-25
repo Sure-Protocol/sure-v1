@@ -3,6 +3,7 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{self, Mint, Token, TokenAccount},
 };
+use std::mem::size_of;
 
 use crate::states::{proposal::Proposal, RevealedVoteArray};
 use crate::utils::{SureError, SURE, SURE_ORACLE_REVEAL_ARRAY_SEED, SURE_ORACLE_SEED};
@@ -48,7 +49,7 @@ pub struct ProposeVote<'info> {
             name.as_bytes().as_ref(),
         ],
         bump,
-        space = 8 + RevealedVoteArray::SPACE
+        space = 8 + size_of::<RevealedVoteArray>()
     )]
     pub reveal_vote_array: AccountLoader<'info, RevealedVoteArray>,
 

@@ -10,6 +10,8 @@ import { SolanaAugmentedProvider } from '@saberhq/solana-contrib';
 import { createNftOperationHandler } from '@metaplex-foundation/js-next';
 import { Program } from '@project-serum/anchor';
 import { OracleProgram } from './program';
+import { Vote } from './vote';
+import { PDA } from './pda';
 
 export type ProviderProps = {
 	connection: anchor.web3.Connection;
@@ -33,7 +35,8 @@ export class Provider {
 export class SureOracleSDK {
 	constructor(
 		readonly provider: solana_contrib.AugmentedProvider,
-		readonly oracle: anchor.Program<OracleIDL>
+		readonly oracle: anchor.Program<OracleIDL>,
+		readonly pda: PDA
 	) {}
 
 	static init({
@@ -53,10 +56,23 @@ export class SureOracleSDK {
 			SURE_ADDRESSES.Oracle
 		);
 		console.log('return finish');
-		return new SureOracleSDK(new SolanaAugmentedProvider(provider), program);
+		const pda = new PDA();
+		return new SureOracleSDK(
+			new SolanaAugmentedProvider(provider),
+			program,
+			pda
+		);
+	}
+
+	static pda(): PDA {
+		return new PDA();
 	}
 
 	proposal(): Proposal {
 		return new Proposal(this);
+	}
+
+	vote(): Vote {
+		return new Vote(this);
 	}
 }

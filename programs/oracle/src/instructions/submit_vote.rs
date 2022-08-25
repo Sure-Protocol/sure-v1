@@ -1,4 +1,5 @@
 
+use std::io::Read;
 use std::ops::{Mul, Div};
 
 use anchor_lang::prelude::*;
@@ -23,7 +24,7 @@ pub struct SubmitVote<'info> {
     pub voter_account: Box<Account<'info,TokenAccount>>,
 
     #[account(
-        constraint = locker.token_mint.key() == SURE
+        //constraint = locker.token_mint.key() == SURE
     )]
     pub locker: Account<'info,Locker>,
 
@@ -41,7 +42,7 @@ pub struct SubmitVote<'info> {
 
     #[account(
         mut,
-        constraint = proposal.vault == proposal_vault.mint,
+        constraint = proposal.vault == proposal_vault.key(),
     )]
     pub proposal_vault: Box<Account<'info,TokenAccount>>,
 
@@ -64,27 +65,28 @@ pub struct SubmitVote<'info> {
     pub vote_account: AccountLoader<'info,VoteAccount>,
 
     pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
 }
 
 
-pub fn handler(ctx:Context<SubmitVote>,vote_hash: String) -> Result<()>{
+pub fn handler(ctx:Context<SubmitVote>,vote_hash: Vec<u8>) -> Result<()>{
     let time = Clock::get()?.unix_timestamp;
     let proposal =  &mut ctx.accounts.proposal;
     let locker =&ctx.accounts.locker;
     let voting_power = ctx.accounts.user_escrow.voting_power(&locker.params)?;
     let decimals = ctx.accounts.proposal_vault_mint.decimals;
     
-    // check if proposal accepts votes
+    // check f 
     proposal.can_submit_vote(time)?;
 
     //initialize vote account
-    let mut vote_account = ctx.accounts.vote_account.load_mut()?;
+    let mut vote_account = ctx.accounts.vote_account.load_init()?;
     let vote_account_bump = *ctx.bumps.get("vote_account").unwrap();
-    let vote_hash_bytes:&[u8;32] = vote_hash.as_bytes().try_into().unwrap();
-   
+    let vote_hash_bytes: [u8;32] =vote_hash.try_into().unwrap();
+    msg!("vote hash bytes length: {}",vote_hash_bytes.len());
     // Initialize vote account
-    let vote_update = vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), &proposal.key(),vote_hash_bytes, voting_power,decimals)?;
+    let vote_update = vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), &proposal.key(),&vote_hash_bytes, voting_power,decimals)?;
 
     // Update proposal with vote 
     proposal.cast_vote_at_time(vote_account, time)?;

@@ -22,8 +22,8 @@ pub struct VoteAccount {
     pub bump: u8,            // 1 byte
     pub bump_array: [u8; 1], // 1 byte
 
-    pub proposal: Pubkey,
-    pub owner: Pubkey,
+    pub proposal: Pubkey, // 32
+    pub owner: Pubkey,    // 32
 
     // hash of vote "vote"+"salt"
     pub vote_hash: [u8; 32], // 32 bytes
@@ -33,7 +33,7 @@ pub struct VoteAccount {
     pub vote: i64, // 8 bytes
 
     /// F = V * l * exp(-l*(x-X))
-    pub vote_factor: u64,
+    pub vote_factor: u64, // 8
 
     /// rewards earned from voting
     /// C * F / S_v
@@ -45,7 +45,7 @@ pub struct VoteAccount {
 
     pub revealed_vote: bool, // 1 bytes
 
-    pub locked: bool,
+    pub locked: bool, // 1
 }
 
 impl Default for VoteAccount {
@@ -68,7 +68,7 @@ impl Default for VoteAccount {
 }
 
 impl VoteAccount {
-    pub const SPACE: usize = 1 + 32 + 8 + 8 + 8 + 1;
+    pub const SPACE: usize = 1 + 1 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1;
 
     pub fn seeds(&self) -> [&[u8]; 4] {
         [

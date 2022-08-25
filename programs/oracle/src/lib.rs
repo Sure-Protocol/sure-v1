@@ -38,7 +38,7 @@ pub mod oracle {
     /// ### Parameters
     /// * `ctx` - context
     /// * `vote_hash` - hash of vote with secret salt
-    pub fn submit_vote(ctx: Context<SubmitVote>, vote_hash: String) -> Result<()> {
+    pub fn submit_vote(ctx: Context<SubmitVote>, vote_hash: Vec<u8>) -> Result<()> {
         instructions::submit_vote::handler(ctx, vote_hash)
     }
 

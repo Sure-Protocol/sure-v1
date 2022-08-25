@@ -1,5 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 import * as solana_contrib from '@saberhq/solana-contrib';
+import * as tribeca from '@tribecahq/tribeca-sdk';
+import * as goki from '@gokiprotocol/client';
 import * as token_utils from '@saberhq/token-utils';
 import * as web3 from '@solana/web3.js';
 import * as spl from '@solana/spl-token';
@@ -15,6 +17,9 @@ import {
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { Keypair } from '@solana/web3.js';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { createTestProposal } from './setup';
+import { TransactionError } from '@solana/web3.js';
+import { SendTransactionError } from '@solana/web3.js';
 
 const program = anchor.workspace.Oracle as anchor.Program<OracleIDL>;
 
@@ -34,9 +39,18 @@ describe('Test Sure Oracle', () => {
 		opts: provider.opts,
 	});
 	const oracleSdk = SureOracleSDK.init({ provider: oracleProvider });
+	const tribecaSDK = tribeca.TribecaSDK.load({ provider: oracleProvider });
+
+	/// create mock smart wallet
+	const gokiSDK = goki.GokiSDK.load({ provider: oracleProvider });
+
 	let mint: web3.PublicKey;
 	let walletATA: web3.PublicKey;
+	let proposalName: string;
+	let sureLocker: web3.PublicKey;
+	let governorKey: web3.PublicKey;
 	before(async () => {
+		proposalName = 'test 1';
 		// load up wallet
 		const minterWallet = Keypair.generate();
 		const airdrop = await connection.requestAirdrop(
@@ -68,20 +82,94 @@ describe('Test Sure Oracle', () => {
 			100_000_000
 		);
 		await connection.confirmTransaction(res);
+
+		// create smart wallet
+		try {
+			const base = Keypair.generate();
+			const [governor] = await tribeca.findGovernorAddress(base.publicKey);
+			const owners = [governor];
+			const smartWallet = await gokiSDK.newSmartWallet({
+				owners,
+				threshold: new anchor.BN(1),
+				numOwners: 1,
+				base: base,
+			});
+			await smartWallet.tx.confirm();
+
+			// set up locker
+			const governSDK = new tribeca.GovernWrapper(tribecaSDK);
+
+			// generate a locker from a base keypair
+			const locker = tribeca.getLockerAddress(base.publicKey);
+			// create governor controlled by the locker
+
+			const govern = await governSDK.createGovernor({
+				electorate: locker,
+				smartWallet: smartWallet.smartWalletWrapper.key,
+				baseKP: base,
+			});
+			await govern.tx.confirm();
+			governorKey = govern.wrapper.governorKey;
+			const createLockerRes = await tribecaSDK.createLocker({
+				governor: governorKey,
+				govTokenMint: mint,
+				baseKP: base,
+			});
+			await createLockerRes.tx.confirm();
+			sureLocker = createLockerRes.locker;
+		} catch (e) {
+			const error = e as SendTransactionError;
+			console.log('error: ', error);
+			throw new Error('before error');
+		}
+
+		// create locker associated with governor
 	}),
 		it('Create a new proposal ', async () => {
-			const proposedStake = new anchor.BN(100_000_000);
-			const createProposal = await oracleSdk.proposal().proposeVote({
-				name: 'proposal 1',
-				description: 'how many eggs are in the basket',
-				stake: proposedStake,
-				mint,
-			});
 			try {
-				await createProposal.confirm();
+				const txRceipt = await createTestProposal(
+					oracleSdk,
+					mint,
+					proposalName,
+					new anchor.BN(10_000_000)
+				);
 			} catch (err) {
-				const error = err as web3.SendTransactionError;
-				console.log('error: ', error);
+				throw new Error('failed to create proposal');
 			}
 		});
+	it('Vote on proposal', async () => {
+		try {
+			const [proposal] = await SureOracleSDK.pda().findProposalAddress(
+				proposalName
+			);
+			const lockerWrapperSDK = new tribeca.LockerWrapper(
+				tribecaSDK,
+				sureLocker,
+				governorKey
+			);
+
+			// lock tokens in escrow
+			const lockTokensRes = await lockerWrapperSDK.lockTokens({
+				amount: new anchor.BN(1_000_000),
+				duration: tribeca.ONE_YEAR,
+			});
+			await lockTokensRes.confirm();
+
+			const [userEscrow] = await tribeca.findEscrowAddress(
+				sureLocker,
+				wallet.publicKey
+			);
+			const voteTx = await oracleSdk.vote().submitVote({
+				vote: new anchor.BN(4.2),
+				mint: mint,
+				proposal,
+				locker: sureLocker,
+				userEscrow,
+			});
+			await voteTx.confirm();
+		} catch (e) {
+			const error = e as SendTransactionError;
+			console.log('error: ', error);
+		}
+	});
 });

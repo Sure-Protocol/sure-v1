@@ -23129,6 +23129,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "root-workspace-0b6124@workspace:."
   dependencies:
+    "@gokiprotocol/client": ^0.11.1
     "@metaplex-foundation/js-next": ^0.9.0
     "@project-serum/anchor": ^0.25.0
     "@saberhq/solana-contrib": ^1.14.2
@@ -23137,6 +23138,7 @@ __metadata:
     "@solana/spl-token": ^0.3.1
     "@solana/wallet-adapter-phantom": ^0.9.3
     "@surec/sdk": 0.0.14
+    "@tribecahq/tribeca-sdk": ^0.5.8
     "@types/chai": ^4.3.1
     "@types/mocha": ^9.0.0
     buffer-layout: ^1.2.2
@@ -23144,6 +23146,7 @@ __metadata:
     lerna: ^5.0.0
     mocha: ^9.0.3
     prettier: 2.6.2
+    sha3: ^2.1.4
     ts-mocha: ^10.0.0
     typescript: ^4.3.5
     yarn: ^1.22.19
@@ -23633,6 +23636,15 @@ __metadata:
   bin:
     sha.js: ./bin.js
   checksum: ebd3f59d4b799000699097dadb831c8e3da3eb579144fd7eb7a19484cbcbb7aca3c68ba2bb362242eb09e33217de3b4ea56e4678184c334323eca24a58e3ad07
+  languageName: node
+  linkType: hard
+
+"sha3@npm:^2.1.4":
+  version: 2.1.4
+  resolution: "sha3@npm:2.1.4"
+  dependencies:
+    buffer: 6.0.3
+  checksum: fb49c8e18143cc46babc0e5d83d5f5d0149e645f26633a0e6a9aa2514df2ef91f10b6ece20da229e7ead8b8002d8e9514dcc747ef96a25b749294d6385c6f29f
   languageName: node
   linkType: hard
 

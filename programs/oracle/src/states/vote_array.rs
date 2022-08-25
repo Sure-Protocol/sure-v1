@@ -8,8 +8,8 @@ use anchor_lang::prelude::*;
 use crate::utils::SureError;
 
 use super::VoteAccount;
-pub const NUM_VOTES_IN_ARRAY_USIZE: usize = 1240;
-pub const NUM_VOTES_IN_ARRAY: u16 = 1240;
+pub const NUM_VOTES_IN_ARRAY_USIZE: usize = 1024;
+pub const NUM_VOTES_IN_ARRAY: u16 = 1024;
 
 #[account(zero_copy)]
 #[repr(packed)]
