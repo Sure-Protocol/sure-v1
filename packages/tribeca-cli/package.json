@@ -1,6 +1,6 @@
 {
 	"name": "@surec/tribeca-cli",
-	"version": "0.0.16",
+	"version": "0.0.17",
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
@@ -81,5 +81,6 @@
 	"keywords": [
 		"oclif"
 	],
-	"types": "dist/index.d.ts"
+	"types": "dist/index.d.ts",
+	"gitHead": "4ae0179911cff99b7d62679a736ac15fc1b42a58"
 }

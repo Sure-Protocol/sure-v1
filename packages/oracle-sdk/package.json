@@ -1,6 +1,6 @@
 {
 	"name": "@surec/oracle",
-	"version": "0.0.16",
+	"version": "0.0.17",
 	"description": "Typescript SDK for the Sure Oracle to be used to bring off-chain data on-chain",
 	"keywords": [
 		"solana",
@@ -36,5 +36,6 @@
 	"devDependencies": {
 		"@saberhq/tsconfig": "^2.0.4",
 		"typescript": "^4.7.4"
-	}
+	},
+	"gitHead": "4ae0179911cff99b7d62679a736ac15fc1b42a58"
 }
