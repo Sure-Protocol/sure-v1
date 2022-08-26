@@ -3,11 +3,12 @@
 	import { css } from '@emotion/css';
 	import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
 	import { writable } from 'svelte/store';
-	import * as sureOracle from '../../../oracle-sdk/src/index';
+	import * as oracle from '@surec/oracle';
 
 	const progress = writable(0);
 	progress.set(0.3);
 	$: console.log('walletStore: ', walletStore);
+	console.log('oracle: ', oracle);
 </script>
 
 <svelte:head>
