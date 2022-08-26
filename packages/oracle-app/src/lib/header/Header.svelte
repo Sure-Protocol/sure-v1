@@ -36,6 +36,10 @@
 		];
 
 		wallets = walletsMap;
+
+		// create writable store
+		const createProposal = writable('createProposal');
+		createProposal.set(false);
 	});
 </script>
 

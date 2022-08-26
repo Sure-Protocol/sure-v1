@@ -1,26 +1,25 @@
 <script lang="ts">
-	import Counter from '$lib/Counter.svelte';
 	import { css } from '@emotion/css';
-	import * as anchor from '@project-serum/anchor';
+	import ProposalList from '$lib/ProposalList.svelte';
 	import * as wallet_adapter from '@svelte-on-solana/wallet-adapter-core';
-	import { writable } from 'svelte/store';
 	import * as oracle from '@surec/oracle';
 	import * as web3 from '@solana/web3.js';
-	import type { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
-	import { json } from '@sveltejs/kit';
-	const progress = writable(0);
+	import * as solana_contrib from '@saberhq/solana-contrib';
 
-	progress.set(0.3);
-	const wallet = wallet_adapter.getLocalStorage('walletAdapter');
+	import { globalStore } from './../stores/global';
+
 	wallet_adapter.walletStore.subscribe((value) => {
 		console.log(value);
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
-		if (wallet) {
-			const provider = oracle.Provider.init({
+		if (value.wallet != null) {
+			const oracleProvider = solana_contrib.SolanaProvider.init({
 				connection,
 				wallet: value.wallet,
 				opts: { skipPreflight: true }
 			});
+
+			const oracleSDK = oracle.SureOracleSDK.init({ provider: oracleProvider });
+			$globalStore.oracleSDK = oracleSDK;
 		}
 	});
 </script>
@@ -41,84 +40,7 @@
 							<input type="text" class="input-text-field" placeholder="search votes" />
 							<button>Filter</button>
 						</div>
-
-						<ul
-							class={css`
-								display: flex;
-								flex-direction: column;
-								align-items: center;
-								padding: 0;
-								list-style: none;
-								color: white;
-								width: 100%;
-							`}
-						>
-							<li
-								class={css`
-									display: flex;
-									flex-direction: row;
-									background-color: #061e42;
-									border-radius: 10px;
-									width: 80%;
-									margin-bottom: 10px;
-
-									:hover {
-										background-color: #082756;
-										cursor: pointer;
-									}
-								`}
-							>
-								<div
-									class={css`
-										background-color: #f50093;
-										width: 5%;
-										border-radius: 10px 0 0 10px;
-									`}
-								/>
-								<div
-									class={css`
-										padding-top: 2rem;
-										padding-bottom: 2rem;
-										padding-left: 1rem;
-										padding-right: 1rem;
-										flex-grow: 2;
-									`}
-								>
-									<div
-										class={css`
-											display: flex;
-											flex-direction: row;
-											width: 100%;
-											justify-content: space-between;
-										`}
-									>
-										<p class="p p--white p--medium p--margin-0 ">Lost money on x</p>
-
-										<div class={'voting-status'}>
-											<p class="p p--small p--pink p--margin-0">Voting</p>
-										</div>
-									</div>
-									<div
-										class={css`
-											display: flex;
-											flex-direction: row;
-											justify-content: flex-start;
-											gap: 10px;
-										`}
-									>
-										<p class="p p--small p--margin-0">Proposed: 10/10/10</p>
-										<p class="p p--small p--margin-0">By: h332j32...232e</p>
-									</div>
-									<div>
-										<p class="p p--medium p--white">this is lost of money caused</p>
-									</div>
-									<div>
-										<progress class={css``} value={$progress} />
-										<p class="p p--small p--margin-0">200000 / 1_000_000 required votes</p>
-									</div>
-								</div>
-							</li>
-						</ul>
+						<ProposalList />
 					</div>
 				</div>
 			</div>
@@ -132,7 +54,7 @@
 									color: white;
 								`}
 							>
-								<h3 class="h3--white">Top up with veSure</h3>
+								<h3 class="h3--white">Top up veSure</h3>
 								<input type="number" class="input-number-field--padding-m" />
 								<p>Amount of sure: 0</p>
 								<p>Amount of veSure: 0</p>

@@ -7,6 +7,8 @@ import { SureOracleSDK } from './sdk';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
 import { validateKeys } from './utils';
 import { getATAAddressSync } from '@saberhq/token-utils';
+import { ProposalType } from './program';
+import { ProgramAccount } from '@project-serum/anchor';
 
 // ================== Types ==================
 type ProposeVote = {
@@ -26,6 +28,15 @@ export class Proposal {
 	readonly program: anchor.Program<oracleIDL.Oracle>;
 	constructor(readonly sdk: SureOracleSDK) {
 		this.program = sdk.program;
+	}
+
+	async fetchAllProposals(): Promise<ProgramAccount<ProposalType>[]> {
+		return await this.program.account.proposal.all();
+	}
+
+	async fetchProposal({ name }: { name: string }): Promise<ProposalType> {
+		const [proposalPDA] = this.sdk.pda.findProposalAddress(name);
+		return await this.program.account.proposal.fetch(proposalPDA);
 	}
 
 	/**

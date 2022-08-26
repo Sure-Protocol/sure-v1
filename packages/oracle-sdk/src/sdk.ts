@@ -1,12 +1,12 @@
 import * as anchor from '@project-serum/anchor';
 import * as solana_contrib from '@saberhq/solana-contrib';
 import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
-import * as oracleIDL from '../../idls/oracle';
+import { Oracle, IDL } from '../../idls/oracle';
 import { Proposal } from './proposal';
 import { SolanaAugmentedProvider } from '@saberhq/solana-contrib';
-import { Program } from '@project-serum/anchor';
 import { Vote } from './vote';
 import { PDA } from './pda';
+import { SURE_ADDRESSES } from './constants';
 
 export type ProviderProps = {
 	connection: anchor.web3.Connection;
@@ -30,7 +30,7 @@ export class Provider {
 export class SureOracleSDK {
 	constructor(
 		readonly provider: solana_contrib.AugmentedProvider,
-		readonly program: anchor.Program<oracleIDL.Oracle>,
+		readonly program: anchor.Program<Oracle>,
 		readonly pda: PDA
 	) {}
 
@@ -39,7 +39,17 @@ export class SureOracleSDK {
 	}: {
 		provider: solana_contrib.Provider;
 	}): SureOracleSDK {
-		const program = anchor.workspace.Oracle as Program<oracleIDL.Oracle>;
+		const anchorProvider = new anchor.AnchorProvider(
+			provider.connection,
+			provider.wallet,
+			{ skipPreflight: true }
+		);
+		// get anchorprogram properly
+		const program = new anchor.Program(
+			IDL,
+			SURE_ADDRESSES.Oracle,
+			anchorProvider
+		);
 		const pda = new PDA();
 		return new SureOracleSDK(
 			new SolanaAugmentedProvider(provider),

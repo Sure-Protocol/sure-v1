@@ -1,12 +1,27 @@
 <script lang="ts">
 	import Header from '$lib/header/Header.svelte';
+	import CreateProposal from '$lib/CreateProposal.svelte';
+	import { writable } from 'svelte/store';
+	import { createProposalState } from '../stores/global';
+	import { onMount } from 'svelte';
+
+	let showProposal = false;
+	onMount(() => {
+		createProposalState.subscribe((val) => {
+			console.log('create proposal state::');
+			showProposal = val;
+		});
+	});
 </script>
 
 <Header />
 
-<main>
+<main class={showProposal ? 'blurred' : ''}>
 	<slot />
 </main>
+{#if showProposal}
+	<CreateProposal />
+{/if}
 
 <footer />
 
@@ -28,6 +43,10 @@
 		margin: 0 auto;
 		box-sizing: border-box;
 		background-color: $sure-black;
+	}
+
+	.blurred {
+		filter: blur(10px);
 	}
 
 	footer {
