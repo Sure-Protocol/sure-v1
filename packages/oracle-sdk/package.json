@@ -1,6 +1,6 @@
 {
 	"name": "@surec/oracle",
-	"version": "0.0.18",
+	"version": "0.0.19",
 	"description": "Typescript SDK for the Sure Oracle to be used to bring off-chain data on-chain",
 	"keywords": [
 		"solana",
@@ -13,14 +13,18 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"repository": "https://github.com/Sure-Protocol/sure-v1",
+	"files": [
+		"dist/",
+		"src/"
+	],
 	"exports": {
 		".": {
-			"import": "./dist/esm/oracle-sdk/index.js",
-			"require": "./dist/cjs/oracle-sdk/index.js"
+			"import": "./dist/esm/oracle-sdk/src/index.js",
+			"require": "./dist/cjs/oracle-sdk/src/index.js"
 		}
 	},
-	"main": "dist/cjs/oracle-sdk/index.js",
-	"module": "dist/esm/oracle-sdk/index.js",
+	"main": "dist/cjs/oracle-sdk/src/index.js",
+	"module": "dist/esm/oracle-sdk/src/index.js",
 	"packageManager": "yarn@3.2.1",
 	"dependencies": {
 		"@project-serum/anchor": "^0.25.0",

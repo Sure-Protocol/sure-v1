@@ -3,7 +3,7 @@
 	import { css } from '@emotion/css';
 	import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
 	import { writable } from 'svelte/store';
-	import * as oracle from '@surec/oracle';
+	import * as oracle from '@surec/oracle/dist/esm/oracle-sdk/src/index';
 
 	const progress = writable(0);
 	progress.set(0.3);
