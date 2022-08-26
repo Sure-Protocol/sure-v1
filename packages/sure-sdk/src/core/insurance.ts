@@ -18,7 +18,7 @@ import {
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { min } from 'bn.js';
 
-import { SurePool } from './../anchor/types/sure_pool';
+import { SurePool } from './../../../../target/types/sure_pool';
 import { Common } from './commont';
 import { InsuranceContractsInfo, PoolInsuranceContract } from '../types';
 import { Money, Bitmap, sendTransaction } from './../utils';

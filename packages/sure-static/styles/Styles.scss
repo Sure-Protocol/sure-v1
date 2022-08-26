@@ -1,0 +1,260 @@
+// Main colors Sure 
+$sure-black: #061122;
+//$sure-pink: #ff008e;
+$sure-pink: #F50093;
+$sure-purple: #612897;
+$sure-blue: #0C1E7F;
+$sure-white: #FFEEF2;
+$sure-text-grey: #9CA3AF;
+
+// -- Shades ----
+// Blue layers 
+$sure-blue-2: #05152F;
+$sure-blue-2_1: #061e42;
+$sure-blue-2_2: #082756;
+$sure-blue-3: #0C1E7F;
+$sure-blue-4: #324F7E;
+
+// Purple
+$sure-dark-purple:rgb(89, 36, 139);
+$sure-dark-blue-5: #092655;
+
+// status colors
+$success: #09e85d;
+$warning: rgba(217, 232, 9,100);
+$error: #d4100b;
+
+// Fonts
+
+// Screen sizes 
+$small: 450px;
+$medium: 900px;
+
+@font-face {
+    font-family: 'arvo-bold';
+    src: url("./../assets/Arvo-Bold.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: 'arvo-bolditalic';
+    src: url("./../assets/Arvo-BoldItalic.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: 'arvo-italic';
+    src: url("./../assets/Arvo-Italic.ttf") format("truetype");
+}
+
+@font-face {
+    font-family: 'arvo';
+    src: url("./../assets/Arvo-Regular.ttf") format("truetype");
+}
+
+// ---------------- Text styles ---------------
+p {
+    color: $sure-text-grey;   
+    font-family: 'arvo';
+}
+
+
+h1,h2,h3,h4,h5{
+    color: $sure-text-grey;   
+    font-family: 'arvo';
+}
+
+.h1,.h2,.h3,.h4,.h5 {
+    
+    &--white{
+        color: $sure-white;
+    }
+
+    &--center{
+        text-align: center;
+    }
+
+    &--margin-s{
+        margin-bottom: 4px;
+        margin-top: 4px;
+    }
+
+    &--margin-m{
+        margin-bottom: 8px;
+        margin-top: 8px;
+    }
+
+}
+
+.p{
+    font-family: 'arvo';
+    &--margin-0{
+        margin: 0;
+    }
+    &--margin-xs{
+        margin-bottom: 4px;
+        margin-top: 4px;
+    }
+
+    &--margin-s{
+        margin-bottom: 8px;
+        margin-top: 8px;
+    }
+
+    &--margin-hs{
+        margin-left: 4px;
+        margin-right: 4px;
+    }
+
+    &--padding-s{
+       padding:8px;
+    }
+    
+
+    &--small{
+        font-size: small;
+    }
+
+    &--medium{
+        font-size: medium;
+    }
+
+    &--large{
+        font-size: large;
+    }
+
+    &--center{
+        text-align: center;
+    }
+
+    &--white{
+        color: $sure-white;
+    }
+
+    &--bold{
+        font-family: 'arvo-bold';
+    }
+
+    &--pink{
+        color: $sure-pink;
+    }
+
+    &--green{
+        color: $sure-pink;
+    }
+}
+
+.a{
+    &--no-highlight{
+        color: $sure-text-grey;
+    }
+}
+
+.button{
+    &--round{
+        background-color: transparent;
+        color: $sure-pink;
+        cursor: pointer;
+        width: 30px;
+        height: 30px;
+
+        border-radius: 0 20% 0 0;
+        border-width: 1px;
+        border-color: transparent;
+        padding: 5px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+            background-color: $sure-pink;
+            color: $sure-white;
+        }
+    }
+}
+
+// General text styles
+.text{
+    &--margin-vertical{
+        &__0{
+            margin:0;
+        }
+        &__small{
+            margin-bottom: 8px;
+            margin-top: 8px;
+        }
+    
+        &__xsmall{
+            margin-bottom: 8px;
+            margin-top: 8px;
+        }
+    }
+    &--margin-right{
+        &__0{
+            margin:0;
+        }
+        &__small{
+            margin-right: 8px;
+        }
+    }
+
+    &--margin-left{
+        &__small{
+            margin-left: 8px;
+        }
+
+        &__medium{
+            margin-left: 14px;
+        }
+
+        &__large{
+            margin-left: 24px;
+        }
+    }
+
+    &--color{
+        &__white{
+            color: $sure-white;
+        }
+        &__pink{
+            color: $sure-pink
+        }
+    }
+
+    &--font{
+        &__bold{
+            font-family: 'arvo-bold';
+        }
+        &__italix{
+            font-family: 'arvo-italic';
+        }
+    }
+    &--width{
+        &__small{
+            width: 32px;
+        }
+
+        &__medium{
+            width: 42px;
+        }
+
+         &__large{
+            width: 62px;
+        }
+
+        &__xlarge{
+            width: 84px;
+        }
+    }
+
+    &--position{
+        &__center{
+            text-align: center;
+        }
+        &__right{
+            text-align: right;
+        }
+    }
+
+    
+  
+}

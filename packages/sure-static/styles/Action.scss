@@ -1,0 +1,133 @@
+.container{
+    padding-top:3rem;
+    display: flex;
+    justify-content: center;
+   
+}
+
+.action-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 3rem;
+    padding-bottom: 3rem;
+    border-radius: 10px;
+    background-color: $sure-blue-2;
+    width: 90vw;
+    padding-left: 10px;
+    padding-right: 10px;
+
+    @media(max-width: $small){
+        width: 90%;
+    }
+
+    &--transparent{
+        @extend .action-container;
+        background-color:transparent;
+    }
+
+    &--width-full{
+        @extend .action-container;
+        width: 100%;
+    }
+
+    &--width-xl{
+        @extend .action-container;
+        width: 80vw;
+    }
+
+    &--width-l{
+        @extend .action-container;
+        width: 60vw;
+    }
+
+    &--width-m{
+        @extend .action-container;
+        width: 45vw;
+    }
+
+    &--width-s{
+        @extend .action-container;
+        width: 30vw;
+    }
+
+    &--padding-h0{
+        @extend .action-container;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    &__blur{
+        @extend .action-container;
+        opacity: 60%;
+    }
+}
+
+.action-container-inner {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.action-container-inner-content {
+    z-index: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: left;
+	margin-bottom: 1rem;
+    position: relative;
+
+	&--centered {
+		@extend .action-container-inner-content;
+		justify-content: center;
+		align-items: center;
+	}
+
+	&--form {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+        margin-bottom: 20px;
+	}
+
+	&--row {
+		display: flex;
+		flex-wrap: wrap;
+		flex-direction: row;
+        margin-bottom: 1rem;
+
+		&_centered {
+			@extend .action-container-inner-content--row;
+			display: flex;
+			flex-direction: column;
+			margin-bottom: 1rem;
+			justify-content: center;
+			align-items: center;
+		}
+
+        @media(max-width: $small) {
+            flex-direction: column;
+            align-items: center;
+            justify-content: column;
+            
+        }
+	}
+
+    &--column {
+        display: flex;
+        flex-direction: column;
+    }
+
+    // multiple items in one row 
+    &--item{
+        margin-right: 5px;
+        margin-left: 5px;
+        margin-bottom: 10px;
+        display: flex;
+        flex-direction: column;
+    }
+}

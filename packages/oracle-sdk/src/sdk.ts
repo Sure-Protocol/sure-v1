@@ -1,15 +1,10 @@
 import * as anchor from '@project-serum/anchor';
-import * as web3 from '@solana/web3.js';
 import * as solana_contrib from '@saberhq/solana-contrib';
-import * as anchor_contrib from '@saberhq/anchor-contrib';
 import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
 import * as oracleIDL from '../../idls/oracle';
-import { SURE_ADDRESSES } from './constants';
 import { Proposal } from './proposal';
 import { SolanaAugmentedProvider } from '@saberhq/solana-contrib';
-import { createNftOperationHandler } from '@metaplex-foundation/js-next';
 import { Program } from '@project-serum/anchor';
-import { OracleProgram } from './program';
 import { Vote } from './vote';
 import { PDA } from './pda';
 
@@ -24,7 +19,7 @@ export class Provider {
 	constructor(
 		readonly connection: anchor.web3.Connection,
 		readonly wallet: Wallet,
-		opts: anchor.web3.ConfirmOptions
+		readonly opts: anchor.web3.ConfirmOptions
 	) {}
 
 	static init({ connection, wallet, opts }: ProviderProps): Provider {
@@ -44,10 +39,6 @@ export class SureOracleSDK {
 	}: {
 		provider: solana_contrib.Provider;
 	}): SureOracleSDK {
-		// const program = new anchor.Program<OracleIDL>(
-		// 	OracleJSON,
-		// 	SURE_ADDRESSES.Oracle
-		// );
 		const program = anchor.workspace.Oracle as Program<oracleIDL.Oracle>;
 		const pda = new PDA();
 		return new SureOracleSDK(

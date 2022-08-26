@@ -1,27 +1,12 @@
 import * as anchor from '@project-serum/anchor';
-import * as solana_contrib from '@saberhq/solana-contrib';
 import * as token_utils from '@saberhq/token-utils';
-import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
-import {
-	Keypair,
-	PublicKey,
-	SystemProgram,
-	Transaction,
-	TransactionInstruction,
-} from '@solana/web3.js';
+import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from '../../idls/oracle';
-import {
-	SURE_ADDRESSES,
-	SURE_ORACLE_REVEAL_ARRAY_SEED,
-	SURE_ORACLE_SEED,
-	SURE_TOKEN,
-} from './constants';
-import { Provider, SureOracleSDK } from './sdk';
-import { OracleProgram } from './program';
-import { getOrCreateAssociatedTokenAccount } from '@solana/spl-token/lib/types/actions/getOrCreateAssociatedTokenAccount';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { SURE_TOKEN } from './constants';
+import { SureOracleSDK } from './sdk';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
 import { validateKeys } from './utils';
+import { getATAAddressSync } from '@saberhq/token-utils';
 
 // ================== Types ==================
 type ProposeVote = {
@@ -31,10 +16,11 @@ type ProposeVote = {
 	mint?: PublicKey;
 };
 
-type TransactionInformation = {
-	address: PublicKey;
-	envelope: TransactionEnvelope;
+type FinalizeVoteResults = {
+	proposal: PublicKey;
 };
+
+type CollectProposerReward = FinalizeVoteResults;
 
 export class Proposal {
 	readonly program: anchor.Program<oracleIDL.Oracle>;
@@ -74,13 +60,73 @@ export class Proposal {
 			mint: tokenMint,
 		});
 		const ixs: TransactionInstruction[] = [];
-		ixs.push(proposerAccount.instruction);
+		if (proposerAccount.instruction) {
+			ixs.push(proposerAccount.instruction);
+		}
 		ixs.push(
 			await this.program.methods
 				.proposeVote(name, description, stake)
 				.accounts({
 					proposerAccount: proposerAccount.address,
 					proposalVaultMint: tokenMint,
+				})
+				.instruction()
+		);
+		return this.sdk.provider.newTX(ixs);
+	}
+
+	/**
+	 * finalize vote results
+	 *
+	 * @param proposal - the proposal PK
+	 * @returns TransactionEnvelope - a new transaction
+	 */
+	async finalizeVoteResults({
+		proposal,
+	}: FinalizeVoteResults): Promise<TransactionEnvelope> {
+		const [voteArray] = this.sdk.pda.findRevealVoteArrayAddress({ proposal });
+
+		const ixs: TransactionInstruction[] = [];
+		ixs.push(
+			await this.program.methods
+				.finalizeVoteResults()
+				.accounts({
+					finalizer: this.sdk.provider.wallet.publicKey,
+					proposal,
+					revealedVotes: voteArray,
+				})
+				.instruction()
+		);
+
+		return this.sdk.provider.newTX(ixs);
+	}
+
+	/**
+	 * collect proposer rewards
+	 *
+	 * @param proposal - the proposal PK
+	 * @returns TransactionEnvelope - a new transaction
+	 */
+	async collectProposerRewards({
+		proposal,
+	}: CollectProposerReward): Promise<TransactionEnvelope> {
+		const proposalAccount = await this.program.account.proposal.fetch(proposal);
+
+		const proposerTokenAccount = getATAAddressSync({
+			mint: proposalAccount.vaultMint,
+			owner: this.sdk.provider.wallet.publicKey,
+		});
+
+		const [proposalVault] = this.sdk.pda.findProposalVault({ proposal });
+		const ixs: TransactionInstruction[] = [];
+		ixs.push(
+			await this.program.methods
+				.collectProposerReward()
+				.accounts({
+					proposerTokenAccount,
+					proposal,
+					proposalVault,
+					proposalVaultMint: proposalAccount.vaultMint,
 				})
 				.instruction()
 		);

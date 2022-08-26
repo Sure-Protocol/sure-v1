@@ -52,6 +52,7 @@ pub struct Proposal {
 
     /// vault for storing stake and votes
     pub vault: Pubkey, // 32 bytes
+    pub vault_mint: Pubkey, // 32
 
     /// % of ve tokens needed to conclude
     /// represented as basis points 1% = 100bp
@@ -113,6 +114,7 @@ impl Default for Proposal {
             proposer: Pubkey::default(),
             proposed_staked: 0,
             vault: Pubkey::default(),
+            vault_mint: Pubkey::default(),
             required_votes: 100_000,
             votes: 0,
             revealed_votes: 0,
@@ -136,7 +138,7 @@ pub struct FinalizeVoteResult {}
 
 impl Proposal {
     pub const SPACE: usize =
-        1 + 1 + 4 + 64 + 4 + 200 + 8 + 32 + 8 + 32 + 10 * 8 + 1 + 1 + 8 + 16 + 8;
+        1 + 1 + 4 + 64 + 4 + 200 + 8 + 32 + 8 + 32 + 32 + 10 * 8 + 1 + 1 + 8 + 16 + 8;
 
     pub fn seeds(&self) -> [&[u8]; 3] {
         [
@@ -155,6 +157,7 @@ impl Proposal {
         proposed_staked: u64,
         token_supply: u64,
         vault: &Pubkey,
+        vault_mint: &Pubkey,
         end_time_ts: Option<i64>,
         decimals: u8,
     ) -> Result<()> {
@@ -171,6 +174,7 @@ impl Proposal {
         let proposed_stake_proto = (proposed_staked).div(10_u64.pow(decimals as u32));
         self.proposed_staked = (proposed_stake_proto as u64) << 32; // Q32.32
         self.vault = *vault;
+        self.vault_mint = *vault_mint;
 
         // set end of
         let current_time = Clock::get()?.unix_timestamp;
@@ -688,6 +692,7 @@ pub mod test_proposal_proto {
                 proposed_result: self.proposed_result,
                 proposed_staked: self.proposed_staked,
                 vault: Pubkey::default(),
+                vault_mint: Pubkey::default(),
                 required_votes: self.required_votes,
                 votes: self.votes,
                 revealed_votes: self.revealed_votes,
@@ -712,36 +717,10 @@ pub mod test_proposal_proto {
 pub mod test_propose_vote {
     use std::cell::RefCell;
 
-    use crate::states::vote_account_proto;
+    use crate::states::{test_proposal_proto::ProposalProto, vote_account_proto};
 
     use super::*;
     const START_TIME: i64 = 1660681219;
-
-    pub fn create_test_proposal() -> Result<Proposal> {
-        let mut proposal = Proposal::default();
-        let end_time_ts = 1692182416;
-        let proposer = Pubkey::default();
-        let stake = 100_000_000;
-        let decimals = 6;
-        proposal.initialize(
-            245,
-            "My first proposal".to_string(),
-            "protocol lost 25%".to_string(),
-            &proposer,
-            stake,
-            100_000_000_000,
-            &Pubkey::default(),
-            Some(end_time_ts),
-            decimals,
-        )?;
-        proposal.scale_parameter = convert_f32_x16(0.2) as u32;
-        Ok(proposal)
-    }
-
-    #[test]
-    pub fn test_initialize() {
-        create_test_proposal().unwrap();
-    }
 
     #[test]
     pub fn calculate_rewards() {
@@ -767,7 +746,7 @@ pub mod test_propose_vote {
             expected_result: ExpectedResult { reward: 0.007 },
         }];
         for test in tests {
-            let mut proposal = create_test_proposal().unwrap();
+            let mut proposal = ProposalProto::initialize().build();
             let mut current_time = START_TIME;
             for vote in test.votes {
                 proposal
@@ -812,7 +791,7 @@ pub mod test_propose_vote {
         ];
 
         for test in tests {
-            let proposal = create_test_proposal().unwrap();
+            let proposal = ProposalProto::initialize().build();
 
             let consensus = proposal.calculate_consensus_(test.weighted_votes, test.weight);
             println!("cons: {}", convert_ix32_f64(consensus));
@@ -855,7 +834,7 @@ pub mod test_propose_vote {
             },
         }];
         for test in tests {
-            let mut proposal = create_test_proposal().unwrap();
+            let mut proposal = ProposalProto::initialize().build();
             let mut vote_array = RevealedVoteArray::default();
             let mut current_time = START_TIME;
             for vote in test.votes.clone() {

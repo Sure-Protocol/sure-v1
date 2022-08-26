@@ -1,0 +1,55 @@
+.input-number-field{
+	background-color: $sure-blue-4;
+    color: $sure-white;
+    cursor: pointer;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: transparent;
+    padding: 5px;
+
+    flex-grow: 2;
+    text-align: right;
+    font-family: 'arvo-bold';
+
+    &:focus {
+        outline: none;
+    }
+
+    &--padding-m{
+        @extend .input-number-field;
+        padding: 10px;
+    }
+
+    &__error{
+        @extend .input-number-field;
+        border-color: red;
+    }
+}
+
+.input-text-field{
+    background-color: $sure-blue-4;
+    color: $sure-white;
+    cursor: pointer;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: transparent;
+    padding: 5px;
+
+    flex-grow: 2;
+    text-align: left;
+    font-family: 'arvo-bold';
+
+    &:focus {
+        outline: none;
+    }
+
+    &__centered{
+        @extend .input-text-field;
+        text-align: center;
+    }
+
+    &__error{
+        @extend .input-text-field;
+        border-color: red;
+    }
+}

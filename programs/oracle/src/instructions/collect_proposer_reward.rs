@@ -9,7 +9,7 @@ pub struct CollectProposerReward<'info> {
     pub proposer: Signer<'info>,
 
     #[account(mut)]
-    pub proposer_account: Box<Account<'info, TokenAccount>>,
+    pub proposer_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
     pub proposal: Box<Account<'info, Proposal>>,
@@ -39,7 +39,7 @@ pub fn handler(ctx: Context<CollectProposerReward>) -> Result<()> {
     tokenTx::withdraw_from_vault(
         &proposal,
         &ctx.accounts.proposal_vault,
-        &ctx.accounts.proposer_account,
+        &ctx.accounts.proposer_token_account,
         &ctx.accounts.token_program,
         reward,
     )?;

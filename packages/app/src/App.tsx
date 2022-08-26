@@ -1,5 +1,5 @@
 import React, { FC, useMemo } from 'react';
-import './styles/index.scss';
+import './../../styles/index.scss';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import {
 	ConnectionProvider,

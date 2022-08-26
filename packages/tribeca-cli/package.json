@@ -1,6 +1,10 @@
 {
-	"name": "tb",
-	"version": "0.0.0",
+	"name": "@surec/tribeca-cli",
+	"version": "0.0.16",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
 	"description": "oclif example Hello World CLI",
 	"author": "@0xksure",
 	"bin": "./bin/run",

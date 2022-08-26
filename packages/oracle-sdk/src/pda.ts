@@ -42,9 +42,13 @@ export class PDA {
 		);
 	}
 
-	findProposalVault(mint: PublicKey): [PublicKey, number] {
+	findProposalVault({
+		proposal,
+	}: {
+		proposal: PublicKey;
+	}): [PublicKey, number] {
 		return findProgramAddressSync(
-			[SURE_ORACLE_SEED, mint.toBuffer()],
+			[SURE_ORACLE_SEED, proposal.toBuffer()],
 			SURE_ADDRESSES.Oracle
 		);
 	}

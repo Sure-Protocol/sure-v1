@@ -1,25 +1,14 @@
 import * as anchor from '@project-serum/anchor';
 import { SHA3 } from 'sha3';
-import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
-import * as solana_contrib from '@saberhq/solana-contrib';
 import * as token_utils from '@saberhq/token-utils';
-import {
-	PublicKey,
-	Transaction,
-	TransactionInstruction,
-} from '@solana/web3.js';
+import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from '../../idls/oracle';
 import { randomBytes } from 'crypto';
-import {
-	SURE_ADDRESSES,
-	SURE_ORACLE_REVEAL_ARRAY_SEED,
-	SURE_ORACLE_VOTE_SEED,
-	SURE_TOKEN,
-} from './constants';
-import { OracleProgram } from './program';
-import { Provider, SureOracleSDK } from './sdk';
+import { SURE_TOKEN } from './constants';
+import { SureOracleSDK } from './sdk';
 import { validateKeys } from './utils';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
+import { getATAAddressSync } from '@saberhq/token-utils';
 
 type SubmitVote = {
 	vote: anchor.BN;
@@ -111,10 +100,14 @@ export class Vote {
 		let ixs: TransactionInstruction[] = [];
 		const createATA = await token_utils.getOrCreateATA({
 			provider: this.sdk.provider,
-			mint,
+			mint: tokenMint,
 		});
-		const [proposalVault] = await this.sdk.pda.findProposalVault(tokenMint);
-		ixs.push(createATA.instruction);
+		const [proposalVault] = await this.sdk.pda.findProposalVault({ proposal });
+
+		if (createATA.instruction) {
+			ixs.push(createATA.instruction);
+		}
+
 		ixs.push(
 			await this.program.methods
 				.submitVote(voteHash)
@@ -185,8 +178,9 @@ export class Vote {
 			voteAccount
 		);
 		const stakeMint = voteAccountLoaded.stakeMint;
+		const proposal = voteAccountLoaded.proposal;
 
-		const [proposalVault] = await this.sdk.pda.findProposalVault(stakeMint);
+		const [proposalVault] = await this.sdk.pda.findProposalVault({ proposal });
 		const voterAccount = await token_utils.getATAAddressSync({
 			mint: stakeMint,
 			owner: voter,
@@ -211,7 +205,7 @@ export class Vote {
 	/**
 	 * cancel vote
 	 *
-	 * @param voteAccout - the account used to vote with
+	 * @param voteAccount - the account used to vote with
 	 * @returns
 	 */
 	async revealVote({
@@ -221,7 +215,6 @@ export class Vote {
 	}: RevealVote): Promise<TransactionEnvelope> {
 		validateKeys([{ v: voteAccount, n: 'voteAccount' }]);
 
-		console.log('voteAccount: ', voteAccount.toString());
 		const voteAccountLoaded = await this.program.account.voteAccount.fetch(
 			voteAccount
 		);
@@ -230,7 +223,6 @@ export class Vote {
 		const [voteArray] = await this.sdk.pda.findRevealVoteArrayAddress({
 			proposal,
 		});
-		console.log('voteArray: ', voteArray);
 
 		let ixs: TransactionInstruction[] = [];
 		ixs.push(
@@ -240,6 +232,72 @@ export class Vote {
 					proposal,
 					revealVoteArray: voteArray,
 					voteAccount,
+				})
+				.instruction()
+		);
+		return this.sdk.provider.newTX(ixs);
+	}
+
+	/**
+	 * finalize vote
+	 *
+	 * @param voteAccount - the account used to vote with
+	 * @returns
+	 */
+	async finalizeVote({
+		voteAccount,
+	}: RevealVote): Promise<TransactionEnvelope> {
+		validateKeys([{ v: voteAccount, n: 'voteAccount' }]);
+
+		const voteAccountLoaded = await this.program.account.voteAccount.fetch(
+			voteAccount
+		);
+		const proposal = voteAccountLoaded.proposal;
+
+		let ixs: TransactionInstruction[] = [];
+		ixs.push(
+			await this.program.methods
+				.finalizeVote()
+				.accounts({
+					proposal,
+					voteAccount,
+				})
+				.instruction()
+		);
+		return this.sdk.provider.newTX(ixs);
+	}
+
+	/**
+	 * collect vote rewards
+	 *
+	 * @param voteAccount - the account used to vote with
+	 * @returns
+	 */
+	async collectRewards({
+		voteAccount,
+	}: RevealVote): Promise<TransactionEnvelope> {
+		validateKeys([{ v: voteAccount, n: 'voteAccount' }]);
+
+		const voteAccountLoaded = await this.program.account.voteAccount.fetch(
+			voteAccount
+		);
+		const proposal = voteAccountLoaded.proposal;
+		const mint = voteAccountLoaded.stakeMint;
+		const voterAccount = getATAAddressSync({
+			mint,
+			owner: this.sdk.provider.wallet.publicKey,
+		});
+		const [proposalVault] = this.sdk.pda.findProposalVault({ proposal });
+		let ixs: TransactionInstruction[] = [];
+		ixs.push(
+			await this.program.methods
+				.collectVoteReward()
+				.accounts({
+					voterAccount,
+					voteAccount,
+					proposal,
+					proposalVaultMint: mint,
+					proposalVault,
 				})
 				.instruction()
 		);

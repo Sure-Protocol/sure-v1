@@ -85,8 +85,8 @@ export type Oracle = {
               {
                 "kind": "account",
                 "type": "publicKey",
-                "account": "Mint",
-                "path": "proposal_vault_mint"
+                "account": "Proposal",
+                "path": "proposal"
               }
             ]
           }
@@ -524,7 +524,7 @@ export type Oracle = {
           "isSigner": true
         },
         {
-          "name": "proposerAccount",
+          "name": "proposerTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -670,6 +670,10 @@ export type Oracle = {
             "docs": [
               "vault for storing stake and votes"
             ],
+            "type": "publicKey"
+          },
+          {
+            "name": "vaultMint",
             "type": "publicKey"
           },
           {
@@ -1132,8 +1136,8 @@ export const IDL: Oracle = {
               {
                 "kind": "account",
                 "type": "publicKey",
-                "account": "Mint",
-                "path": "proposal_vault_mint"
+                "account": "Proposal",
+                "path": "proposal"
               }
             ]
           }
@@ -1571,7 +1575,7 @@ export const IDL: Oracle = {
           "isSigner": true
         },
         {
-          "name": "proposerAccount",
+          "name": "proposerTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -1717,6 +1721,10 @@ export const IDL: Oracle = {
             "docs": [
               "vault for storing stake and votes"
             ],
+            "type": "publicKey"
+          },
+          {
+            "name": "vaultMint",
             "type": "publicKey"
           },
           {

@@ -69,7 +69,7 @@ pub struct ProposeVote<'info> {
         payer = proposer,
         seeds = [
             SURE_ORACLE_SEED.as_bytes().as_ref(),
-            proposal_vault_mint.key().as_ref()
+            proposal.key().as_ref()
         ],
         bump,
         token::mint = proposal_vault_mint,
@@ -117,6 +117,7 @@ pub fn handler(
         stake,
         token_supply,
         &ctx.accounts.proposal_vault.key(),
+        &ctx.accounts.proposal_vault_mint.key(),
         None,
         decimals,
     )?;

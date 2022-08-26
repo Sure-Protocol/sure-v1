@@ -1,10 +1,7 @@
 {
 	"name": "@surec/sdk",
-	"version": "0.0.15",
-	"publishConfig": {
-		"access": "public",
-		"registry": "https://registry.npmjs.org/"
-	},
+	"version": "0.0.16",
+	"private": true,
 	"repository": "https://github.com/Sure-Protocol/sure-v1",
 	"description": "Sure Protocol SDK",
 	"packageManager": "yarn@3.2.0",
