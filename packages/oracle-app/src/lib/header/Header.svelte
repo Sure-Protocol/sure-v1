@@ -9,6 +9,7 @@
 		WalletMultiButton,
 		ConnectionProvider
 	} from '@svelte-on-solana/wallet-adapter-ui';
+	import * as anchor_adapter from '@svelte-on-solana/wallet-adapter-anchor';
 	import type { Adapter } from '@sveltejs/kit';
 	import { writable } from 'svelte/store';
 
@@ -47,7 +48,6 @@
 
 	<WalletProvider {localStorageKey} {wallets} autoConnect />
 	<ConnectionProvider {network} />
-
 	<WalletMultiButton />
 </header>
 

@@ -1,14 +1,28 @@
 <script lang="ts">
 	import Counter from '$lib/Counter.svelte';
 	import { css } from '@emotion/css';
-	import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
+	import * as anchor from '@project-serum/anchor';
+	import * as wallet_adapter from '@svelte-on-solana/wallet-adapter-core';
 	import { writable } from 'svelte/store';
-	import * as oracle from '@surec/oracle/dist/esm/oracle-sdk/src/index';
-
+	import * as oracle from '@surec/oracle';
+	import * as web3 from '@solana/web3.js';
+	import type { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
+	import { json } from '@sveltejs/kit';
 	const progress = writable(0);
+
 	progress.set(0.3);
-	$: console.log('walletStore: ', walletStore);
-	console.log('oracle: ', oracle);
+	const wallet = wallet_adapter.getLocalStorage('walletAdapter');
+	wallet_adapter.walletStore.subscribe((value) => {
+		console.log(value);
+		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
+		if (wallet) {
+			const provider = oracle.Provider.init({
+				connection,
+				wallet: value.wallet,
+				opts: { skipPreflight: true }
+			});
+		}
+	});
 </script>
 
 <svelte:head>

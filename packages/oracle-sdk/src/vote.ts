@@ -3,7 +3,7 @@ import { SHA3 } from 'sha3';
 import * as token_utils from '@saberhq/token-utils';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from '../../idls/oracle';
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'randomBytes';
 import { SURE_TOKEN } from './constants';
 import { SureOracleSDK } from './sdk';
 import { validateKeys } from './utils';

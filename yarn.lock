@@ -7684,7 +7684,7 @@ __metadata:
     "@solana/wallet-adapter-react-ui": ^0.9.7
     "@solana/wallet-adapter-wallets": ^0.16.1
     "@solana/web3.js": ^1.44.0
-    "@surec/sdk": ^0.0.18
+    "@surec/sdk": ^0.0.19
     "@svgr/rollup": ^6.2.1
     "@types/react": ^18.0.0
     "@types/react-dom": ^18.0.0
@@ -7734,7 +7734,7 @@ __metadata:
     "@saberhq/chai-solana": ^1.14.2
     "@saberhq/token-utils": ^1.14.2
     "@solana/web3.js": ^1.53.0
-    "@surec/sdk": ^0.0.18
+    "@surec/sdk": ^0.0.19
     "@tribecahq/tribeca-sdk": ^0.5.8
     jsbi: ^4.3.0
     rimraf: ^3.0.2
@@ -7744,7 +7744,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@surec/oracle@^0.0.18, @surec/oracle@workspace:packages/oracle-sdk":
+"@surec/oracle@^0.0.19, @surec/oracle@workspace:packages/oracle-sdk":
   version: 0.0.0-use.local
   resolution: "@surec/oracle@workspace:packages/oracle-sdk"
   dependencies:
@@ -7755,6 +7755,8 @@ __metadata:
     "@saberhq/tsconfig": ^2.0.4
     "@solana/spl-token": ^0.3.2
     "@solana/web3.js": ^1.53.0
+    crypto-hash: ^2.0.1
+    randombytes: ^2.1.0
     typescript: ^4.7.4
   languageName: unknown
   linkType: soft
@@ -7773,7 +7775,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@surec/sdk@^0.0.18, @surec/sdk@workspace:packages/sure-sdk":
+"@surec/sdk@^0.0.19, @surec/sdk@workspace:packages/sure-sdk":
   version: 0.0.0-use.local
   resolution: "@surec/sdk@workspace:packages/sure-sdk"
   dependencies:
@@ -13510,6 +13512,13 @@ __metadata:
   version: 1.3.0
   resolution: "crypto-hash@npm:1.3.0"
   checksum: a3a507e0d2b18fbd2da8088a1c62d0c53c009a99bbfa6d851cac069734ffa546922fa51bdd776d006459701cdda873463e5059ece3431aca048fd99e7573d138
+  languageName: node
+  linkType: hard
+
+"crypto-hash@npm:^2.0.1":
+  version: 2.0.1
+  resolution: "crypto-hash@npm:2.0.1"
+  checksum: 08d304024166ef4856d71ec16f9429dfe6ddd8126d07b2a798e0f586eb60106c0f05b210b6d6f6f8189f8304ec33e7f1a880d5a38c2fadca19c4801fb5bd3e36
   languageName: node
   linkType: hard
 
@@ -22927,7 +22936,7 @@ __metadata:
     "@solana/wallet-adapter-base": ^0.9.16
     "@solana/wallet-adapter-wallets": ^0.18.5
     "@solana/web3.js": ^1.54.0
-    "@surec/oracle": ^0.0.18
+    "@surec/oracle": ^0.0.19
     "@svelte-on-solana/wallet-adapter-anchor": ^1.0.16-alpha.0
     "@svelte-on-solana/wallet-adapter-core": ^1.0.8-alpha.0
     "@svelte-on-solana/wallet-adapter-ui": ^1.0.20-alpha.0
