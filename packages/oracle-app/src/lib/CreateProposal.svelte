@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { css, cx } from '@emotion/css';
+	import close from './../../../sure-static/assets/icons/close.svg';
+	import { createProposalState } from './../stores/global';
 </script>
 
 <svelte:head>
@@ -7,40 +9,84 @@
 	<meta name="description" content="Svelte demo app" />
 </svelte:head>
 
-<div
+<form
 	class={css`
-		background: blue;
+		display: flex;
+		justify-content: center;
+		background: #102b54;
 		position: absolute;
 		transform: translateX(-50%);
-		width: 10rem;
-		height: 10rem;
 		top: 20%;
 		left: 50%;
 		border-radius: 10px;
+		width: 30rem;
 	`}
 >
-	<form
+	<div
 		class={css`
-			background-color: #324f7e;
+			position: absolute;
+			color: white;
+			right: 10px;
+			top: 10px;
+			z-index: 2;
 		`}
 	>
-		<div
-			class={cx(
-				'action-container',
-				css`
+		<img
+			src={close}
+			class={css`
+				//border: black 1px solid;
+				border-radius: 100%;
+				padding: 1px;
+				color: white;
+				fill: white;
+				:hover {
+					cursor: pointer;
 					background: #324f7e;
-					width: 10rem;
-				`
-			)}
-		>
-			<div class="action-container-inner">
-				<div class="action-container-inner-content">
-					<p>Name of proposal</p>
-					<input type="text" class="input-text-field" />
-				</div>
+				}
+			`}
+			width="30"
+			on:click={() => createProposalState.set(false)}
+			alt="Sure protocol"
+		/>
+	</div>
+	<div
+		class={css`
+			position: absolute;
+			color: white;
+			left: 20px;
+			top: 0px;
+			z-index: 2;
+		`}
+	>
+		<h3 class="h3 p--white">Create proposal</h3>
+	</div>
+	<div
+		class={cx(
+			'action-container',
+			css`
+				background: #102b54;
+				width: 10rem;
+				padding-left: 2rem;
+				padding-right: 2rem;
+			`
+		)}
+	>
+		<div class="action-container-inner">
+			<div class="action-container-inner-content">
+				<p class="p p--white">Name of proposal</p>
+				<input placeholder="an awesome idea" type="text" class="input-text-field" />
 			</div>
+			<div class="action-container-inner-content">
+				<p class="p p--white">Description</p>
+				<input placeholder="an awesome idea" type="textarea" class="input-text-field" />
+			</div>
+			<div class="action-container-inner-content">
+				<p class="p p--white">Stake</p>
+				<input placeholder="0" type="input" class="input-number-field" />
+			</div>
+			<button class="button">Submit proposal</button>
 		</div>
-	</form>
-</div>
+	</div>
+</form>
 
 <style lang="scss"></style>

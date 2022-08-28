@@ -3,9 +3,11 @@
 	import CreateProposal from '$lib/CreateProposal.svelte';
 	import { writable } from 'svelte/store';
 	import { createProposalState } from '../stores/global';
+	import TestPanel from '$lib/test/TestPanel.svelte';
 	import { onMount } from 'svelte';
 
 	let showProposal = false;
+	console.log(process.env.SURE_ENV);
 	onMount(() => {
 		createProposalState.subscribe((val) => {
 			console.log('create proposal state::');
@@ -24,6 +26,10 @@
 {/if}
 
 <footer />
+
+{#if process.env.SURE_ENV == 'dev'}
+	<TestPanel />
+{/if}
 
 <style lang="scss">
 	@import '../../../sure-static/styles/index.scss';

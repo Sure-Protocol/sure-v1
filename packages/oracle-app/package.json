@@ -3,7 +3,7 @@
 	"version": "0.0.22",
 	"private": true,
 	"scripts": {
-		"dev": "vite dev",
+		"dev": "SURE_ENV=dev vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
 		"test": "playwright test",
