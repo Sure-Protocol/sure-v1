@@ -30,3 +30,4 @@ test-ledger
 *.txt
 
 temp/
+*/**/*ledger

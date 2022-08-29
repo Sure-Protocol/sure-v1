@@ -7,7 +7,6 @@
 	import { globalStore, createProposalState } from '../stores/global';
 	const progress = writable(0);
 	const proposals = writable<ProgramAccount<ProposalType>[]>([]);
-	progress.set(0.3);
 
 	onMount(async () => {
 		const oracleSdk = $globalStore.oracleSDK;
@@ -90,7 +89,7 @@
 						<p class="p p--medium p--white">{proposal.account.description}</p>
 					</div>
 					<div>
-						<progress class={css``} value={$progress} />
+						<progress class={css``} value={proposal.account.votes} />
 						<p class="p p--small p--margin-0">
 							{`${proposal.account.votes} / ${proposal.account.requiredVotes} required votes`}
 						</p>
