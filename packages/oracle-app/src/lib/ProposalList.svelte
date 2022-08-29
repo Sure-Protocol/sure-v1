@@ -4,11 +4,20 @@
 	import type { ProposalType } from '@surec/oracle/dist/cjs/oracle-sdk/src';
 	import { writable } from 'svelte/store';
 	import { onMount } from 'svelte';
-	import { globalStore, createProposalState } from '../stores/global';
+	import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
+	import { globalStore, createProposalState, selectedProposal } from '../stores/global';
+	import { prettyPublicKey, unixToReadable, prettyLargeNumber } from '$utils';
 	const progress = writable(0);
 	const proposals = writable<ProgramAccount<ProposalType>[]>([]);
 
 	onMount(async () => {
+		const oracleSdk = $globalStore.oracleSDK;
+		if (oracleSdk) {
+			proposals.set(await oracleSdk.proposal().fetchAllProposals());
+		}
+	});
+
+	walletStore.subscribe(async () => {
 		const oracleSdk = $globalStore.oracleSDK;
 		if (oracleSdk) {
 			proposals.set(await oracleSdk.proposal().fetchAllProposals());
@@ -30,6 +39,7 @@
 	{#if $proposals.length > 0}
 		{#each $proposals as proposal}
 			<li
+				on:click={() => selectedProposal.set(proposal)}
 				class={css`
 					display: flex;
 					flex-direction: row;
@@ -71,7 +81,9 @@
 						<p class="p p--white p--medium p--margin-0 ">{proposal.account.name}</p>
 
 						<div class={'voting-status'}>
-							<p class="p p--small p--pink p--margin-0">{proposal.account.voteEndAt}</p>
+							<p class="p p--small p--pink p--margin-0">
+								{`end date: ${unixToReadable(proposal.account.voteEndAt)}`}
+							</p>
 						</div>
 					</div>
 					<div
@@ -82,8 +94,12 @@
 							gap: 10px;
 						`}
 					>
-						<p class="p p--small p--margin-0">{`Proposed: ${proposal.account.voteStartAt}`}</p>
-						<p class="p p--small p--margin-0">{`By: ${proposal.account.proposer.toString()}`}`</p>
+						<p class="p p--small p--margin-0">
+							{`Proposed: ${unixToReadable(proposal.account.voteStartAt)}`}
+						</p>
+						<p class="p p--small p--margin-0">
+							{`By: ${prettyPublicKey(proposal.account.proposer)}`}
+						</p>
 					</div>
 					<div>
 						<p class="p p--medium p--white">{proposal.account.description}</p>
@@ -91,7 +107,9 @@
 					<div>
 						<progress class={css``} value={proposal.account.votes} />
 						<p class="p p--small p--margin-0">
-							{`${proposal.account.votes} / ${proposal.account.requiredVotes} required votes`}
+							{`${prettyLargeNumber(proposal.account.votes)} / ${prettyLargeNumber(
+								proposal.account.requiredVotes
+							)} required votes`}
 						</p>
 					</div>
 				</div>

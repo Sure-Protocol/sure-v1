@@ -5,6 +5,7 @@ import type { SureOracleSDK } from '@surec/oracle';
 export * from './time';
 export * from './sdks';
 export * from './money';
+export * from './formatting';
 export function getTestKeypairFromSeed(oracleSdk: SureOracleSDK, seed: string): web3.Keypair {
 	console.log('oracleSdk.program.programId: ', oracleSdk.program.programId);
 	const [pda] = findProgramAddressSync([Buffer.from(seed)], oracleSdk.program.programId);

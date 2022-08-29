@@ -31,3 +31,4 @@ test-ledger
 
 temp/
 */**/*ledger
+*/**/test_ledger*

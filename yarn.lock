@@ -14171,6 +14171,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"decimal.js@npm:3.0.0":
+  version: 3.0.0
+  resolution: "decimal.js@npm:3.0.0"
+  checksum: 60c473d40f4d2f12037f8ce45300d50a37b71f87afcc99bab2c08580e0a8156071ab7bdcd860d4fe9d5231138584be87a5bbefb82f99c08566a684a916264035
+  languageName: node
+  linkType: hard
+
 "decimal.js@npm:^10.2.1":
   version: 10.3.1
   resolution: "decimal.js@npm:10.3.1"
@@ -23071,6 +23078,7 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^5.27.0
     "@typescript-eslint/parser": ^5.27.0
     cookie: ^0.4.1
+    decimal.js: 3.0.0
     eslint: ^8.16.0
     eslint-config-prettier: ^8.3.0
     eslint-plugin-svelte3: ^4.0.0
@@ -26502,6 +26510,7 @@ __metadata:
     "@types/mocha": ^9.0.0
     buffer-layout: ^1.2.2
     chai: ^4.3.4
+    decimal.js: 3.0.0
     lerna: ^5.0.0
     mocha: ^9.0.3
     prettier: 2.6.2

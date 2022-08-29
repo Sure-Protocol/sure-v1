@@ -1,9 +1,10 @@
 import { writable } from 'svelte/store';
-import type { SureOracleSDK } from '@surec/oracle';
+import { SureOracleSDK, type ProposalType } from '@surec/oracle';
 import type { PublicKey } from '@solana/web3.js';
 import type { Adapter } from '@solana/wallet-adapter-base';
 import type { Provider } from '@project-serum/anchor';
 import type { SolanaProvider } from '@saberhq/solana-contrib';
+import type { ProgramAccount } from '@saberhq/token-utils';
 
 export type GlobalStoreT = {
 	oracleSDK: SureOracleSDK | undefined;
@@ -31,3 +32,10 @@ export type Event = {
 export const newEvent = writable<Event>({ name: '' }, () => {
 	console.log('subscribe');
 });
+
+export const selectedProposal = writable<ProgramAccount<ProposalType> | undefined>(
+	undefined,
+	() => {
+		console.log('Subsribe');
+	}
+);

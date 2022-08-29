@@ -8,6 +8,7 @@
 
 	import { globalStore } from './../stores/global';
 	import TopUp from '$lib/TopUp.svelte';
+	import VoteStats from '$lib/VoteStats.svelte';
 
 	wallet_adapter.walletStore.subscribe((value) => {
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
@@ -54,17 +55,7 @@
 						<TopUp />
 					</div>
 					<div class="action-container-inner-content--item">
-						<div class="action-container--width-s action-container--padding-h0 ">
-							<div
-								class={css`
-									width: 100%;
-									color: white;
-								`}
-							>
-								<h3 class="h3--white">Vote stats</h3>
-								<p>Pick a proposal...</p>
-							</div>
-						</div>
+						<VoteStats />
 					</div>
 				</div>
 			</div>
