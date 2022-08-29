@@ -5347,6 +5347,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@noble/ed25519@npm:^1.7.0":
+  version: 1.7.0
+  resolution: "@noble/ed25519@npm:1.7.0"
+  checksum: 9a2cd37885c46d6fec2d5b08f59601894314e8cb984a1b69c616ed079d9b96ebc288706b3fcfb16a6bb175667c15c7ef80042c7d3b5a173d44dc051101364415
+  languageName: node
+  linkType: hard
+
+"@noble/hashes@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "@noble/hashes@npm:1.1.2"
+  checksum: 3c2a8cb7c2e053811032f242155d870c5eb98844d924d69702244d48804cb03b42d4a666c49c2b71164420d8229cb9a6f242b972d50d5bb2f1d673b98b041de2
+  languageName: node
+  linkType: hard
+
+"@noble/secp256k1@npm:^1.6.3":
+  version: 1.6.3
+  resolution: "@noble/secp256k1@npm:1.6.3"
+  checksum: 16eb3242533e645deb64444c771515f66bdc2ee0759894efd42fdeed4ab226ed29827aaaf6caa27d3d95b831452fd4246aa1007cd688aa462ad48fc084ab76e6
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -6503,6 +6524,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@saberhq/token-utils@npm:^1.14.4":
+  version: 1.14.4
+  resolution: "@saberhq/token-utils@npm:1.14.4"
+  dependencies:
+    "@saberhq/solana-contrib": ^1.14.4
+    "@solana/buffer-layout": ^4.0.0
+    "@solana/spl-token": ^0.1.8
+    "@ubeswap/token-math": ^5.2.0
+    tiny-invariant: ^1.2.0
+    tslib: ^2.4.0
+  peerDependencies:
+    "@solana/web3.js": ^1.42
+    bn.js: ^4 || ^5
+    jsbi: ^3 || ^4
+  checksum: 308ab179670c91cb87f8ee82be96191f087a545cd01d67b67e0cc8c44ad58a4ca332d589b162fe6a4402599d42bd277c0b4920f240fe9d3bf36d4a2c0ce3a260
+  languageName: node
+  linkType: hard
+
 "@saberhq/tsconfig@npm:^2.0.4":
   version: 2.0.4
   resolution: "@saberhq/tsconfig@npm:2.0.4"
@@ -6635,6 +6674,19 @@ __metadata:
   peerDependencies:
     "@solana/web3.js": ^1.20.0
   checksum: 0d801868161c715bb53a589c61fc88fed527b02b81a260f981ff37d0742e33365fac6550e1bfde96c7e2e018a978d001521d8cfa87451ed24fc6935823bb6332
+  languageName: node
+  linkType: hard
+
+"@solana/spl-token@npm:^0.3.4":
+  version: 0.3.4
+  resolution: "@solana/spl-token@npm:0.3.4"
+  dependencies:
+    "@solana/buffer-layout": ^4.0.0
+    "@solana/buffer-layout-utils": ^0.2.0
+    buffer: ^6.0.3
+  peerDependencies:
+    "@solana/web3.js": ^1.47.4
+  checksum: 66f2301425a57008112053a82194a154e5e405f079a4ac35fe8a84014d8b229c509d7eeb4e3f296e3ea3eb8525d1688e6053a578908e773b0ecbb9b0ef82e531
   languageName: node
   linkType: hard
 
@@ -7487,6 +7539,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@solana/web3.js@npm:^1.54.1":
+  version: 1.54.1
+  resolution: "@solana/web3.js@npm:1.54.1"
+  dependencies:
+    "@babel/runtime": ^7.12.5
+    "@noble/ed25519": ^1.7.0
+    "@noble/hashes": ^1.1.2
+    "@noble/secp256k1": ^1.6.3
+    "@solana/buffer-layout": ^4.0.0
+    bigint-buffer: ^1.1.5
+    bn.js: ^5.0.0
+    borsh: ^0.7.0
+    bs58: ^4.0.1
+    buffer: 6.0.1
+    fast-stable-stringify: ^1.0.0
+    jayson: ^3.4.4
+    js-sha3: ^0.8.0
+    node-fetch: 2
+    rpc-websockets: ^7.5.0
+    superstruct: ^0.14.2
+  checksum: c29eb24de6264020cd00c30e19c9aa48dd69d0ebae2d415a11b30f5a6b47f34e4162c69f27f023a5836c43b828f7876b874c1f80493c088f1489ed76f53a81df
+  languageName: node
+  linkType: hard
+
 "@solflare-wallet/sdk@npm:^1.0.11":
   version: 1.0.12
   resolution: "@solflare-wallet/sdk@npm:1.0.12"
@@ -7796,10 +7872,10 @@ __metadata:
     "@project-serum/anchor": ^0.25.0
     "@saberhq/anchor-contrib": ^1.14.2
     "@saberhq/solana-contrib": ^1.14.2
-    "@saberhq/token-utils": ^1.14.2
+    "@saberhq/token-utils": ^1.14.4
     "@saberhq/tsconfig": ^2.0.4
-    "@solana/spl-token": ^0.3.2
-    "@solana/web3.js": ^1.53.0
+    "@solana/spl-token": ^0.3.4
+    "@solana/web3.js": ^1.54.1
     "@types/randombytes": ^2.0.0
     randombytes: ^2.1.0
     typescript: ^4.7.4
@@ -7870,7 +7946,7 @@ __metadata:
     "@project-serum/anchor": ^0.25.0-beta.1
     "@saberhq/anchor-contrib": ^1.14.1
     "@saberhq/chai-solana": ^1.14.2
-    "@saberhq/token-utils": ^1.14.2
+    "@saberhq/token-utils": ^1.14.4
     "@solana/buffer-layout": ^4.0.0
     "@solana/web3.js": ^1.53.0
     "@tribecahq/tribeca-sdk": ^0.5.8
@@ -22980,6 +23056,7 @@ __metadata:
     "@fontsource/fira-mono": ^4.5.0
     "@playwright/test": ^1.25.0
     "@rollup/plugin-inject": ^4.0.4
+    "@solana/spl-token": ^0.3.4
     "@solana/wallet-adapter-base": ^0.9.16
     "@solana/wallet-adapter-wallets": ^0.18.5
     "@solana/web3.js": ^1.54.0
@@ -26414,7 +26491,7 @@ __metadata:
     "@project-serum/anchor": ^0.25.0
     "@saberhq/anchor-contrib": ^1.14.4
     "@saberhq/solana-contrib": ^1.14.2
-    "@saberhq/token-utils": ^1.14.2
+    "@saberhq/token-utils": ^1.14.4
     "@solana/buffer-layout": ^4.0.0
     "@solana/spl-token": ^0.3.1
     "@solana/wallet-adapter-phantom": ^0.9.3

@@ -65,7 +65,6 @@ export class Proposal {
 		if (description.length == 0) {
 			throw new Error('proposal description cannot be empty');
 		}
-
 		const proposerAccount = await token_utils.getOrCreateATA({
 			provider: this.sdk.provider,
 			mint: tokenMint,

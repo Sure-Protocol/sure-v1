@@ -40,6 +40,7 @@
 	"dependencies": {
 		"@emotion/css": "^11.10.0",
 		"@fontsource/fira-mono": "^4.5.0",
+		"@solana/spl-token": "^0.3.4",
 		"@solana/wallet-adapter-base": "^0.9.16",
 		"@solana/wallet-adapter-wallets": "^0.18.5",
 		"@solana/web3.js": "^1.54.0",

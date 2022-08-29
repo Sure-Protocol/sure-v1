@@ -33,6 +33,11 @@ const config: UserConfig = {
 		rollupOptions: {
 			plugins: [inject({ Buffer: ['buffer', 'Buffer'] }), nodePolyfills({ crypto: true })]
 		}
+	},
+	kit: {
+		alias: {
+			'@solana/spl-token': './node_modules/@solana/spl-token'
+		}
 	}
 };
 

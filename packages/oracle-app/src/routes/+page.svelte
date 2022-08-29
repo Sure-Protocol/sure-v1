@@ -7,11 +7,12 @@
 	import * as solana_contrib from '@saberhq/solana-contrib';
 
 	import { globalStore } from './../stores/global';
+	import TopUp from '$lib/TopUp.svelte';
 
 	wallet_adapter.walletStore.subscribe((value) => {
-		console.log(value);
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
-		if (value.wallet != null) {
+		if (value.wallet?.publicKey != null) {
+			console.log('wallet:  ', value.wallet.publicKey);
 			const oracleProvider = solana_contrib.SolanaProvider.init({
 				connection,
 				wallet: value.wallet,
@@ -20,6 +21,9 @@
 
 			const oracleSDK = oracle.SureOracleSDK.init({ provider: oracleProvider });
 			$globalStore.oracleSDK = oracleSDK;
+			$globalStore.walletPk = value.wallet.publicKey;
+			$globalStore.wallet = value.wallet;
+			$globalStore.provider = oracleProvider;
 		}
 	});
 </script>
@@ -47,21 +51,7 @@
 			<div class="action-container-inner-content--item">
 				<div class="action-container-inner-content">
 					<div class="action-container-inner-content--item">
-						<div class="action-container--width-s action-container--padding-h0 ">
-							<div
-								class={css`
-									width: 100%;
-									color: white;
-								`}
-							>
-								<h3 class="h3--white">Top up veSure</h3>
-								<input type="number" class="input-number-field--padding-m" />
-								<p>Amount of sure: 0</p>
-								<p>Amount of veSure: 0</p>
-								<button>Lock</button>
-								<button>Unlock</button>
-							</div>
-						</div>
+						<TopUp />
 					</div>
 					<div class="action-container-inner-content--item">
 						<div class="action-container--width-s action-container--padding-h0 ">

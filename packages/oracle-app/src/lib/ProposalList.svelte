@@ -10,9 +10,9 @@
 	progress.set(0.3);
 
 	onMount(async () => {
-		const sdk = $globalStore.oracleSDK;
-		if (sdk) {
-			proposals.set(await sdk.proposal().fetchAllProposals());
+		const oracleSdk = $globalStore.oracleSDK;
+		if (oracleSdk) {
+			proposals.set(await oracleSdk.proposal().fetchAllProposals());
 		}
 	});
 </script>

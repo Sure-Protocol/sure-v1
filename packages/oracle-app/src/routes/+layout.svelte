@@ -5,6 +5,7 @@
 	import { createProposalState } from '../stores/global';
 	import TestPanel from '$lib/test/TestPanel.svelte';
 	import { onMount } from 'svelte';
+	import EventStack from '$lib/EventStack.svelte';
 
 	let showProposal = false;
 	console.log(process.env.SURE_ENV);
@@ -30,6 +31,7 @@
 {#if process.env.SURE_ENV == 'dev'}
 	<TestPanel />
 {/if}
+<EventStack />
 
 <style lang="scss">
 	@import '../../../sure-static/styles/index.scss';
