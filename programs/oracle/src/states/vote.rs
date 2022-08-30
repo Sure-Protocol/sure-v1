@@ -175,7 +175,7 @@ impl VoteAccount {
         self.locked = true;
 
         // get refund stake
-        Ok(calculate_stake(self.vote_power as u64, decimals))
+        Ok(calculate_stake((self.vote_power as u64) << 32, decimals))
     }
 
     /// Calculate the vote factor
@@ -200,7 +200,7 @@ impl VoteAccount {
     /// ### Returns
     /// - mint reward in Q32.32
     pub fn calculate_token_reward_at_time(
-        &self,
+        &mut self,
         proposal: &Proposal,
         mint_decimals: u8,
         time: i64,
@@ -211,7 +211,7 @@ impl VoteAccount {
         {
             self.calculate_token_reward_(self.vote_factor, mint_decimals)
         } else if !self.revealed_vote {
-            return Ok(calculate_stake(self.vote_power as u64, mint_decimals));
+            return self.cancel_vote(mint_decimals);
         } else {
             return Err(SureError::NotPossibleToCalculateVoteReward.into());
         }

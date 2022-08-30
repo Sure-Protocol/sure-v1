@@ -83,7 +83,7 @@ pub struct Proposal {
     /// start reveal
     pub vote_end_reveal_at: i64, // 8
 
-    pub status: u8,
+    pub status: u8, // 1
 
     /// reward earned by propsing vote
     /// Q64.64
@@ -148,7 +148,7 @@ pub struct FinalizeVoteResult {}
 
 impl Proposal {
     pub const SPACE: usize =
-        1 + 1 + 4 + 64 + 4 + 200 + 8 + 32 + 8 + 32 + 32 + 10 * 8 + 1 + 1 + 8 + 16 + 8;
+        1 + 1 + 4 + 64 + 4 + 200 + 8 + 32 + 8 + 32 + 32 + 10 * 8 + 1 + 1 + 1 + 8 + 16 + 8;
 
     pub fn seeds(&self) -> [&[u8]; 3] {
         [
@@ -565,9 +565,14 @@ impl Proposal {
     }
 
     pub fn can_collect_voter_reward(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() != ProposalStatus::RewardPayout {
+        let status = self.get_status(time).unwrap();
+        if status == ProposalStatus::Failed {
+            return Ok(());
+        }
+        if status != ProposalStatus::RewardPayout {
             return Err(SureError::NotPossibleToCollectVoterReward.into());
         }
+
         Ok(())
     }
 

@@ -67,7 +67,7 @@
 			let revealEndTime = proposal?.account.voteEndRevealAt;
 			const endTime = getNextDeadline([voteEndTime, revealEndTime]);
 			let updatedText = steps[currentStep]?.status.toString() ?? 'PH';
-			if (isInFuture(endTime.toNumber())) {
+			if (isInFuture(endTime)) {
 				countdown = countdownFromUnix(endTime);
 				updatedText = `${updatedText} ${countdown.toString()}`;
 			}
@@ -118,7 +118,6 @@
 		`}
 	>
 		<h3 class="h3--white">{`Vote management`}</h3>
-
 		{#if proposal !== undefined}
 			<p>{proposal.account.name}</p>
 			{#if steps[currentStep].status == 'Failed'}
@@ -150,49 +149,56 @@
 						</div>
 						<div class="info-box"><p class="p p--small">{`Rewards -${vote.earnedRewards}`}</p></div>
 						<div class="info-box"><p class="p p--small">{`Revealed vote - ${vote.vote}`}</p></div>
+						{#if vote.locked}
+							<div class="info-box"><p class="p p--small">{`Locked`}</p></div>
+						{/if}
 					</div>
 					<h3 class=" h3 h3--white">Actions</h3>
-					<div>
-						<UpdateVote {proposal} />
-					</div>
-					<div>
-						<CancelVote {proposal} />
-					</div>
-					<div>
-						<RevealVote {proposal} />
-					</div>
-					<div>
-						<CollectRewards {proposal} />
-					</div>
+					{#if steps[currentStep].status == 'Voting'}
+						{#if vote}
+							<div>
+								<UpdateVote {proposal} />
+							</div>
+							<div>
+								<CancelVote {proposal} />
+							</div>
+						{:else}
+							<form on:submit|preventDefault={voteOnProposal}>
+								<div
+									class={css`
+										display: flex;
+										flex-direction: column;
+										width: 5rem;
+									`}
+								>
+									<span>Submit Vote</span>
+									<input
+										bind:value={voteValues.userVote}
+										id="userVote"
+										name="userVote"
+										type="decimal"
+										class="input-text-field"
+									/>
+								</div>
+								<button>Vote</button>
+							</form>
+						{/if}
+					{:else if steps[currentStep].status == 'Reveal vote'}
+						<div>
+							<RevealVote {proposal} />
+						</div>
+					{:else if steps[currentStep].status == 'Calculate Reward'}
+						<div>Calculate reward</div>
+					{:else if steps[currentStep].status == 'Collect Reward'}
+						<div>
+							<CollectRewards {proposal} />
+						</div>
+					{:else}
+						<div>
+							<CollectRewards {proposal} />
+						</div>
+					{/if}
 				</div>
-			{:else if getProposalStatus(proposal.account) === 'Voting'}
-				<div>
-					<p>
-						{`Vote ratio: ${proposal.account.votes
-							.div(proposal.account.requiredVotes)
-							.mul(new BN(100))}%`}
-					</p>
-				</div>
-
-				<form on:submit|preventDefault={voteOnProposal}>
-					<div
-						class={css`
-							display: flex;
-							flex-direction: column;
-							width: 5rem;
-						`}
-					>
-						<span>Submit Vote</span>
-						<input
-							bind:value={voteValues.userVote}
-							id="userVote"
-							name="userVote"
-							type="decimal"
-							class="input-text-field"
-						/>
-					</div>
-					<button>Vote</button>
-				</form>
 			{/if}
 		{:else}
 			<p>Pick a proposal...</p>

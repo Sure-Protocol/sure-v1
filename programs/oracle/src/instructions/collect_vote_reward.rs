@@ -33,6 +33,7 @@ pub struct CollectVoteReward<'info> {
     pub proposal_vault_mint: Box<Account<'info, Mint>>,
 
     #[account(
+        mut,
         constraint = proposal_vault.owner == proposal.key()
     )]
     pub proposal_vault: Box<Account<'info, TokenAccount>>,
@@ -42,7 +43,7 @@ pub struct CollectVoteReward<'info> {
 }
 
 pub fn handler(ctx: Context<CollectVoteReward>) -> Result<()> {
-    let vote_account = ctx.accounts.vote_account.load_mut()?;
+    let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let proposal = ctx.accounts.proposal.as_ref();
     let time = clock::Clock::get()?.unix_timestamp;
     let mint_decimals = ctx.accounts.proposal_vault_mint.decimals;

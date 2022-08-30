@@ -42,12 +42,6 @@
 			width: 5rem;
 		`}
 	>
-		<label
-			class={css`
-				margin-bottom: 2px;
-			`}
-			for="userVote">Collect Reward</label
-		>
 		<button class={'vote-button'} aria-disabled="true">
 			<p class="p p--small p--white text--margin-vertical__0">Collect Reward</p>
 		</button>

@@ -241,7 +241,7 @@ export type Oracle = {
         },
         {
           "name": "proposal",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -591,7 +591,7 @@ export type Oracle = {
         },
         {
           "name": "proposalVault",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -725,6 +725,10 @@ export type Oracle = {
               "start reveal"
             ],
             "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": "u8"
           },
           {
             "name": "earnedRewards",
@@ -1045,6 +1049,16 @@ export type Oracle = {
       "code": 6017,
       "name": "InvalidOwnerOfVoteAccount",
       "msg": "The owner of the vote account is not the signer"
+    },
+    {
+      "code": 6018,
+      "name": "ProposalVaultMintKeyDoesNotMatchProposalStateVaultMint",
+      "msg": "Proposal.vault_mint does not match the input proposal_vault_mint key"
+    },
+    {
+      "code": 6019,
+      "name": "ProposalVaultMintKeyDoesNotMatchVaultMint",
+      "msg": "Proposal.vault_mint does not match the vault mint key"
     }
   ]
 };
@@ -1292,7 +1306,7 @@ export const IDL: Oracle = {
         },
         {
           "name": "proposal",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1642,7 +1656,7 @@ export const IDL: Oracle = {
         },
         {
           "name": "proposalVault",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1776,6 +1790,10 @@ export const IDL: Oracle = {
               "start reveal"
             ],
             "type": "i64"
+          },
+          {
+            "name": "status",
+            "type": "u8"
           },
           {
             "name": "earnedRewards",
@@ -2096,6 +2114,16 @@ export const IDL: Oracle = {
       "code": 6017,
       "name": "InvalidOwnerOfVoteAccount",
       "msg": "The owner of the vote account is not the signer"
+    },
+    {
+      "code": 6018,
+      "name": "ProposalVaultMintKeyDoesNotMatchProposalStateVaultMint",
+      "msg": "Proposal.vault_mint does not match the input proposal_vault_mint key"
+    },
+    {
+      "code": 6019,
+      "name": "ProposalVaultMintKeyDoesNotMatchVaultMint",
+      "msg": "Proposal.vault_mint does not match the vault mint key"
     }
   ]
 };
