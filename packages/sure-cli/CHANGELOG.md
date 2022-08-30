@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.0.23 (2022-08-30)
+
+**Note:** Version bump only for package @surec/cli
+
+
+
+
+
 ## 0.0.22 (2022-08-26)
 
 **Note:** Version bump only for package @surec/cli

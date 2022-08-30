@@ -1,6 +1,6 @@
 {
 	"name": "@surec/sdk",
-	"version": "0.0.22",
+	"version": "0.0.23",
 	"private": true,
 	"repository": "https://github.com/Sure-Protocol/sure-v1",
 	"description": "Sure Protocol SDK",
