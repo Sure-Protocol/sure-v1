@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { css } from '@emotion/css';
 	import logo from './../../../../sure-static/assets/icons/sureLogo.svg';
 	import { onMount } from 'svelte';
 	import { clusterApiUrl } from '@solana/web3.js';
@@ -17,6 +18,9 @@
 	const network = clusterApiUrl('devnet'); // localhost or mainnet
 
 	let wallets: Adapter[];
+
+	let time: string = 0;
+	let timeUnix: number = 0;
 
 	onMount(async () => {
 		const {
@@ -36,6 +40,11 @@
 		];
 
 		wallets = walletsMap;
+
+		setInterval(() => {
+			time = new Date().toLocaleString();
+			timeUnix = Math.floor(Date.now() / 1000);
+		}, 1000);
 	});
 </script>
 
@@ -44,6 +53,15 @@
 		<a href="sure.claims">
 			<img src={logo} alt="Sure protocol" />
 		</a>
+	</div>
+	<div>
+		<div
+			class={css`
+				color: green;
+			`}
+		>
+			{`${time} | ${timeUnix}`}
+		</div>
 	</div>
 
 	<WalletProvider {localStorageKey} {wallets} autoConnect />

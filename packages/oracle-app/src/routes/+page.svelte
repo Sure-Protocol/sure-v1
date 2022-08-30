@@ -8,7 +8,7 @@
 
 	import { globalStore } from './../stores/global';
 	import TopUp from '$lib/TopUp.svelte';
-	import VoteStats from '$lib/VoteStats.svelte';
+	import VoteStats from '$lib/VoteManagement/VoteStats.svelte';
 
 	wallet_adapter.walletStore.subscribe((value) => {
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
@@ -25,6 +25,11 @@
 			$globalStore.walletPk = value.wallet.publicKey;
 			$globalStore.wallet = value.wallet;
 			$globalStore.provider = oracleProvider;
+
+			// subscribe on anchor events
+			oracleSDK.program.addEventListener('ProposeVoteEvent', (event) => {
+				console.log('event happened: ', event);
+			});
 		}
 	});
 </script>
@@ -54,6 +59,7 @@
 					<div class="action-container-inner-content--item">
 						<TopUp />
 					</div>
+
 					<div class="action-container-inner-content--item">
 						<VoteStats />
 					</div>

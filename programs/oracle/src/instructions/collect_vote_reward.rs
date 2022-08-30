@@ -3,7 +3,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::{
     states::{Proposal, VoteAccount},
-    utils::tokenTx,
+    utils::{tokenTx, SureError},
 };
 
 #[derive(Accounts)]
@@ -26,8 +26,8 @@ pub struct CollectVoteReward<'info> {
     pub proposal: Box<Account<'info, Proposal>>,
 
     #[account(
-        constraint = proposal_vault_mint.key() == proposal_vault.mint,
-        constraint = proposal_vault_mint.key() == proposal.vault,
+        constraint = proposal_vault_mint.key() == proposal_vault.mint @ SureError::ProposalVaultMintKeyDoesNotMatchVaultMint,
+        constraint = proposal_vault_mint.key() == proposal.vault_mint @ SureError::ProposalVaultMintKeyDoesNotMatchProposalStateVaultMint,
 
     )]
     pub proposal_vault_mint: Box<Account<'info, Mint>>,

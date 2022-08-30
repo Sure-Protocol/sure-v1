@@ -246,7 +246,7 @@ export class Vote {
 	 */
 	async finalizeVote({
 		voteAccount,
-	}: RevealVote): Promise<TransactionEnvelope> {
+	}: CancelVote): Promise<TransactionEnvelope> {
 		validateKeys([{ v: voteAccount, n: 'voteAccount' }]);
 
 		const voteAccountLoaded = await this.program.account.voteAccount.fetch(

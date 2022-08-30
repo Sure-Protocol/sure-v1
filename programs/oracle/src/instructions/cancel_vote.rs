@@ -63,6 +63,9 @@ pub fn handler(ctx: Context<CancelVote>) -> Result<()> {
     // cancel vote in proposal
     proposal.cancel_vote_at_time(vote_account, time)?;
 
+    // cb: update status of proposal
+    proposal.update_status(time);
+
     // refund
     tokenTx::withdraw_from_vault(
         proposal,

@@ -58,6 +58,12 @@ pub enum SureError {
     // account constraints
     #[msg("The owner of the vote account is not the signer")]
     InvalidOwnerOfVoteAccount,
+
+    #[msg("Proposal.vault_mint does not match the input proposal_vault_mint key")]
+    ProposalVaultMintKeyDoesNotMatchProposalStateVaultMint,
+
+    #[msg("Proposal.vault_mint does not match the vault mint key")]
+    ProposalVaultMintKeyDoesNotMatchVaultMint,
 }
 
 impl From<TryFromIntError> for SureError {

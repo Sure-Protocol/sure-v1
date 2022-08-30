@@ -10,35 +10,32 @@
 			setTimeout(() => {
 				console.log('gon!');
 				eventStack = eventStack.slice(0, eventStack.length - 1);
-			}, 5000);
+			}, 100000);
 			console.log('eventStack: ', eventStack);
 		}
 	});
 </script>
 
-<div
+<ul
 	class={css`
 		position: relative;
 		bottom: 0;
-		right: 0;
+		transform: translateX(80%);
+		left: 0;
+		list-style: none;
+		margin: 0;
 	`}
 >
-	<ul
-		class={css`
-			list-style: none;
-		`}
-	>
-		{#each eventStack as event}
-			<li
-				class={css`
-					width: 10rem;
-					height: 8rem;
-					background: blue;
-				`}
-			>
-				{`event: ${event.name}`}
-			</li>
-		{/each}
-		<li />
-	</ul>
-</div>
+	{#each eventStack as event}
+		<li
+			class={css`
+				width: 10rem;
+				height: 8rem;
+				background: blue;
+			`}
+		>
+			{`event: ${event.name}`}
+		</li>
+	{/each}
+	<li />
+</ul>

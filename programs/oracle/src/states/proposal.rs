@@ -14,7 +14,7 @@ use anchor_lang::{prelude::*, solana_program::clock};
 use super::{RevealedVoteArray, VoteAccount};
 
 #[derive(Debug, Eq, PartialEq, PartialOrd)]
-#[repr(C)]
+#[repr(u8)]
 pub enum ProposalStatus {
     /// A vote has been proposed
     Failed = 0,
@@ -27,12 +27,19 @@ pub enum ProposalStatus {
     RewardPayout = 7,
 }
 
+impl ProposalStatus {
+    fn get_id(self) -> u8 {
+        self as u8
+    }
+}
+
 impl Default for ProposalStatus {
     #[inline]
     fn default() -> Self {
         Self::Proposed
     }
 }
+
 #[account]
 pub struct Proposal {
     /// bump for verification
@@ -75,6 +82,8 @@ pub struct Proposal {
     pub vote_end_at: i64, // 8
     /// start reveal
     pub vote_end_reveal_at: i64, // 8
+
+    pub status: u8,
 
     /// reward earned by propsing vote
     /// Q64.64
@@ -127,6 +136,7 @@ impl Default for Proposal {
             scale_parameter: 0,
             scale_parameter_calculated: false,
             locked: false,
+            status: ProposalStatus::Proposed.get_id(),
             distribution_sum: 0,
             vote_factor_sum: 0,
             consensus: 0,
@@ -169,7 +179,7 @@ impl Proposal {
         self.name = name;
         self.description = description;
         self.proposer = *proposer;
-
+        self.status = ProposalStatus::Proposed.get_id();
         // convert to Q32.32
         let proposed_stake_proto = (proposed_staked).div(10_u64.pow(decimals as u32));
         self.proposed_staked = (proposed_stake_proto as u64) << 32; // Q32.32
@@ -455,6 +465,12 @@ impl Proposal {
         (calculate_stake_x32(self.revealed_votes) as u128) << 64
     }
 
+    /// Update status callback
+    pub fn update_status(&mut self, time: i64) {
+        let status = self.get_status(time).unwrap();
+        self.status = status.get_id();
+    }
+
     /// Calculate reward for proposing vote
     ///
     /// if the vote has ended calculate reward
@@ -607,6 +623,7 @@ pub mod test_proposal_proto {
         pub vote_end_at: i64,
         /// start reveal
         pub vote_end_reveal_at: i64,
+        pub status: u8,
 
         /// reward earned by propsing vote
         /// Q64.64
@@ -639,6 +656,7 @@ pub mod test_proposal_proto {
                 proposed_staked: 1_000_000,
                 required_votes: 10_000_000,
                 votes: 0,
+                status: ProposalStatus::Proposed.get_id(),
                 revealed_votes: 0,
                 running_sum_weighted_vote: 0,
                 running_weight: 0,
@@ -699,6 +717,7 @@ pub mod test_proposal_proto {
                 running_sum_weighted_vote: self.running_sum_weighted_vote,
                 running_weight: self.running_weight,
                 vote_start_at: self.vote_start_at,
+                status: self.status,
                 vote_end_at: self.vote_end_at,
                 vote_end_reveal_at: self.vote_end_reveal_at,
                 earned_rewards: self.earned_rewards,

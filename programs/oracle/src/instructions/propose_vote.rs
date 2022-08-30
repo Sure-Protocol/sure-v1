@@ -107,6 +107,7 @@ pub fn handler(
     let decimals = ctx.accounts.proposal_vault_mint.decimals;
     let mut reveal_vote_array = ctx.accounts.reveal_vote_array.load_init()?;
     let token_supply = ctx.accounts.proposal_vault_mint.supply;
+    let time = clock::Clock::get()?.unix_timestamp;
 
     // Initialize state
     proposal.initialize(
@@ -124,6 +125,9 @@ pub fn handler(
 
     // initialize reveal_vote_array
     reveal_vote_array.initialize(proposal.key(), reveal_vote_array_bump);
+
+    // cb: update status of proposal
+    proposal.update_status(time);
 
     // deposit stake into vault
     tokenTx::deposit_into_vault(
