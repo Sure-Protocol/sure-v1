@@ -23,7 +23,7 @@ export const calculateAccountBalanceInDecimals = async (
 };
 
 export const calculateAmountInDecimals = async (
-	oracleSdk: SureOracleSDK,
+	oracleSdk: SureOracleSDK | undefined,
 	amount: anchor.BN
 ): Promise<anchor.BN> => {
 	if (oracleSdk) {
@@ -36,7 +36,7 @@ export const calculateAmountInDecimals = async (
 export const calculateAmountInGivenDecimals = async (
 	oracleSdk: SureOracleSDK,
 	amount: anchor.BN,
-	decimals: number,
+	decimals: number
 ): Promise<anchor.BN> => {
 	if (oracleSdk) {
 		const sureMint = await spl.getMint(oracleSdk.provider.connection, SURE_MINT_DEV);

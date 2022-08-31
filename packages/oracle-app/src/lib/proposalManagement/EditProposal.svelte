@@ -5,12 +5,7 @@
 	import type { ProposalType, VoteStatus, ProposalStatus, VoteAccount } from '@surec/oracle';
 	import { getProposalStatus, SureOracleSDK, getVoteStatus } from '@surec/oracle';
 	import { findEscrowAddress } from '@tribecahq/tribeca-sdk';
-	import {
-		countdownFromUnix,
-		isInFuture,
-		getNextDeadline,
-		saveSalt
-	} from '$utils';
+	import { countdownFromUnix, isInFuture, getNextDeadline, saveSalt } from '$utils';
 	import { selectedProposal, globalStore, newEvent } from './../../stores/global';
 	import { SURE_MINT_DEV } from './../constants';
 	import type { ProgramAccount } from '@saberhq/token-utils';
@@ -19,6 +14,7 @@
 	import type { SendTransactionError } from '@solana/web3.js';
 	import StatBox from '$lib/box/StatBox.svelte';
 	import { to_number } from 'svelte/internal';
+	import { calculateAmountInDecimals } from '$utils/money';
 
 	let steps: { status: VoteStatus; text: string }[] = [
 		{ status: 'Voting', text: 'Voting' },
@@ -28,23 +24,32 @@
 		{ status: 'Failed', text: 'Failed' }
 	];
 	let currentStep: number = 0;
+	let isProposer: boolean = false;
+	let amountStaked: number;
 
 	let timer: NodeJS.Timer;
 	let countdown: string = '^';
-	let vote: VoteAccount | null = null;
-	let voteValues = {
-		userVote: 0.0
-	};
 
 	let proposal: ProgramAccount<ProposalType> | undefined = undefined;
 
 	selectedProposal.subscribe(async (p) => {
 		proposal = p;
 
-		// select vote
 		if (p) {
-			// update steps
 			currentStep = steps.findIndex((val) => val.text == getVoteStatus(p?.account));
+		}
+
+		const oracleSdk = $globalStore.oracleSDK;
+		if (oracleSdk) {
+			if (proposal?.account.proposer.toString() == oracleSdk.provider.walletKey.toString()) {
+				isProposer = true;
+			}
+		}
+
+		if (proposal) {
+			amountStaked = await (
+				await calculateAmountInDecimals(oracleSdk, proposal.account.proposedStaked)
+			).toNumber();
 		}
 
 		timer = setInterval(() => {
@@ -63,41 +68,50 @@
 		}, 1000);
 	});
 
-	function isOnwerOfSelectedProposal(){
-		// if (proposal.account.onwer == )
-	}
-
 	onDestroy(() => {
 		clearInterval(timer);
 	});
 </script>
 
-<div class="action-container--width-s action-container--padding-h0 ">
-	<div
-		class={css`
-			width: 100%;
-			color: white;
-		`}
-	>
-		<h3 class="h3--white">{`Proposal management`}</h3>
-		{#if proposal !== undefined}
-			<p class="p p--italic">{proposal.account.name}</p>
-			<div
-				class={css`
-					width: 100%;
-				`}
-			>
-				{#if steps[currentStep].status == 'Failed'}
-					<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
+{#if isProposer}
+	<div class="action-container--width-s action-container--padding-h0 ">
+		<div
+			class={css`
+				width: 100%;
+				color: white;
+			`}
+		>
+			<h3 class="h3--white">{`Proposal management`}</h3>
+			{#if proposal !== undefined}
+				<p class="p p--italic">{proposal.account.name}</p>
+				<div
+					class={css`
+						width: 100%;
+					`}
+				>
+					{#if steps[currentStep].status == 'Failed'}
+						<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
+					{:else}
+						<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
+					{/if}
+				</div>
+
+				{#if steps[currentStep].status == 'Calculate Reward'}
+					Calculate Reward
+				{:else if steps[currentStep].status == 'Collect Reward'}
+					Collect reward
 				{:else}
-					<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
+					<h3 class="h3">roposal failed</h3>
+					<p>
+						{`the ${amountStaked}$sure staked is going into the treasury`}
+					</p>
 				{/if}
-			</div>
-		{:else}
-			<p>Pick a proposal...</p>
-		{/if}
+			{:else}
+				<p>Pick a proposal...</p>
+			{/if}
+		</div>
 	</div>
-</div>
+{/if}
 
 <style lang="scss">
 	.info-box {

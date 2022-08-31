@@ -34,7 +34,7 @@ pub struct ProposeVote<'info> {
         payer = proposer,
         seeds = [
             SURE_ORACLE_SEED.as_bytes().as_ref(),
-            name.as_bytes().as_ref(),
+            name.as_bytes().as_ref(), // checkout - don't use name as seed 
         ],
         bump,
         space = 8 + Proposal::SPACE

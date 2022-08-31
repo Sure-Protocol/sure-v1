@@ -6,3 +6,4 @@
 - [ ] Validate accounts
 - [ ] Add Oracle config that controls parameters such as vote time, reveal time, minimum stake, ...
 - [ ] whether oracle is optimistic or not
+- [ ] Don't use name as seed.
