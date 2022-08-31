@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
-	import ProposalList from '$lib/ProposalList.svelte';
 	import * as wallet_adapter from '@svelte-on-solana/wallet-adapter-core';
 	import * as oracle from '@surec/oracle';
 	import * as web3 from '@solana/web3.js';
@@ -9,11 +8,11 @@
 	import { globalStore } from './../stores/global';
 	import TopUp from '$lib/TopUp.svelte';
 	import VoteStats from '$lib/VoteManagement/VoteStats.svelte';
+	import Proposals from '$lib/proposals/Proposals.svelte';
 
 	wallet_adapter.walletStore.subscribe((value) => {
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
 		if (value.wallet?.publicKey != null) {
-			console.log('wallet:  ', value.wallet.publicKey);
 			const oracleProvider = solana_contrib.SolanaProvider.init({
 				connection,
 				wallet: value.wallet,
@@ -44,14 +43,7 @@
 		<div class="action-container-inner-content--row">
 			<div class="action-container-inner-content--item">
 				<div class="action-container--width-l">
-					<div class="action-container-inner">
-						<h2 class="h3--white">Votes</h2>
-						<div>
-							<input type="text" class="input-text-field" placeholder="search votes" />
-							<button>Filter</button>
-						</div>
-						<ProposalList />
-					</div>
+					<Proposals />
 				</div>
 			</div>
 			<div class="action-container-inner-content--item">

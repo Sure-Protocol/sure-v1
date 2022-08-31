@@ -58,12 +58,16 @@
 				);
 
 				const txRes = await oracleSdk.provider.send(tx, [mintKeypair]);
-				await txRes.confirm({});
-				console.log('new mint: ', mintKeypair.publicKey.toString());
-				newEvent.set({ name: `created mint: ${mintKeypair.publicKey}` });
+				const txRec = await txRes.confirm({});
+				newEvent.set({
+					name: `created mint: ${mintKeypair.publicKey}`,
+					status: 'success',
+					tx: txRec
+				});
 			} catch (err) {
+				const error = err as web3.SendTransactionError;
 				console.log('could not create mint account cause', err);
-				newEvent.set({ name: `could not create mint account` });
+				newEvent.set({ name: `could not create mint account`, status: 'error', tx: error.message });
 			}
 		}
 	}
@@ -93,12 +97,13 @@
 				);
 
 				const txRes = await oracleSdk.provider.send(tx);
-				await txRes.confirm({});
+				const txRec = await txRes.confirm({});
 				console.log('txRes: ', txRes);
-				newEvent.set({ name: `minted 100 sure tokens` });
+				newEvent.set({ name: `minted 100 sure tokens`, status: 'success', tx: txRec });
 			} catch (err) {
+				const error = err as web3.SendTransactionError;
 				console.log('could not mint tokens to user cause', err);
-				newEvent.set({ name: `could not mint new tokens` });
+				newEvent.set({ name: `could not mint new tokens`, status: 'error', tx: error.message });
 			}
 		}
 	}
@@ -123,10 +128,10 @@
 					baseKP: base
 				});
 				await govern.tx.confirm();
-				newEvent.set({ name: 'created smart wallet' });
+				newEvent.set({ name: 'created smart wallet', success: true });
 			} catch (err) {
 				console.log('could not create smart wallet: cause', err);
-				newEvent.set({ name: `could not create smart wallet` });
+				newEvent.set({ name: `could not create smart wallet`, success: false });
 			}
 		}
 	}
@@ -136,18 +141,19 @@
 		if (oracleSdk && tribecaSdk) {
 			try {
 				const mintPk = SURE_MINT_DEV;
-				const base = getTest(oracleSdk, 'sure_base_3');
+				const base = getTestKeypairFromSeed(oracleSdk, 'sure_base_3');
 				const [governor] = await tribeca.findGovernorAddress(base.publicKey);
 				const createLockerRes = await tribecaSdk.createLocker({
 					governor: governor,
 					govTokenMint: mintPk,
 					baseKP: base
 				});
-				await createLockerRes.tx.confirm();
-				newEvent.set({ name: 'created sure locker!' });
+				const txRec = await createLockerRes.tx.confirm();
+				newEvent.set({ name: 'created sure locker!', status: 'success', tx: txRec.signature });
 			} catch (err) {
+				const error = err as web3.SendTransactionError;
 				console.log('could not create Sure locker: cause', err);
-				newEvent.set({ name: `could not create sure locker` });
+				newEvent.set({ name: `could not create sure locker`, status: 'error', tx: error.message });
 			}
 		}
 	}
@@ -155,7 +161,7 @@
 
 <div
 	class={css`
-		position: relative;
+		position: absolute;
 		bottom: 0px;
 		left: 0px;
 		background: gray;
@@ -193,6 +199,22 @@
 			background: yellow;
 			padding: 10px;
 		`}>Create Sure locker</button
+	>
+
+	<button
+		on:click={() =>
+			newEvent.set({
+				name: Date.now().toString(),
+				message:
+					'this dsds d sd dsd dsds s d s is an awesome message thea tekndjksdlksfs sinfso ldj dolfd snoif s',
+				status: 'success',
+
+				tx: '5jQSFQH2toEQv86DC9KMg7afrWpVsaksaiRsKayZC5jL2GuG13xKHVrZZtyLzGThZfNriocZ765eN57XRMsijXeB'
+			})}
+		class={css`
+			background: yellow;
+			padding: 10px;
+		`}>Create Event</button
 	>
 </div>
 

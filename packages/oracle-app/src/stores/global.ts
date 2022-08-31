@@ -26,10 +26,15 @@ export const createProposalState = writable(false, () => {
 	return () => console.log('unsubsribe');
 });
 
+export type EventStatus = 'success' | 'error' | 'info';
+
 export type Event = {
 	name: string;
+	message?: string;
+	status: EventStatus;
+	tx?: string;
 };
-export const newEvent = writable<Event>({ name: '' }, () => {
+export const newEvent = writable<Event>({ name: '', message: '', status: 'info', tx: '' }, () => {
 	console.log('subscribe');
 });
 

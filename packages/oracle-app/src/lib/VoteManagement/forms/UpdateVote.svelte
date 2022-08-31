@@ -4,6 +4,8 @@
 	import type { ProposalType } from '@surec/oracle';
 	import { BN, type ProgramAccount } from '@project-serum/anchor';
 	import { saveSalt } from '$utils';
+	import MainButton from '$lib/button/MainButton.svelte';
+	import type { SendTransactionError } from '@solana/web3.js';
 
 	export let proposal: ProgramAccount<ProposalType>;
 
@@ -20,12 +22,16 @@
 					vote: userVoteQ32,
 					proposal: proposal.publicKey
 				});
-				await voteTx.transactionEnvelope.confirm();
+				const txRec = await voteTx.transactionEnvelope.confirm();
 				saveSalt(voteTx.salt, proposal.account.name);
-				newEvent.set({ name: 'successfully update user vote vote' });
+				newEvent.set({
+					name: 'successfully updated user vote',
+					status: 'success',
+					tx: txRec.signature
+				});
 			} catch (err) {
-				console.log('failed to update vote: cause: ', err);
-				newEvent.set({ name: 'failed to update vote' });
+				const error = err as SendTransactionError;
+				newEvent.set({ name: 'failed to update user vote', status: 'error', tx: error.message });
 			}
 		}
 	}
@@ -67,26 +73,9 @@
 			align-items: center;
 		`}
 	>
-		<button class={'vote-button'} aria-disabled="true">
-			<p class="p p--small p--white text--margin-vertical__0">Update Vote</p>
-		</button>
+		<MainButton title={'Update'} type={'submit'} />
 	</div>
 </form>
 
 <style lang="scss">
-	.vote-button {
-		padding-left: 10px;
-		padding-right: 10px;
-		padding-top: 2px;
-		padding-bottom: 2px;
-		height: 2rem;
-		border: white 1px solid;
-		border-radius: 10px;
-		background-color: transparent;
-		cursor: pointer;
-
-		&:hover {
-			border: #f50093 1px solid;
-		}
-	}
 </style>

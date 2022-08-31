@@ -4,6 +4,8 @@
 	import type { ProposalType } from '@surec/oracle';
 	import { BN, type ProgramAccount } from '@project-serum/anchor';
 	import { getSalt } from '$utils';
+	import MainButton from '$lib/button/MainButton.svelte';
+	import type { SendTransactionError } from '@solana/web3.js';
 
 	export let proposal: ProgramAccount<ProposalType>;
 
@@ -26,11 +28,15 @@
 					voteAccount,
 					salt
 				});
-				await voteTx.confirm();
-				newEvent.set({ name: 'successfully revealed the user vote vote' });
+				const txRec = await voteTx.confirm();
+				newEvent.set({
+					name: 'successfully revealed user vote',
+					status: 'success',
+					tx: txRec.signature
+				});
 			} catch (err) {
-				console.log('failed to update vote: cause: ', err);
-				newEvent.set({ name: 'failed to update vote' });
+				const error = err as SendTransactionError;
+				newEvent.set({ name: 'failed to reveal vote', status: 'error', tx: error.message });
 			}
 		}
 	}
@@ -48,7 +54,6 @@
 		class={css`
 			display: flex;
 			flex-direction: column;
-			width: 5rem;
 		`}
 	>
 		<label
@@ -64,9 +69,7 @@
 			type="decimal"
 			class="input-text-field__centered"
 		/>
-		<button class={'vote-button'} aria-disabled="true">
-			<p class="p p--small p--white text--margin-vertical__0">Reveal Vote</p>
-		</button>
+		<MainButton title={'Reveal'} type={'submit'} />
 	</div>
 </form>
 

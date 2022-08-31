@@ -3,6 +3,8 @@
 	import { globalStore, newEvent } from './../../../stores/global';
 	import type { ProposalType } from '@surec/oracle';
 	import type { ProgramAccount } from '@project-serum/anchor';
+	import MainButton from '$lib/button/MainButton.svelte';
+	import type { SendTransactionError } from '@solana/web3.js';
 
 	export let proposal: ProgramAccount<ProposalType>;
 
@@ -17,11 +19,16 @@
 				const voteTx = await oracleSdk.vote().cancelVote({
 					voteAccount
 				});
-				await voteTx.confirm();
-				newEvent.set({ name: 'successfully cancelled user vote' });
+				const txRec = await voteTx.confirm();
+				newEvent.set({
+					name: 'successfully cancelled user vote',
+					status: 'success',
+					tx: txRec.signature
+				});
 			} catch (err) {
+				const error = err as SendTransactionError;
 				console.log('failed to cancel vote: cause: ', err);
-				newEvent.set({ name: 'failed to cancel vote' });
+				newEvent.set({ name: 'failed to cancel vote', status: 'error', tx: error.message });
 			}
 		}
 	}
@@ -48,9 +55,7 @@
 			`}
 			for="userVote">Cancel Vote</label
 		>
-		<button class={'vote-button'} aria-disabled="true">
-			<p class="p p--small p--white text--margin-vertical__0">Cancel Vote</p>
-		</button>
+		<MainButton title={'Cancel'} type={'submit'} />
 	</div>
 </form>
 

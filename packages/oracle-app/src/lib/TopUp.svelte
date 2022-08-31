@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { css } from '@emotion/css';
+	import { css, cx } from '@emotion/css';
 	import * as anchor from '@project-serum/anchor';
 	import * as spl from './../../node_modules/@solana/spl-token';
 	import * as web3 from '@solana/spl-token';
@@ -16,13 +16,18 @@
 		calculateAccountBalanceInDecimals,
 		calculateAmountInDecimals
 	} from './../utils/';
-	let sureTokens = new anchor.BN(0);
-	let veSureAmount = new anchor.BN(0);
+	import MainButton from './button/MainButton.svelte';
+	import type { SendTransactionError } from '@solana/web3.js';
+	import TypeInputAmount from './input/TypeInputAmount.svelte';
+	import Amount from './text/Amount.svelte';
+	let sureTokens = '__';
+	let veSureAmount = '__';
 
 	let values = {
-		amount: 1,
-		days: 365
+		amount: undefined,
+		days: undefined
 	};
+	let loadingData = true;
 
 	// send to utils
 
@@ -34,17 +39,25 @@
 				const escrow = await lockerSdk.fetchEscrowByAuthority();
 				const newVeSureAmount = await calculateAmountInDecimals(oracleSdk, escrow.amount);
 				if (newVeSureAmount) {
-					veSureAmount = newVeSureAmount;
+					veSureAmount = newVeSureAmount.toString();
 				}
-			} catch {}
+			} catch {
+				throw new Error();
+			}
+		} else {
+			throw new Error();
 		}
 	}
 
 	async function getSureAmount() {
 		const oracleSdk = $globalStore.oracleSDK;
-		const newSureAmount = await calculateAccountBalanceInDecimals(oracleSdk);
-		if (newSureAmount) {
-			sureTokens = newSureAmount;
+		if (oracleSdk) {
+			const newSureAmount = await calculateAccountBalanceInDecimals(oracleSdk);
+			if (newSureAmount) {
+				sureTokens = newSureAmount.toString();
+			}
+		} else {
+			throw new Error();
 		}
 	}
 
@@ -55,29 +68,50 @@
 			try {
 				const lockAmount = await calculateFullAmount(oracleSdk, new anchor.BN(values.amount));
 				if (lockAmount) {
-					newEvent.set({ name: `lock ${lockAmount} for ${values.days} days ` });
+					newEvent.set({ name: `lock ${lockAmount} for ${values.days} days `, status: 'info' });
 					const lockTokensTx = await lockerSdk.lockTokens({
 						amount: lockAmount,
 						duration: daysToSecond(values.days)
 					});
-					await lockTokensTx.confirm();
-					newEvent.set({ name: `successfully locked ${lockAmount} for ${values.days} ` });
+					const txRes = await lockTokensTx.confirm();
+					newEvent.set({
+						name: `successfully locked ${lockAmount} for ${values.days} `,
+						status: 'success',
+						tx: txRes.signature
+					});
 				}
 			} catch (err) {
+				const error = err as SendTransactionError;
 				console.log('could not lock tokens. Cause: ', err);
-				newEvent.set({ name: 'could not lock tokens.' });
+				newEvent.set({
+					name: 'could not lock tokens.',
+					message: error.message,
+					status: 'error'
+				});
 			}
 		}
 	}
 
 	onMount(async () => {
-		getSureAmount();
-		getVeSureAmount();
+		loadingData = true;
+		Promise.all([getSureAmount(), getVeSureAmount()])
+			.then(() => {
+				loadingData = false;
+			})
+			.catch(() => {
+				loadingData = true;
+			});
 	});
 
 	wallet_adapter.walletStore.subscribe(async (value) => {
-		getSureAmount();
-		getVeSureAmount();
+		loadingData = true;
+		Promise.all([getSureAmount(), getVeSureAmount()])
+			.then(() => {
+				loadingData = false;
+			})
+			.catch(() => {
+				loadingData = true;
+			});
 	});
 </script>
 
@@ -87,9 +121,17 @@
 		class={css`
 			width: 100%;
 			color: white;
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+			padding-bottom: 1rem;
 		`}
 	>
 		<h3 class="h3--white">Top up veSure</h3>
+		<p class="p text--margin-vertical__0">
+			.by locking $sure your receive veSure which can be used to vote on proposals and participate
+			in governance
+		</p>
 		<div
 			class={css`
 				display: flex;
@@ -103,13 +145,7 @@
 				`}
 			>
 				<label for="lockAmount">Amount to lock</label>
-				<input
-					bind:value={values.amount}
-					type="number"
-					name="lockAmount"
-					id="lockAmount"
-					class="input-number-field--padding-m"
-				/>
+				<TypeInputAmount bind:value={values.amount} valueType={'$sure'} />
 			</div>
 
 			<div
@@ -118,18 +154,26 @@
 				`}
 			>
 				<label for="lockDays">Days to lock</label>
-				<input
-					bind:value={values.days}
-					type="number"
-					name="lockDays"
-					id="lockDays"
-					class="input-number-field--padding-m"
-				/>
+				<TypeInputAmount bind:value={values.days} valueType={'days'} />
 			</div>
 		</div>
-
-		<p>{`Amount of sure: ${sureTokens}`}</p>
-		<p>{`Amount of veSure: ${veSureAmount}`}</p>
-		<button type="submit">Lock</button>
+		<div
+			class={css`
+				display: flex;
+				justify-content: center;
+				gap: 5rem;
+			`}
+		>
+			<Amount title="$sure" amount={sureTokens} loading={loadingData} />
+			<Amount title="veSure" amount={veSureAmount} loading={loadingData} />
+		</div>
+		<div
+			class={css`
+				display: flex;
+				justify-content: center;
+			`}
+		>
+			<MainButton title={'Lock'} type={'submit'} />
+		</div>
 	</form>
 </div>

@@ -22,6 +22,9 @@
 	import CancelVote from './forms/CancelVote.svelte';
 	import RevealVote from './forms/RevealVote.svelte';
 	import CollectRewards from './forms/CollectRewards.svelte';
+	import type { SendTransactionError } from '@solana/web3.js';
+	import StatBox from '$lib/box/StatBox.svelte';
+	import { to_number } from 'svelte/internal';
 
 	let steps: { status: VoteStatus; text: string }[] = [
 		{ status: 'Voting', text: 'Voting' },
@@ -95,12 +98,17 @@
 					locker: lockerSdk?.locker,
 					userEscrow: escrowKey
 				});
-				await voteTx.transactionEnvelope.confirm();
+				const txRec = await voteTx.transactionEnvelope.confirm();
 				saveSalt(voteTx.salt, proposal.account.name);
-				newEvent.set({ name: 'successfully submitted user vote vote' });
+				newEvent.set({
+					name: 'successfully submitted user vote',
+					status: 'success',
+					tx: txRec.signature
+				});
 			} catch (err) {
+				const error = err as SendTransactionError;
 				console.log('failed to submit vote: cause: ', err);
-				newEvent.set({ name: 'failed to submit vote' });
+				newEvent.set({ name: 'failed to submit vote', status: 'error', tx: error.message });
 			}
 		}
 	}
@@ -119,12 +127,18 @@
 	>
 		<h3 class="h3--white">{`Vote management`}</h3>
 		{#if proposal !== undefined}
-			<p>{proposal.account.name}</p>
-			{#if steps[currentStep].status == 'Failed'}
-				<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
-			{:else}
-				<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
-			{/if}
+			<p class="p p--italic">{proposal.account.name}</p>
+			<div
+				class={css`
+					width: 100%;
+				`}
+			>
+				{#if steps[currentStep].status == 'Failed'}
+					<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
+				{:else}
+					<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
+				{/if}
+			</div>
 
 			{#if vote}
 				<div
@@ -144,16 +158,14 @@
 							margin-bottom: 5px;
 						`}
 					>
-						<div class="info-box">
-							<p class="p p--small">{`Vote power - ${vote.votePower}`}</p>
-						</div>
-						<div class="info-box"><p class="p p--small">{`Rewards -${vote.earnedRewards}`}</p></div>
-						<div class="info-box"><p class="p p--small">{`Revealed vote - ${vote.vote}`}</p></div>
+						<StatBox title="vote power" value={vote.votePower} />
+						<StatBox title="rewards" value={vote.earnedRewards.toNumber()} />
+						<StatBox title="vote" value={vote.revealedVote ? vote.vote.toNumber() : 'NaN'} />
 						{#if vote.locked}
-							<div class="info-box"><p class="p p--small">{`Locked`}</p></div>
+							<StatBox title="locked" value={'yes'} />
 						{/if}
 					</div>
-					<h3 class=" h3 h3--white">Actions</h3>
+					<h3 class=" h3 h3--white">Available actions</h3>
 					{#if steps[currentStep].status == 'Voting'}
 						{#if vote}
 							<div>
@@ -193,6 +205,10 @@
 						<div>
 							<CollectRewards {proposal} />
 						</div>
+					{:else if vote.locked}
+						<div>
+							<p>The vote rewards are collected and the vote is closed.</p>
+						</div>
 					{:else}
 						<div>
 							<CollectRewards {proposal} />
@@ -213,6 +229,7 @@
 		border-radius: 10px;
 		padding-left: 10px;
 		padding-right: 10px;
+		width: 5rem;
 		justify-content: center;
 		align-items: center;
 	}

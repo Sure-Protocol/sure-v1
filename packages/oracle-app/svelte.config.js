@@ -13,6 +13,12 @@ const config = {
 		// Override http methods in the Todo forms
 		methodOverride: {
 			allowed: ['PATCH', 'DELETE']
+		},
+		alias: {
+			'$static/*': 'static/*',
+			'$utils/*': 'src/utils/*',
+			'$lib/*': 'src/lib/*',
+			'$stores/*': 'src/stores/*'
 		}
 	}
 };

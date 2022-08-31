@@ -3,6 +3,8 @@
 	import { globalStore, newEvent } from './../../../stores/global';
 	import type { ProposalType } from '@surec/oracle';
 	import type { ProgramAccount } from '@project-serum/anchor';
+	import MainButton from '$lib/button/MainButton.svelte';
+	import type { SendTransactionError } from '@solana/web3.js';
 
 	export let proposal: ProgramAccount<ProposalType>;
 
@@ -17,11 +19,20 @@
 				const voteTx = await oracleSdk.vote().collectRewards({
 					voteAccount
 				});
-				await voteTx.confirm();
-				newEvent.set({ name: 'successfully collect user vote rewards' });
+				const txRec = await voteTx.confirm();
+				newEvent.set({
+					name: 'successfully collected vote rewards',
+					status: 'success',
+					tx: txRec.signature
+				});
 			} catch (err) {
-				console.log('failed to collect vote rewards: cause: ', err);
-				newEvent.set({ name: 'failed to collect vote rewards' });
+				const error = err as SendTransactionError;
+				console.log('failed to collect vote rewards: ', err);
+				newEvent.set({
+					name: 'failed to collect vote rewards',
+					status: 'error',
+					tx: error.message
+				});
 			}
 		}
 	}
@@ -39,29 +50,11 @@
 		class={css`
 			display: flex;
 			flex-direction: column;
-			width: 5rem;
 		`}
 	>
-		<button class={'vote-button'} aria-disabled="true">
-			<p class="p p--small p--white text--margin-vertical__0">Collect Reward</p>
-		</button>
+		<MainButton title={'Collect reward'} type={'submit'} />
 	</div>
 </form>
 
 <style lang="scss">
-	.vote-button {
-		padding-left: 10px;
-		padding-right: 10px;
-		padding-top: 2px;
-		padding-bottom: 2px;
-		height: 2rem;
-		border: white 1px solid;
-		border-radius: 10px;
-		background-color: transparent;
-		cursor: pointer;
-
-		&:hover {
-			border: #f50093 1px solid;
-		}
-	}
 </style>

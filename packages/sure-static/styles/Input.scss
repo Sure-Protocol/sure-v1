@@ -24,6 +24,11 @@
         @extend .input-number-field;
         border-color: red;
     }
+
+    &__centered{
+        @extend .input-number-field;
+        text-align: center;
+    }
 }
 
 .input-text-field{

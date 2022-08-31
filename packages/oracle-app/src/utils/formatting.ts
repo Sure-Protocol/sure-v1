@@ -38,3 +38,7 @@ export const countdownFromUnix = (unixDeadline: number): string => {
 export const prettyLargeNumber = (number: BN): string => {
 	return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
+
+export const prettySolanaExplorerLink = (tx: string, network: string): string => {
+	return `https://explorer.solana.com/tx/${tx}?cluster=${network}`;
+};

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Header from '$lib/header/Header.svelte';
 	import CreateProposal from '$lib/CreateProposal.svelte';
+	import { css } from '@emotion/css';
 	import { writable } from 'svelte/store';
 	import { globalStore } from './../stores/global';
 	import { createProposalState } from '../stores/global';
@@ -17,21 +18,25 @@
 	});
 </script>
 
-<Header />
+<div
+	class={css`
+		height: 100vh;
+	`}
+>
+	<Header />
 
-<main class={showProposal ? 'blurred' : ''}>
-	<slot />
-</main>
-{#if showProposal}
-	<CreateProposal />
-{/if}
+	<main class={showProposal ? 'blurred' : ''}>
+		<slot />
+	</main>
+	{#if showProposal}
+		<CreateProposal />
+	{/if}
 
-<footer />
-
-<EventStack />
-{#if process.env.SURE_ENV == 'dev'}
-	<TestPanel />
-{/if}
+	<EventStack />
+	{#if process.env.SURE_ENV == 'dev'}
+		<TestPanel />
+	{/if}
+</div>
 
 <style lang="scss">
 	@import '../../../sure-static/styles/index.scss';
@@ -39,6 +44,7 @@
 		body {
 			background-color: $sure-black;
 			width: auto;
+			height: 100vh;
 		}
 	}
 	main {
@@ -47,7 +53,7 @@
 		flex-direction: column;
 		padding: 1rem;
 		width: 100%;
-		//max-width: 1024px;
+		height: 100vh;
 		margin: 0 auto;
 		box-sizing: border-box;
 		background-color: $sure-black;
