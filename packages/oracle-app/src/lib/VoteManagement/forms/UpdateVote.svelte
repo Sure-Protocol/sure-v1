@@ -31,7 +31,11 @@
 				});
 			} catch (err) {
 				const error = err as SendTransactionError;
-				newEvent.set({ name: 'failed to update user vote', status: 'error', tx: error.message });
+				newEvent.set({
+					name: 'failed to update user vote',
+					status: 'error',
+					message: error.message
+				});
 			}
 		}
 	}

@@ -31,7 +31,7 @@
 		{ status: 'Reveal vote', text: 'Reveal vote' },
 		{ status: 'Calculate Reward', text: 'Calculate Reward' },
 		{ status: 'Collect Reward', text: 'Collect Reward' },
-		{ status: 'Failed ', text: 'Failed' }
+		{ status: 'Failed', text: 'Failed' }
 	];
 	let currentStep: number = 0;
 

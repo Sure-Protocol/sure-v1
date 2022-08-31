@@ -23,7 +23,7 @@
 			eventStack = [...eventStackTemp, event];
 			setTimeout(() => {
 				eventStack = eventStack.slice(0, eventStack.length - 1);
-			}, 3000);
+			}, 5000);
 		}
 	});
 

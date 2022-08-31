@@ -9,6 +9,7 @@
 	import TopUp from '$lib/TopUp.svelte';
 	import VoteStats from '$lib/VoteManagement/VoteStats.svelte';
 	import Proposals from '$lib/proposals/Proposals.svelte';
+	import EditProposal from "$lib/proposalManagement/EditProposal.svelte"
 
 	wallet_adapter.walletStore.subscribe((value) => {
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
@@ -50,6 +51,10 @@
 				<div class="action-container-inner-content">
 					<div class="action-container-inner-content--item">
 						<TopUp />
+					</div>
+
+					<div class="action-container-inner-content--item">
+						<EditProposal />
 					</div>
 
 					<div class="action-container-inner-content--item">

@@ -66,6 +66,7 @@
 		left: 50%;
 		border-radius: 10px;
 		width: 30rem;
+		box-shadow: 10px 10px 40px 1px #324f7e;
 	`}
 >
 	<CloseButton onClick={() => createProposalState.set(false)} />

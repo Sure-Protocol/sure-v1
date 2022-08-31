@@ -36,7 +36,7 @@
 				});
 			} catch (err) {
 				const error = err as SendTransactionError;
-				newEvent.set({ name: 'failed to reveal vote', status: 'error', tx: error.message });
+				newEvent.set({ name: 'failed to reveal vote', status: 'error', message: error.message });
 			}
 		}
 	}

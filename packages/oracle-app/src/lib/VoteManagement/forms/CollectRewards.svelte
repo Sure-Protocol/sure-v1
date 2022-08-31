@@ -31,7 +31,7 @@
 				newEvent.set({
 					name: 'failed to collect vote rewards',
 					status: 'error',
-					tx: error.message
+					message: error.message
 				});
 			}
 		}

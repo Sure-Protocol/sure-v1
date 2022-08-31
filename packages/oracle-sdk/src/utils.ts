@@ -29,7 +29,7 @@ export const getProposalStatus = (proposal: ProposalType): ProposalStatus => {
 		return 'Voting';
 	} else if (isBlindVoteFinished(proposal, currentTime) && hasReachedQuorum) {
 		return 'Reveal';
-	} else if (isRevealVoteFinished(proposal, currentTime)) {
+	} else if (isRevealVoteFinished(proposal, currentTime) && hasReachedQuorum) {
 		return 'Creating reward distribution';
 	} else if (isScaleParameterCalculated) {
 		return 'Calculate Reward';
