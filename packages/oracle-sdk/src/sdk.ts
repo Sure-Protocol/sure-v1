@@ -7,6 +7,7 @@ import { SolanaAugmentedProvider } from '@saberhq/solana-contrib';
 import { Vote } from './vote';
 import { PDA } from './pda';
 import { SURE_ADDRESSES } from './constants';
+import { Config } from './config';
 
 export type ProviderProps = {
 	connection: anchor.web3.Connection;
@@ -62,6 +63,9 @@ export class SureOracleSDK {
 		return new PDA();
 	}
 
+	config(): Config {
+		return new Config(this);
+	}
 	proposal(): Proposal {
 		return new Proposal(this);
 	}

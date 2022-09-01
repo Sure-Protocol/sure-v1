@@ -91,9 +91,40 @@ export type Oracle = {
         {
           "name": "votingPeriod",
           "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "updateRevealPeriod",
+      "docs": [
+        "update config: reveal period",
+        "",
+        "change the reveal period and reveal period",
+        "",
+        "### args",
+        "* voting_period<i64>: period for which the voter can submit a vote hash. In seconds",
+        "* reveal_period<i64>: period for which the voter can reveal the vote. In seconds"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
         },
         {
-          "name": "revealPeriod",
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "votingPeriod",
           "type": "i64"
         }
       ]
@@ -1483,7 +1514,12 @@ export type Oracle = {
           "name": "votingPeriod",
           "type": "i64",
           "index": false
-        },
+        }
+      ]
+    },
+    {
+      "name": "UpdatedRevealPeriod",
+      "fields": [
         {
           "name": "oldRevealPeriod",
           "type": "i64",
@@ -1929,9 +1965,40 @@ export const IDL: Oracle = {
         {
           "name": "votingPeriod",
           "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "updateRevealPeriod",
+      "docs": [
+        "update config: reveal period",
+        "",
+        "change the reveal period and reveal period",
+        "",
+        "### args",
+        "* voting_period<i64>: period for which the voter can submit a vote hash. In seconds",
+        "* reveal_period<i64>: period for which the voter can reveal the vote. In seconds"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
         },
         {
-          "name": "revealPeriod",
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "votingPeriod",
           "type": "i64"
         }
       ]
@@ -3321,7 +3388,12 @@ export const IDL: Oracle = {
           "name": "votingPeriod",
           "type": "i64",
           "index": false
-        },
+        }
+      ]
+    },
+    {
+      "name": "UpdatedRevealPeriod",
+      "fields": [
         {
           "name": "oldRevealPeriod",
           "type": "i64",

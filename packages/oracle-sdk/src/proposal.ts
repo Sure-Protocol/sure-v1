@@ -6,7 +6,7 @@ import { SURE_TOKEN } from './constants';
 import { SureOracleSDK } from './sdk';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
 import { createProposalHash, validateKeys } from './utils';
-import { getATAAddressSync, token } from '@saberhq/token-utils';
+import { getATAAddressSync } from '@saberhq/token-utils';
 import { ProposalType } from './program';
 import { ProgramAccount } from '@project-serum/anchor';
 

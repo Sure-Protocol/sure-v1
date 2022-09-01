@@ -2,20 +2,23 @@ import * as anchor from '@project-serum/anchor';
 import * as token_utils from '@saberhq/token-utils';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from '../../idls/oracle';
-import { SURE_TOKEN } from './constants';
 import { SureOracleSDK } from './sdk';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
-import { createProposalHash, validateKeys } from './utils';
-import { getATAAddressSync } from '@saberhq/token-utils';
-import { ProposalType } from './program';
-import { ProgramAccount } from '@project-serum/anchor';
 
 export type InitializeOracleConfig = {
 	protocolAuthority: PublicKey;
 	tokenMint: PublicKey;
 };
 
-export type UpdateConfig = {};
+export type UpdateConfig = {
+	proposalPk: PublicKey;
+	votingPeriod?: anchor.BN;
+	revealPeriod?: anchor.BN;
+	requiredVotes?: anchor.BN;
+	minimumProposalStake?: anchor.BN;
+	voteStakeRate?: number;
+	protocolFeeRate?: number;
+};
 export class Config {
 	readonly program: anchor.Program<oracleIDL.Oracle>;
 	constructor(readonly sdk: SureOracleSDK) {
@@ -46,7 +49,99 @@ export class Config {
 		return this.sdk.provider.newTX(ixs);
 	}
 
-	//async updateConfig({}: UpdateConfig): Promise<TransactionEnvelope> {}
+	/**
+	 * update oracle config
+	 *
+	 * @param proposalPk - public key of proposal
+	 * @param votingPeriod - the voting period in seconds
+	 * @param revealPeriod - the period for which the users can reveal their vote in seconds
+	 * @param requiredVotes - the number of required voted to reach quorum
+	 * @param minimumProposalStake - the minimum amount of stake a proposer needs to put into the vault (escrow)
+	 * @param voteStakeRate - the 1/x of total voting power the user have to deposit to vote
+	 * @param protocolFeeRate - the 1/x the protocol will extract from the voting pool
+	 *
+	 * @returns TransactionEnvelope
+	 */
+	async updateConfig({
+		proposalPk,
+		votingPeriod,
+		revealPeriod,
+		requiredVotes,
+		minimumProposalStake,
+		voteStakeRate,
+		protocolFeeRate,
+	}: UpdateConfig): Promise<TransactionEnvelope> {
+		const ixs: TransactionInstruction[] = [];
+		const proposal = await this.sdk.program.account.proposal.fetch(proposalPk);
+
+		if (votingPeriod) {
+			ixs.push(
+				await this.sdk.program.methods
+					.updateVotingPeriod(votingPeriod)
+					.accounts({
+						config: proposal.config,
+					})
+					.instruction()
+			);
+		}
+
+		if (revealPeriod) {
+			ixs.push(
+				await this.sdk.program.methods
+					.updateRevealPeriod(revealPeriod)
+					.accounts({
+						config: proposal.config,
+					})
+					.instruction()
+			);
+		}
+
+		if (requiredVotes) {
+			ixs.push(
+				await this.sdk.program.methods
+					.updateRequiredVotes(requiredVotes)
+					.accounts({
+						config: proposal.config,
+					})
+					.instruction()
+			);
+		}
+
+		if (minimumProposalStake) {
+			ixs.push(
+				await this.sdk.program.methods
+					.updateProposalMinimumStake(minimumProposalStake)
+					.accounts({
+						config: proposal.config,
+					})
+					.instruction()
+			);
+		}
+
+		if (voteStakeRate) {
+			ixs.push(
+				await this.sdk.program.methods
+					.updateVoteStakeRate(voteStakeRate)
+					.accounts({
+						config: proposal.config,
+					})
+					.instruction()
+			);
+		}
+
+		if (protocolFeeRate) {
+			ixs.push(
+				await this.sdk.program.methods
+					.updateProtocolFeeRate(protocolFeeRate)
+					.accounts({
+						config: proposal.config,
+					})
+					.instruction()
+			);
+		}
+
+		return this.sdk.provider.newTX(ixs);
+	}
 
 	/**
 	 * collect protocol fees

@@ -54,7 +54,7 @@ impl Config {
         self.reveal_length_seconds = SECONDS_PER_DAY as i64;
 
         self.default_required_votes = token_supply.div(VOTING_FRACTION_REQUIRED);
-        self.minimum_proposal_stake = 100_u64.mul(10_u64.pow(decimals as u32));
+        self.minimum_proposal_stake = 10_u64.mul(10_u64.pow(decimals as u32));
 
         // default to 1%
         self.vote_stake_rate = 100;
@@ -100,6 +100,16 @@ impl Config {
         reveal_length_seconds: i64,
     ) -> Result<()> {
         self.voting_length_seconds = voting_length_seconds;
+        self.reveal_length_seconds = reveal_length_seconds;
+        Ok(())
+    }
+
+    pub fn update_voting_length(&mut self, voting_length_seconds: i64) -> Result<()> {
+        self.voting_length_seconds = voting_length_seconds;
+        Ok(())
+    }
+
+    pub fn update_reveal_length(&mut self, reveal_length_seconds: i64) -> Result<()> {
         self.reveal_length_seconds = reveal_length_seconds;
         Ok(())
     }

@@ -15,26 +15,17 @@ pub struct UpdateConfig<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn update_voting_period(
-    ctx: Context<UpdateConfig>,
-    voting_period: i64,
-    reveal_period: i64,
-) -> Result<()> {
-    if voting_period < MIN_VOTING_LENGTH_SECONDS || reveal_period < MIN_VOTING_LENGTH_SECONDS {
+pub fn update_voting_period(ctx: Context<UpdateConfig>, voting_period: i64) -> Result<()> {
+    if voting_period < MIN_VOTING_LENGTH_SECONDS {
         return Err(SureError::InvalidVoteEndTime.into());
     }
     let old_voting_period = ctx.accounts.config.voting_length_seconds;
-    let old_reveal_period = ctx.accounts.config.reveal_length_seconds;
 
-    ctx.accounts
-        .config
-        .update_voting_lengths(voting_period, reveal_period)?;
+    ctx.accounts.config.update_voting_length(voting_period)?;
 
     emit!(UpdatedVotingPeriod {
         old_voting_period,
         voting_period,
-        old_reveal_period,
-        reveal_period
     });
     Ok(())
 }
@@ -43,6 +34,25 @@ pub fn update_voting_period(
 pub struct UpdatedVotingPeriod {
     old_voting_period: i64,
     voting_period: i64,
+}
+
+pub fn update_reveal_period(ctx: Context<UpdateConfig>, reveal_period: i64) -> Result<()> {
+    if reveal_period < MIN_VOTING_LENGTH_SECONDS {
+        return Err(SureError::InvalidVoteEndTime.into());
+    }
+    let old_reveal_period = ctx.accounts.config.reveal_length_seconds;
+
+    ctx.accounts.config.update_reveal_length(reveal_period)?;
+
+    emit!(UpdatedRevealPeriod {
+        old_reveal_period,
+        reveal_period
+    });
+    Ok(())
+}
+
+#[event]
+pub struct UpdatedRevealPeriod {
     old_reveal_period: i64,
     reveal_period: i64,
 }

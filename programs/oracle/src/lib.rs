@@ -35,12 +35,19 @@ pub mod oracle {
     /// ### args
     /// * voting_period<i64>: period for which the voter can submit a vote hash. In seconds
     /// * reveal_period<i64>: period for which the voter can reveal the vote. In seconds
-    pub fn update_voting_period(
-        ctx: Context<UpdateConfig>,
-        voting_period: i64,
-        reveal_period: i64,
-    ) -> Result<()> {
-        instructions::update_voting_period(ctx, voting_period, reveal_period)
+    pub fn update_voting_period(ctx: Context<UpdateConfig>, voting_period: i64) -> Result<()> {
+        instructions::update_voting_period(ctx, voting_period)
+    }
+
+    /// update config: reveal period
+    ///
+    /// change the reveal period and reveal period
+    ///
+    /// ### args
+    /// * voting_period<i64>: period for which the voter can submit a vote hash. In seconds
+    /// * reveal_period<i64>: period for which the voter can reveal the vote. In seconds
+    pub fn update_reveal_period(ctx: Context<UpdateConfig>, voting_period: i64) -> Result<()> {
+        instructions::update_reveal_period(ctx, voting_period)
     }
 
     /// update required votes

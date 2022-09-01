@@ -199,7 +199,6 @@ impl Proposal {
         self.description = String::from(description);
         self.proposer = *proposer;
         self.status = ProposalStatus::Proposed.get_id();
-        // convert to Q32.32
         if proposed_staked < config.minimum_proposal_stake {
             return Err(SureError::NotEnoughProposalStake.into());
         }

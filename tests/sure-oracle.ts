@@ -21,10 +21,11 @@ import {
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { Keypair } from '@solana/web3.js';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { createTestProposal } from './setup';
+import { createTestConfig, createTestProposal } from './setup';
 import { TransactionError } from '@solana/web3.js';
 import { SendTransactionError } from '@solana/web3.js';
 import { assert } from 'chai';
+import { SmartWalletWrapper } from '@gokiprotocol/client';
 
 describe('Test Sure Oracle', () => {
 	const provider = anchor.AnchorProvider.env();
@@ -48,6 +49,7 @@ describe('Test Sure Oracle', () => {
 	let sureLocker: web3.PublicKey;
 	let governorKey: web3.PublicKey;
 	let eggVote: anchor.BN;
+	let smartWallet: SmartWalletWrapper;
 	let salt: Buffer;
 	before(async () => {
 		proposalName = 'test 1';
@@ -63,7 +65,7 @@ describe('Test Sure Oracle', () => {
 			minterWallet,
 			minterWallet.publicKey,
 			minterWallet.publicKey,
-			8
+			6
 		);
 
 		walletATA = await createAssociatedTokenAccount(
@@ -88,14 +90,14 @@ describe('Test Sure Oracle', () => {
 			const base = Keypair.generate();
 			const [governor] = await tribeca.findGovernorAddress(base.publicKey);
 			const owners = [governor];
-			const smartWallet = await gokiSDK.newSmartWallet({
+			const pendingSmartWallet = await gokiSDK.newSmartWallet({
 				owners,
 				threshold: new anchor.BN(1),
 				numOwners: 1,
 				base: base,
 			});
-			await smartWallet.tx.confirm();
-
+			await pendingSmartWallet.tx.confirm();
+			smartWallet = pendingSmartWallet.smartWalletWrapper;
 			// set up locker
 			const governSDK = new tribeca.GovernWrapper(tribecaSDK);
 
@@ -105,7 +107,7 @@ describe('Test Sure Oracle', () => {
 
 			const govern = await governSDK.createGovernor({
 				electorate: locker,
-				smartWallet: smartWallet.smartWalletWrapper.key,
+				smartWallet: smartWallet.key,
 				baseKP: base,
 			});
 			await govern.tx.confirm();
@@ -125,23 +127,37 @@ describe('Test Sure Oracle', () => {
 
 		// create locker associated with governor
 	}),
-		it('Create a new proposal ', async () => {
+		it('Create oracle config', async () => {
 			try {
-				const txRceipt = await createTestProposal(
-					oracleSdk,
-					mint,
-					proposalName,
-					new anchor.BN(10_000_000)
-				);
-				console.log('create proposal logs:', txRceipt.printLogs);
+				const txRec = await createTestConfig(smartWallet.key, oracleSdk, mint);
 			} catch (err) {
-				console.log('err: ', err);
-				throw new Error('failed to create proposal. cause: ', err);
+				console.log('create config error: ', err);
+
+				throw new Error('failed to create proposal. cause: ' + err);
+				assert.fail();
 			}
 		});
+	it('Create a new proposal ', async () => {
+		try {
+			const txRceipt = await createTestProposal(
+				oracleSdk,
+				mint,
+				proposalName,
+				new anchor.BN(20_000_000)
+			);
+			console.log('create proposal logs:', txRceipt.printLogs);
+		} catch (err) {
+			console.log('err: ', err);
+
+			throw new Error('failed to create proposal. cause: ' + err);
+			assert.fail();
+		}
+	});
 	it('Vote on proposal', async () => {
 		try {
-			const [proposal] = SureOracleSDK.pda().findProposalAddress(proposalName);
+			const [proposal] = SureOracleSDK.pda().findProposalAddress({
+				proposalName,
+			});
 			const lockerWrapperSDK = new tribeca.LockerWrapper(
 				tribecaSDK,
 				sureLocker,
@@ -170,11 +186,14 @@ describe('Test Sure Oracle', () => {
 		} catch (e) {
 			const error = e as SendTransactionError;
 			console.log('error: ', error);
+			assert.fail();
 		}
 	});
 	it('Update vote ', async () => {
 		try {
-			const [proposal] = SureOracleSDK.pda().findProposalAddress(proposalName);
+			const [proposal] = SureOracleSDK.pda().findProposalAddress({
+				proposalName,
+			});
 			eggVote = new anchor.BN(4.3);
 
 			const voteTx = await oracleSdk.vote().updateVote({
@@ -201,11 +220,14 @@ describe('Test Sure Oracle', () => {
 		} catch (e) {
 			const error = e as SendTransactionError;
 			console.log(error);
+			assert.fail();
 		}
 	});
 	it('Cancel vote', async () => {
 		try {
-			const [proposal] = SureOracleSDK.pda().findProposalAddress(proposalName);
+			const [proposal] = SureOracleSDK.pda().findProposalAddress({
+				proposalName,
+			});
 			const [voteAccountPDA] = await SureOracleSDK.pda().findVoteAccount({
 				proposal,
 				voter: provider.wallet.publicKey,
@@ -217,12 +239,15 @@ describe('Test Sure Oracle', () => {
 		} catch (e) {
 			const error = e as SendTransactionError;
 			console.log(error);
+			assert.fail();
 		}
 	});
 	it('Create and reveal vote', async () => {
 		try {
 			// create a new vote
-			const [proposal] = SureOracleSDK.pda().findProposalAddress(proposalName);
+			const [proposal] = SureOracleSDK.pda().findProposalAddress({
+				proposalName,
+			});
 			const [userEscrow] = await tribeca.findEscrowAddress(
 				sureLocker,
 				provider.wallet.publicKey
