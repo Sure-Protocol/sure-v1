@@ -15,7 +15,7 @@ pub const NUM_VOTES_IN_ARRAY: u16 = 1024;
 #[repr(packed)]
 #[derive(Debug, PartialEq)]
 pub struct RevealedVoteArray {
-    pub bump: u8,
+    pub bump: u8,         // 1
     pub proposal: Pubkey, // 32
     /// Q32.32
     pub weighted_votes: [i64; NUM_VOTES_IN_ARRAY_USIZE], // 8*

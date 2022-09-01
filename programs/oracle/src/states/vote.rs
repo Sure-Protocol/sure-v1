@@ -25,6 +25,7 @@ pub struct VoteAccount {
     pub proposal: Pubkey,   //      32 bytes
     pub owner: Pubkey,      //      32 bytes
     pub stake_mint: Pubkey, //      32 bytes
+
     // hash of vote "vote"+"salt"
     pub vote_hash: [u8; 32], //     32 bytes
 

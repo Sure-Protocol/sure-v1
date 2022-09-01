@@ -6,7 +6,7 @@ seeds = true
 
 [programs.localnet]
 sure_pool = "D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM"
-oracle = "G3HjAD81oEXbR867NNBfpZ2PWDhsioaCguPZhTiXunu"
+oracle = "2prR7H6LfRqwiP2iTyZG1suG4B3zU6JEpUBXWeQB66qH"
 
 [programs.devnet]
 sure_pool = "D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM"

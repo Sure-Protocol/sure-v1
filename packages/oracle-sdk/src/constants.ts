@@ -1,7 +1,7 @@
 import * as web3 from '@solana/web3.js';
 import * as anchor from '@project-serum/anchor';
 export const SURE_ADDRESSES = {
-	Oracle: new web3.PublicKey('G3HjAD81oEXbR867NNBfpZ2PWDhsioaCguPZhTiXunu'),
+	Oracle: new web3.PublicKey('2prR7H6LfRqwiP2iTyZG1suG4B3zU6JEpUBXWeQB66qH'),
 };
 
 /// SEEDS

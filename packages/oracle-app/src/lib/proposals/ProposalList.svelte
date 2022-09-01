@@ -30,7 +30,6 @@
 		const oracleSdk = $globalStore.oracleSDK;
 		if (oracleSdk) {
 			proposals.set(await oracleSdk.proposal().fetchAllProposals());
-			const sureMint = await spl.getMint(oracleSdk.provider.connection, SURE_MINT_DEV);
 		}
 	});
 
@@ -144,7 +143,7 @@
 								{`By: ${prettyPublicKey(proposal.account.proposer)}`}
 							</p>
 							<p class="p p--small p--margin-0">
-								{`Staked: ${proposal.account.proposedStaked.toString()}`}
+								{`Staked: ${proposal.account.staked.toString()}`}
 							</p>
 						</div>
 

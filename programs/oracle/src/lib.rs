@@ -7,7 +7,7 @@ pub mod utils;
 use crate::instructions::ProposeVote;
 use instructions::*;
 
-declare_id!("G3HjAD81oEXbR867NNBfpZ2PWDhsioaCguPZhTiXunu");
+declare_id!("2prR7H6LfRqwiP2iTyZG1suG4B3zU6JEpUBXWeQB66qH");
 #[program]
 pub mod oracle {
     use super::*;
