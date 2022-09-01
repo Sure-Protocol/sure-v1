@@ -1,23 +1,42 @@
 use anchor_lang::{prelude::*, solana_program::clock};
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-use crate::{states::Proposal, utils::tokenTx};
+use crate::{
+    states::{Config, Proposal},
+    utils::tokenTx,
+};
 
 #[derive(Accounts)]
 pub struct CollectProposerReward<'info> {
     #[account(mut)]
     pub proposer: Signer<'info>,
 
-    #[account(mut)]
+    pub config: Box<Account<'info, Config>>,
+
+    #[account(
+        mut,
+        constraint = proposer_token_account.mint == proposal_vault_mint.key()
+    )]
     pub proposer_token_account: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        has_one = proposer,
+        has_one = config,
+        constraint = proposal.vault == proposal_vault.key()
+    )]
     pub proposal: Box<Account<'info, Proposal>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = proposal_vault.mint == proposal_vault_mint.key()
+    )]
     pub proposal_vault: Box<Account<'info, TokenAccount>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = proposal_vault_mint.key() == config.token_mint
+    )]
     pub proposal_vault_mint: Box<Account<'info, Mint>>,
 
     pub system_program: Program<'info, System>,
@@ -44,5 +63,17 @@ pub fn handler(ctx: Context<CollectProposerReward>) -> Result<()> {
         reward,
     )?;
 
+    emit!(CollectProposerRewardEvent {
+        proposal: proposal.key(),
+        time,
+        reward
+    });
     Ok(())
+}
+
+#[event]
+pub struct CollectProposerRewardEvent {
+    pub proposal: Pubkey,
+    pub time: i64,
+    pub reward: u64,
 }

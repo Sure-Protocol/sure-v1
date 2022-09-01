@@ -3,7 +3,7 @@ use crate::{
     utils::{convert_x32_to_u64, SureError, SURE_ORACLE_VOTE_SEED, VOTE_STAKE_RATE},
 };
 
-use super::{Proposal, ProposalStatus};
+use super::{Config, Proposal, ProposalStatus};
 use anchor_lang::{prelude::*, solana_program::pubkey};
 use std::ops::{Add, BitAnd, BitOr, Div, Mul, Shl, Shr, Sub};
 
@@ -19,33 +19,34 @@ pub struct VoteAccountUpdate {
 #[repr(packed)]
 #[derive(Debug, PartialEq)]
 pub struct VoteAccount {
-    pub bump: u8,            // 1 byte
-    pub bump_array: [u8; 1], // 1 byte
+    pub bump: u8,            //     1 byte
+    pub bump_array: [u8; 1], //     1 byte
 
-    pub proposal: Pubkey,   // 32
-    pub owner: Pubkey,      // 32
-    pub stake_mint: Pubkey, // 32
+    pub proposal: Pubkey,   //      32 bytes
+    pub owner: Pubkey,      //      32 bytes
+    pub stake_mint: Pubkey, //      32 bytes
     // hash of vote "vote"+"salt"
-    pub vote_hash: [u8; 32], // 32 bytes
+    pub vote_hash: [u8; 32], //     32 bytes
 
     /// real vote:
     /// I32.32
-    pub vote: i64, // 8 bytes
+    pub vote: i64, //               8 bytes
+    pub staked: u64, //             8 bytes
 
     /// F = V * l * exp(-l*(x-X))
-    pub vote_factor: u64, // 8
+    pub vote_factor: u64, //        8 bytes
 
     /// rewards earned from voting
     /// C * F / S_v
-    pub earned_rewards: u64, // 8 bytes
+    pub earned_rewards: u64, //     8 bytes
 
     // how many votes put on the vote_hash
     // Q32.0 - assume rounded
-    pub vote_power: u32, // 8  bytes
+    pub vote_power: u32, //         8  bytes
 
-    pub revealed_vote: bool, // 1 bytes
+    pub revealed_vote: bool, //     1 bytes
 
-    pub locked: bool, // 1
+    pub locked: bool, //            1 bytes
 }
 
 impl Default for VoteAccount {
@@ -58,6 +59,7 @@ impl Default for VoteAccount {
             owner: Pubkey::default(),
             stake_mint: Pubkey::default(),
             proposal: Pubkey::default(),
+            staked: 0,
             vote: 0,
             vote_factor: 0,
             earned_rewards: 0,
@@ -69,7 +71,7 @@ impl Default for VoteAccount {
 }
 
 impl VoteAccount {
-    pub const SPACE: usize = 1 + 1 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 1 + 1;
+    pub const SPACE: usize = 1 + 1 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1;
 
     pub fn seeds(&self) -> [&[u8]; 4] {
         [
@@ -82,6 +84,7 @@ impl VoteAccount {
 
     pub fn initialize(
         &mut self,
+        stake_rate: u32,
         bump: u8,
         owner: &Pubkey,
         proposal: &Pubkey,
@@ -104,13 +107,13 @@ impl VoteAccount {
         let vote_power = vote_power_proto as u32;
         self.vote_power = vote_power;
         self.stake_mint = stake_mint;
-        let stake = calculate_stake((vote_power as u64) << 32, decimals);
+        self.staked = calculate_stake((vote_power as u64) << 32, decimals, stake_rate);
         self.vote = 0;
         self.earned_rewards = 0;
         self.owner = *owner;
         self.proposal = *proposal;
         Ok(VoteAccountUpdate {
-            stake_change: stake,
+            stake_change: self.staked,
             increase_stake: true,
         })
     }
@@ -170,12 +173,12 @@ impl VoteAccount {
         Ok(())
     }
 
-    pub fn cancel_vote(&mut self, decimals: u8) -> Result<u64> {
+    pub fn cancel_vote(&mut self) -> Result<u64> {
         // lock vote
         self.locked = true;
 
         // get refund stake
-        Ok(calculate_stake((self.vote_power as u64) << 32, decimals))
+        Ok(self.staked)
     }
 
     /// Calculate the vote factor
@@ -205,13 +208,12 @@ impl VoteAccount {
         mint_decimals: u8,
         time: i64,
     ) -> Result<u64> {
-        if self.revealed_vote
-            && self.vote_factor > 0
-            && proposal.get_status(time).unwrap() == ProposalStatus::RewardCalculation
+        let status = proposal.get_status(time).unwrap();
+        if self.revealed_vote && self.vote_factor > 0 && status == ProposalStatus::RewardCalculation
         {
             self.calculate_token_reward_(self.vote_factor, mint_decimals)
-        } else if !self.revealed_vote {
-            return self.cancel_vote(mint_decimals);
+        } else if status == ProposalStatus::Failed {
+            return self.cancel_vote();
         } else {
             return Err(SureError::NotPossibleToCalculateVoteReward.into());
         }
@@ -285,6 +287,8 @@ pub mod vote_account_proto {
 
         pub vote_factor: u64,
 
+        pub staked: u64,
+
         // rewards earned from voting
         pub earned_rewards: u64, // 8 bytes
 
@@ -303,6 +307,7 @@ pub mod vote_account_proto {
                 vote: 0,
                 vote_factor: 0,
                 earned_rewards: 0,
+                staked: 0,
                 vote_power: 0,
                 revealed_vote: false,
                 locked: false,
@@ -339,6 +344,7 @@ pub mod vote_account_proto {
                 vote: self.vote,
                 vote_factor: self.vote_factor,
                 stake_mint: Pubkey::default(),
+                staked: self.staked,
                 earned_rewards: self.earned_rewards,
                 vote_power: self.vote_power,
                 revealed_vote: self.revealed_vote,
@@ -354,10 +360,7 @@ pub mod vote_account_proto {
 pub mod test_vote {
     use proposal::test_proposal_proto::{self, ProposalProto};
 
-    use crate::{
-        states::{proposal, test_propose_vote},
-        utils::convert_f32_i64,
-    };
+    use crate::{states::proposal, utils::convert_f32_i64};
 
     use super::*;
     const START_TIME: i64 = 1660681219;
@@ -422,6 +425,7 @@ pub mod test_vote {
             let vote_hash = vote_account_proto::hash_vote(test.vote, &test.salt_true);
             vote_account
                 .initialize(
+                    10,
                     0,
                     &Pubkey::default(),
                     &Pubkey::default(),
@@ -487,6 +491,7 @@ pub mod test_vote {
             let vote_hash = vote_account_proto::hash_vote(test.vote, &test.salt_true);
             vote_account
                 .initialize(
+                    10,
                     0,
                     &Pubkey::default(),
                     &Pubkey::default(),
@@ -550,6 +555,7 @@ pub mod test_vote {
             let vote_hash = vote_account_proto::hash_vote(test.vote, &test.salt_true);
             vote_account
                 .initialize(
+                    10,
                     0,
                     &Pubkey::default(),
                     &Pubkey::default(),
@@ -641,6 +647,7 @@ pub mod test_vote {
             let vote_hash = vote_account_proto::hash_vote(test.vote, &test.salt_true);
             vote_account
                 .initialize(
+                    10,
                     0,
                     &Pubkey::default(),
                     &Pubkey::default(),

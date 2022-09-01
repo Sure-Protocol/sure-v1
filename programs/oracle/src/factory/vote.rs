@@ -12,8 +12,8 @@ use crate::utils::{convert_x32_to_u64, VOTE_STAKE_RATE};
 ///
 /// ### Result
 ///
-pub fn calculate_stake(vote_power: u64, decimals: u8) -> u64 {
-    convert_x32_to_u64(calculate_stake_x32(vote_power), decimals)
+pub fn calculate_stake(vote_power: u64, decimals: u8, vote_stake_rate: u32) -> u64 {
+    convert_x32_to_u64(calculate_stake_x32(vote_power, vote_stake_rate), decimals)
 }
 
 /// calculate stake based on vote power
@@ -23,6 +23,6 @@ pub fn calculate_stake(vote_power: u64, decimals: u8) -> u64 {
 ///
 /// ### Returns
 /// vote_power  / 100
-pub fn calculate_stake_x32(vote_power: u64) -> u64 {
-    vote_power.div(VOTE_STAKE_RATE as u64)
+pub fn calculate_stake_x32(vote_power: u64, vote_stake_rate: u32) -> u64 {
+    vote_power.div(vote_stake_rate as u64)
 }

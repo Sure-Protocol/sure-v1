@@ -64,6 +64,24 @@ pub enum SureError {
 
     #[msg("Proposal.vault_mint does not match the vault mint key")]
     ProposalVaultMintKeyDoesNotMatchVaultMint,
+
+    #[msg("Not enough stake to propose a vote ")]
+    NotEnoughProposalStake,
+
+    #[msg("Quorum requirements are too low")]
+    InvalidRequiredVotesParam,
+
+    #[msg("Invalid minimum staked on proposal")]
+    InvalidMinimumStakedParam,
+
+    #[msg("Invalid vote stake rate param. Probably less than 1")]
+    InvalidVoteStakeRateParam,
+
+    #[msg("Invalid protocol fee rate param. Probably less than 1")]
+    InvalidProtocolFeeRateParam,
+
+    #[msg("Unauthorized signer")]
+    UnauthorizedSigner,
 }
 
 impl From<TryFromIntError> for SureError {

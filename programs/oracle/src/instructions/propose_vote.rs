@@ -3,11 +3,11 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{self, Mint, Token, TokenAccount},
 };
-use std::mem::size_of;
+use std::{io::Read, mem::size_of};
 
-use crate::states::{proposal::Proposal, RevealedVoteArray};
+use crate::states::{proposal::Proposal, Config, RevealedVoteArray};
+use crate::utils::tokenTx;
 use crate::utils::{SureError, SURE, SURE_ORACLE_REVEAL_ARRAY_SEED, SURE_ORACLE_SEED};
-use crate::{states::ProposeVoteEvent, utils::tokenTx};
 pub const MINIMUM_STAKE: u64 = 3_000_000;
 // 1/ln(2)
 // Q16.16
@@ -24,17 +24,20 @@ pub fn validate_stake(stake: u64) -> Result<()> {
 }
 
 #[derive(Accounts)]
-#[instruction(name: String)]
+#[instruction(id: Vec<u8>)]
 pub struct ProposeVote<'info> {
     #[account(mut)]
     pub proposer: Signer<'info>,
+
+    /// configuration for the proposal
+    pub config: Box<Account<'info, Config>>,
 
     #[account(
         init,
         payer = proposer,
         seeds = [
             SURE_ORACLE_SEED.as_bytes().as_ref(),
-            name.as_bytes().as_ref(), // checkout - don't use name as seed 
+            id.as_ref(), // checkpoint - don't use name as seed 
         ],
         bump,
         space = 8 + Proposal::SPACE
@@ -59,9 +62,7 @@ pub struct ProposeVote<'info> {
     )]
     pub proposer_account: Box<Account<'info, TokenAccount>>,
 
-    #[account(
-        //constraint = proposal_vault_mint.key() == SURE
-    )]
+    #[account()]
     pub proposal_vault_mint: Box<Account<'info, Mint>>,
 
     #[account(
@@ -97,28 +98,33 @@ pub struct ProposeVote<'info> {
 /// * stake: The amount staked on event. In BN:  x*10^{decimals}
 pub fn handler(
     ctx: Context<ProposeVote>,
+    id: Vec<u8>,
     name: String,
     description: String,
     stake: u64, //Q64.0
 ) -> Result<()> {
     let proposal = ctx.accounts.proposal.as_mut();
     let proposal_bump = *ctx.bumps.get("proposal").unwrap();
+    let config = ctx.accounts.config.as_ref();
     let reveal_vote_array_bump = *ctx.bumps.get("reveal_vote_array").unwrap();
     let decimals = ctx.accounts.proposal_vault_mint.decimals;
     let mut reveal_vote_array = ctx.accounts.reveal_vote_array.load_init()?;
     let token_supply = ctx.accounts.proposal_vault_mint.supply;
     let time = clock::Clock::get()?.unix_timestamp;
 
+    let id_hash: [u8; 16] = id.clone().try_into().unwrap();
+
     // Initialize state
     proposal.initialize(
+        config,
         proposal_bump,
         name.clone(),
-        description,
+        &id_hash,
+        &description,
         &ctx.accounts.proposer.key(),
         stake,
         token_supply,
         &ctx.accounts.proposal_vault.key(),
-        &ctx.accounts.proposal_vault_mint.key(),
         None,
         decimals,
     )?;
@@ -140,8 +146,20 @@ pub fn handler(
 
     emit!(ProposeVoteEvent {
         name: name,
-        proposer: ctx.accounts.proposer.key()
+        description: description,
+        id: id.clone().to_vec(),
+        proposer: ctx.accounts.proposer.key(),
+        stake: stake,
     });
 
     Ok(())
+}
+
+#[event]
+pub struct ProposeVoteEvent {
+    pub name: String,
+    pub description: String,
+    pub id: Vec<u8>,
+    pub proposer: Pubkey,
+    pub stake: u64,
 }

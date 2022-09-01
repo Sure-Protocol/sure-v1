@@ -53,12 +53,11 @@ pub fn handler(ctx: Context<CancelVote>) -> Result<()> {
     let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let proposal = ctx.accounts.proposal.as_mut();
     let time = clock::Clock::get()?.unix_timestamp;
-    let decimals = ctx.accounts.proposal_vault_mint.decimals;
     // check if vote can be cancelled
     proposal.can_cancel_vote(time)?;
 
     // cancel vote
-    let refund = vote_account.cancel_vote(decimals)?;
+    let refund = vote_account.cancel_vote()?;
 
     // cancel vote in proposal
     proposal.cancel_vote_at_time(vote_account, time)?;

@@ -1,6 +1,7 @@
 import { PublicKey } from '@solana/web3.js';
 import { BN } from '@project-serum/anchor';
 import { ProposalType } from './program';
+import { SHAKE } from 'sha3';
 
 export const validateKeys = (keys: { v: PublicKey; n: string }[]) => {
 	const undefinedErrors = keys
@@ -88,4 +89,10 @@ const isRevealVoteFinished = (
 	currentTime: BN
 ): Boolean => {
 	return currentTime >= proposal.voteEndRevealAt;
+};
+
+export const createProposalHash = ({ name }: { name: string }): Buffer => {
+	const hash = new SHAKE(128);
+	hash.update(name);
+	return hash.digest();
 };

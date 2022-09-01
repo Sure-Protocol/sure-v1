@@ -1,8 +1,10 @@
+use std::future::ready;
+
 use anchor_lang::{prelude::*, solana_program::clock};
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::{
-    states::{Proposal, VoteAccount},
+    states::{Config, Proposal, VoteAccount},
     utils::{tokenTx, SureError},
 };
 
@@ -10,6 +12,8 @@ use crate::{
 pub struct CollectVoteReward<'info> {
     #[account(mut)]
     pub voter: Signer<'info>,
+
+    pub config: Box<Account<'info, Config>>,
 
     #[account(
         mut,
@@ -22,12 +26,15 @@ pub struct CollectVoteReward<'info> {
     #[account(mut)]
     pub vote_account: AccountLoader<'info, VoteAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        has_one = config
+    )]
     pub proposal: Box<Account<'info, Proposal>>,
 
     #[account(
         constraint = proposal_vault_mint.key() == proposal_vault.mint @ SureError::ProposalVaultMintKeyDoesNotMatchVaultMint,
-        constraint = proposal_vault_mint.key() == proposal.vault_mint @ SureError::ProposalVaultMintKeyDoesNotMatchProposalStateVaultMint,
+        constraint = proposal_vault_mint.key() == config.token_mint @ SureError::ProposalVaultMintKeyDoesNotMatchProposalStateVaultMint,
 
     )]
     pub proposal_vault_mint: Box<Account<'info, Mint>>,
@@ -61,5 +68,20 @@ pub fn handler(ctx: Context<CollectVoteReward>) -> Result<()> {
         &ctx.accounts.token_program,
         reward,
     )?;
+
+    emit!(CollectVoteRewardEvent {
+        vote: ctx.accounts.vote_account.key(),
+        proposal: proposal.key(),
+        time: time,
+        reward: reward,
+    });
     Ok(())
+}
+
+#[event]
+pub struct CollectVoteRewardEvent {
+    pub vote: Pubkey,
+    pub proposal: Pubkey,
+    pub time: i64,
+    pub reward: u64,
 }

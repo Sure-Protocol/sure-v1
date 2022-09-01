@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, solana_program::clock};
 
 use crate::states::{Proposal, VoteAccount};
-
+use crate::utils::SURE_ORACLE_SEED;
 #[derive(Accounts)]
 pub struct FinalizeVote<'info> {
     #[account(mut)]
@@ -14,7 +14,13 @@ pub struct FinalizeVote<'info> {
     )]
     pub vote_account: AccountLoader<'info, VoteAccount>,
 
-    #[account()]
+    #[account(
+        seeds = [
+            SURE_ORACLE_SEED.as_bytes().as_ref(),
+            proposal.id.as_ref(), // checkpoint - don't use name as seed 
+        ],
+        bump,
+    )]
     pub proposal: Box<Account<'info, Proposal>>,
 
     pub system_program: Program<'info, System>,
@@ -33,5 +39,16 @@ pub fn handler(ctx: Context<FinalizeVote>) -> Result<()> {
     proposal.can_finalize_vote(time)?;
 
     vote_account.calculate_vote_factor(proposal)?;
+
+    emit!(FinalizedVoteEvent {
+        proposal: proposal.key(),
+        time,
+    });
     Ok(())
+}
+
+#[event]
+pub struct FinalizedVoteEvent {
+    pub proposal: Pubkey,
+    pub time: i64,
 }

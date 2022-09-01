@@ -3,7 +3,6 @@ use crate::utils::{self, SureError, SURE_ORACLE_VOTE_SEED};
 use anchor_lang::{prelude::*, solana_program::clock};
 #[derive(Accounts)]
 pub struct UpdateVote<'info> {
-    #[account(mut)]
     pub voter: Signer<'info>,
 
     #[account(
@@ -39,7 +38,7 @@ pub fn handler(ctx: Context<UpdateVote>, vote_hash: Vec<u8>) -> Result<()> {
     let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let proposal = ctx.accounts.proposal.as_mut();
     let time = clock::Clock::get()?.unix_timestamp;
-    let vote_hash_bytes: [u8; 32] = vote_hash.try_into().unwrap();
+    let vote_hash_bytes: [u8; 32] = vote_hash.clone().try_into().unwrap();
 
     // check if user can update vote
     proposal.can_submit_vote(time)?;
@@ -48,5 +47,18 @@ pub fn handler(ctx: Context<UpdateVote>, vote_hash: Vec<u8>) -> Result<()> {
     proposal.update_status(time);
 
     vote_account.update_vote_at_time(proposal, &vote_hash_bytes, time)?;
+    emit!(UpdatedVoteEvent {
+        proposal: proposal.key(),
+        time,
+        vote_hash,
+    });
+
     Ok(())
+}
+
+#[event]
+pub struct UpdatedVoteEvent {
+    pub proposal: Pubkey,
+    pub time: i64,
+    pub vote_hash: Vec<u8>,
 }

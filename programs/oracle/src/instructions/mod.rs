@@ -1,6 +1,8 @@
 pub mod cancel_vote;
 pub mod collect_proposer_reward;
+pub mod collect_protocol_fees;
 pub mod collect_vote_reward;
+pub mod config;
 pub mod finalize_vote;
 pub mod finalize_vote_results;
 pub mod propose_vote;
@@ -10,7 +12,9 @@ pub mod update_vote;
 
 pub use cancel_vote::*;
 pub use collect_proposer_reward::*;
+pub use collect_protocol_fees::*;
 pub use collect_vote_reward::*;
+pub use config::*;
 pub use finalize_vote::*;
 pub use finalize_vote_results::*;
 pub use propose_vote::*;

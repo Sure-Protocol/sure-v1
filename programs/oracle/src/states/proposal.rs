@@ -1,6 +1,6 @@
 use std::{
     cell::RefMut,
-    ops::{Add, BitAnd, BitOr, Div, Mul, Shl, Shr, Sub},
+    ops::{Add, BitAnd, BitOr, Deref, Div, Mul, Shl, Shr, Sub},
 };
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
 
 use anchor_lang::{prelude::*, solana_program::clock};
 
-use super::{RevealedVoteArray, VoteAccount};
+use super::{Config, RevealedVoteArray, VoteAccount};
 
 #[derive(Debug, Eq, PartialEq, PartialOrd)]
 #[repr(u8)]
@@ -42,28 +42,50 @@ impl Default for ProposalStatus {
 
 #[account]
 pub struct Proposal {
+    pub config: Pubkey,
     /// bump for verification
     pub bump: u8, // 1 byte
     pub bump_array: [u8; 1], // 1 byte
+
+    /// when the vote is finished and
+    /// users can reap rewards
+    pub locked: bool, // 1
+
+    /// Optimistic
+    pub optimistic: bool, // 1
+
+    pub status: u8, // 1
+
     /// name of vote
-    pub name: String, // 4 + 64 bytes
+    pub name: String, // 4 + 4*64 bytes
+
+    /// id - hashed name
+    pub id: [u8; 16], // 16 bytes
+
     /// description of vote
-    pub description: String, // 4 + 200 bytes
+    pub description: String, // 4 + 4*140 (140chars) bytes
+
     /// Proposed result
     pub proposed_result: i64, // 8
+
     /// user who proposed the vote
     pub proposer: Pubkey, // 32 bytes
 
+    /// 1/x of vote power that must be staked
+    pub stake_rate: u32, // 4
+
     /// amount staked by propose Q32.32
-    pub proposed_staked: u64, // 8 bytes
+    pub staked: u64, // 8 bytes
 
     /// vault for storing stake and votes
     pub vault: Pubkey, // 32 bytes
-    pub vault_mint: Pubkey, // 32
 
     /// % of ve tokens needed to conclude
     /// represented as basis points 1% = 100bp
     pub required_votes: u64, // 8
+
+    /// as 1/x of revealed vote staked
+    pub protocol_fee_rate: u32, // 4
 
     /// Current votes given in basis points
     /// 1 vote = 1 veToken@
@@ -83,21 +105,18 @@ pub struct Proposal {
     /// start reveal
     pub vote_end_reveal_at: i64, // 8
 
-    pub status: u8, // 1
-
     /// reward earned by propsing vote
     /// Q64.64
-    pub earned_rewards: u128, // 8
+    pub earned_rewards: u128, // 16
+
+    /// protocol fees
+    pub protocol_fees: u128, // 16
 
     /// Scale parameter in exp(L)
     /// Q16.16
-    pub scale_parameter: u32, // 8
+    pub scale_parameter: u32, // 4
 
     pub scale_parameter_calculated: bool, // 1
-
-    /// when the vote is finished and
-    /// users can reap rewards
-    pub locked: bool, // 1
 
     pub vote_factor_sum: u64,   // 8
     pub distribution_sum: u128, // 16
@@ -105,25 +124,22 @@ pub struct Proposal {
     pub consensus: i64, // 8
 }
 
-#[event]
-pub struct ProposeVoteEvent {
-    pub name: String,
-    pub proposer: Pubkey,
-}
-
 impl Default for Proposal {
     #[inline]
     fn default() -> Proposal {
         Proposal {
+            config: Pubkey::default(),
             bump: 0,
             bump_array: [0; 1],
             name: "test proposal".to_string(),
+            id: [0; 16],
+            optimistic: false,
             description: "test descr".to_string(),
             proposed_result: 0,
             proposer: Pubkey::default(),
-            proposed_staked: 0,
+            stake_rate: 10,
+            staked: 0,
             vault: Pubkey::default(),
-            vault_mint: Pubkey::default(),
             required_votes: 100_000,
             votes: 0,
             revealed_votes: 0,
@@ -133,7 +149,9 @@ impl Default for Proposal {
             vote_start_at: 0,
             vote_end_reveal_at: 0,
             earned_rewards: 0,
+            protocol_fees: 0,
             scale_parameter: 0,
+            protocol_fee_rate: 50,
             scale_parameter_calculated: false,
             locked: false,
             status: ProposalStatus::Proposed.get_id(),
@@ -147,27 +165,27 @@ impl Default for Proposal {
 pub struct FinalizeVoteResult {}
 
 impl Proposal {
-    pub const SPACE: usize =
-        1 + 1 + 4 + 64 + 4 + 200 + 8 + 32 + 8 + 32 + 32 + 10 * 8 + 1 + 1 + 1 + 8 + 16 + 8;
+    pub const SPACE: usize = 1 * 6 + 4 * 3 + 8 * 12 + 16 * 4 + 32 * 3 + 4 + 4 * 64 + 4 + 4 * 140;
 
     pub fn seeds(&self) -> [&[u8]; 3] {
         [
             SURE_ORACLE_SEED.as_bytes().as_ref() as &[u8],
-            self.name.as_bytes().as_ref() as &[u8],
+            self.id.as_ref() as &[u8],
             self.bump_array.as_ref(),
         ]
     }
 
     pub fn initialize(
         &mut self,
+        config: &Account<Config>,
         bump: u8,
         name: String,
-        description: String,
+        id: &[u8; 16],
+        description: &str,
         proposer: &Pubkey,
         proposed_staked: u64,
         token_supply: u64,
         vault: &Pubkey,
-        vault_mint: &Pubkey,
         end_time_ts: Option<i64>,
         decimals: u8,
     ) -> Result<()> {
@@ -177,34 +195,40 @@ impl Proposal {
         self.bump = bump;
         self.bump_array = [bump; 1];
         self.name = name;
-        self.description = description;
+        self.id = *id;
+        self.description = String::from(description);
         self.proposer = *proposer;
         self.status = ProposalStatus::Proposed.get_id();
         // convert to Q32.32
-        let proposed_stake_proto = (proposed_staked).div(10_u64.pow(decimals as u32));
-        self.proposed_staked = (proposed_stake_proto as u64) << 32; // Q32.32
+        if proposed_staked < config.minimum_proposal_stake {
+            return Err(SureError::NotEnoughProposalStake.into());
+        }
+        self.staked = proposed_staked; // Q32.32
         self.vault = *vault;
-        self.vault_mint = *vault_mint;
-
+        self.stake_rate = config.vote_stake_rate;
+        self.protocol_fee_rate = config.protocol_fee_rate;
+        self.optimistic = false;
+        self.config = config.key();
         // set end of
         let current_time = Clock::get()?.unix_timestamp;
         self.vote_start_at = current_time;
         self.vote_end_at = match end_time_ts {
             Some(t) => t,
             None => current_time
-                .checked_add(VOTING_LENGTH_SECONDS)
+                .checked_add(config.voting_length_seconds)
                 .ok_or(SureError::InvalidVoteEndTime)?,
         };
 
         self.vote_end_reveal_at = match end_time_ts {
             Some(t) => t,
             None => current_time
-                .checked_add(VOTING_LENGTH_SECONDS + VOTING_LENGTH_SECONDS)
+                .checked_add(self.vote_end_at + config.reveal_length_seconds)
                 .ok_or(SureError::InvalidVoteEndTime)?,
         };
 
-        self.required_votes = token_supply.div(VOTING_FRACTION_REQUIRED);
+        self.required_votes = config.default_required_votes;
         self.votes = 0;
+        self.protocol_fees = 0;
         Ok(())
     }
 
@@ -456,13 +480,34 @@ impl Proposal {
         }
     }
 
+    /// update protocol fee
+    ///
+    /// when a user reveals the vote the protocol takes a cut
+    pub fn update_protocol_fee(&mut self, amount: u64) {
+        let protocol_fee = amount.div(self.protocol_fee_rate as u64);
+        self.protocol_fees += protocol_fee as u128;
+    }
+
+    /// payout protocol fees
+    ///
+    /// get the accrued protocol fees and
+    /// set it to zero
+    pub fn payout_accrued_protocol_fees(&mut self) -> Result<u64> {
+        let protocol_fees = (self.protocol_fees >> 64);
+        if protocol_fees > u64::MAX as u128 {
+            return Err(SureError::OverflowU64.into());
+        }
+        self.protocol_fees = 0;
+        Ok(protocol_fees as u64)
+    }
+
     /// Calculate the reward from the votes
     ///
     /// 0.1% = 10bp of the total votes
     ///
     /// Returns Q64.64
     fn calculate_reward_from_revealed_votes(&self) -> u128 {
-        (calculate_stake_x32(self.revealed_votes) as u128) << 64
+        (calculate_stake_x32(self.revealed_votes, self.stake_rate) as u128) << 64
     }
 
     /// Update status callback
@@ -479,7 +524,7 @@ impl Proposal {
     /// - proposer reward as Q64.64
     pub fn calculate_proposer_reward(&self) -> u128 {
         // if vote is successful
-        return (self.proposed_staked as u128) << 64 + self.calculate_reward_from_revealed_votes();
+        return (self.staked as u128) << 64 + self.calculate_reward_from_revealed_votes();
     }
 
     pub fn is_blind_vote_ongoing_at_time(&self, time: i64) -> bool {
@@ -600,12 +645,13 @@ pub mod test_proposal_proto {
         pub bump_array: [u8; 1],
         /// name of vote
         pub name: String, // 4 + 64 bytes
+        pub id: [u8; 16],
         /// description of vote
         pub description: String, // 4 + 200 bytes
 
         /// amount staked by propose Q32.32
-        pub proposed_staked: u64, // 16 bytes
-        proposed_result: i64,
+        pub staked: u64, // 16 bytes
+        pub proposed_result: i64,
 
         /// % of ve tokens needed to conclude
         /// represented as basis points 1% = 100bp
@@ -633,7 +679,9 @@ pub mod test_proposal_proto {
         /// reward earned by propsing vote
         /// Q64.64
         pub earned_rewards: u128,
+        pub protocol_fee_rate: u32,
 
+        pub protocol_fees: u128,
         /// Scale parameter in exp(L)
         /// Q16.16
         pub scale_parameter: u32,
@@ -656,11 +704,13 @@ pub mod test_proposal_proto {
                 bump: 0,
                 bump_array: [0; 1],
                 name: "test".to_string(),
+                id: [0; 16],
                 description: "test".to_string(),
                 proposed_result: 0,
-                proposed_staked: 1_000_000,
+                staked: 1_000_000,
                 required_votes: 10_000_000,
                 votes: 0,
+                protocol_fee_rate: 50,
                 status: ProposalStatus::Proposed.get_id(),
                 revealed_votes: 0,
                 running_sum_weighted_vote: 0,
@@ -669,6 +719,7 @@ pub mod test_proposal_proto {
                 vote_end_at: TEST_START_TIME + 86400,
                 vote_end_reveal_at: TEST_START_TIME + 86400 * 2,
                 earned_rewards: 0,
+                protocol_fees: 0,
                 scale_parameter: 0,
                 scale_parameter_calculated: false,
                 distribution_sum: 0,
@@ -707,15 +758,19 @@ pub mod test_proposal_proto {
         pub fn build(self) -> Proposal {
             // checkpoint: fill in ny state variables
             Proposal {
+                config: Pubkey::default(),
                 bump: self.bump,
                 bump_array: self.bump_array,
                 name: self.name,
+                id: self.id,
                 description: self.description,
                 proposer: Pubkey::default(),
                 proposed_result: self.proposed_result,
-                proposed_staked: self.proposed_staked,
+                staked: self.staked,
+                optimistic: false,
+                stake_rate: 10,
+                protocol_fee_rate: self.protocol_fee_rate,
                 vault: Pubkey::default(),
-                vault_mint: Pubkey::default(),
                 required_votes: self.required_votes,
                 votes: self.votes,
                 revealed_votes: self.revealed_votes,
@@ -726,6 +781,7 @@ pub mod test_proposal_proto {
                 vote_end_at: self.vote_end_at,
                 vote_end_reveal_at: self.vote_end_reveal_at,
                 earned_rewards: self.earned_rewards,
+                protocol_fees: self.protocol_fees,
                 scale_parameter: self.scale_parameter,
                 scale_parameter_calculated: self.scale_parameter_calculated,
                 locked: self.locked,

@@ -5,8 +5,8 @@ import * as oracleIDL from '../../idls/oracle';
 import { SURE_TOKEN } from './constants';
 import { SureOracleSDK } from './sdk';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
-import { validateKeys } from './utils';
-import { getATAAddressSync } from '@saberhq/token-utils';
+import { createProposalHash, validateKeys } from './utils';
+import { getATAAddressSync, token } from '@saberhq/token-utils';
 import { ProposalType } from './program';
 import { ProgramAccount } from '@project-serum/anchor';
 
@@ -20,6 +20,7 @@ type ProposeVote = {
 
 type FinalizeVoteResults = {
 	proposal: PublicKey;
+	tokenMint: PublicKey;
 };
 
 type CollectProposerReward = FinalizeVoteResults;
@@ -35,7 +36,9 @@ export class Proposal {
 	}
 
 	async fetchProposal({ name }: { name: string }): Promise<ProposalType> {
-		const [proposalPDA] = this.sdk.pda.findProposalAddress(name);
+		const [proposalPDA] = this.sdk.pda.findProposalAddress({
+			proposalName: name,
+		});
 		return await this.program.account.proposal.fetch(proposalPDA);
 	}
 
@@ -73,10 +76,18 @@ export class Proposal {
 		if (proposerAccount.instruction) {
 			ixs.push(proposerAccount.instruction);
 		}
+
+		const id = createProposalHash({ name });
+		const [config] = this.sdk.pda.findOracleConfig({ tokenMint });
+		const [proposal] = SureOracleSDK.pda().findProposalAddress({
+			proposalName: name,
+		});
 		ixs.push(
 			await this.program.methods
-				.proposeVote(name, description, stake)
+				.proposeVote(id, name, description, stake)
 				.accounts({
+					config,
+					proposal,
 					proposerAccount: proposerAccount.address,
 					proposalVaultMint: tokenMint,
 				})
@@ -86,7 +97,7 @@ export class Proposal {
 	}
 
 	/**
-	 * finalize vote results
+	 * finalize vote resul ts
 	 *
 	 * @param proposal - the proposal PK
 	 * @returns TransactionEnvelope - a new transaction
@@ -119,24 +130,25 @@ export class Proposal {
 	 */
 	async collectProposerRewards({
 		proposal,
+		tokenMint,
 	}: CollectProposerReward): Promise<TransactionEnvelope> {
-		const proposalAccount = await this.program.account.proposal.fetch(proposal);
-
 		const proposerTokenAccount = getATAAddressSync({
-			mint: proposalAccount.vaultMint,
+			mint: tokenMint,
 			owner: this.sdk.provider.wallet.publicKey,
 		});
 
+		const [config] = this.sdk.pda.findOracleConfig({ tokenMint });
 		const [proposalVault] = this.sdk.pda.findProposalVault({ proposal });
 		const ixs: TransactionInstruction[] = [];
 		ixs.push(
 			await this.program.methods
 				.collectProposerReward()
 				.accounts({
+					config,
 					proposerTokenAccount,
 					proposal,
 					proposalVault,
-					proposalVaultMint: proposalAccount.vaultMint,
+					proposalVaultMint: tokenMint,
 				})
 				.instruction()
 		);

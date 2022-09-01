@@ -133,8 +133,10 @@ describe('Test Sure Oracle', () => {
 					proposalName,
 					new anchor.BN(10_000_000)
 				);
+				console.log('create proposal logs:', txRceipt.printLogs);
 			} catch (err) {
-				throw new Error('failed to create proposal');
+				console.log('err: ', err);
+				throw new Error('failed to create proposal. cause: ', err);
 			}
 		});
 	it('Vote on proposal', async () => {

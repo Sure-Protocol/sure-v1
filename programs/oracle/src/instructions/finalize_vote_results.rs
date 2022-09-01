@@ -11,7 +11,9 @@ pub struct FinalizeVoteResults<'info> {
     #[account(mut)]
     pub proposal: Box<Account<'info, Proposal>>,
 
-    #[account()]
+    #[account(
+        has_one = proposal,
+    )]
     pub revealed_votes: AccountLoader<'info, RevealedVoteArray>,
 
     pub system_program: Program<'info, System>,
@@ -35,5 +37,21 @@ pub fn handler(ctx: Context<FinalizeVoteResults>) -> Result<()> {
 
     proposal.try_finalize_vote_after_reveal(&revealed_votes, time)?;
 
+    emit!(FinalizedVoteResultsEvent {
+        proposal: proposal.key(),
+        time,
+        revealed_votes: proposal.revealed_votes,
+        consensus: proposal.consensus,
+        status: proposal.status
+    });
     Ok(())
+}
+
+#[event]
+pub struct FinalizedVoteResultsEvent {
+    pub proposal: Pubkey,
+    pub time: i64,
+    pub revealed_votes: u64,
+    pub consensus: i64,
+    pub status: u8,
 }

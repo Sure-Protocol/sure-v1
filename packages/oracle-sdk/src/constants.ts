@@ -11,6 +11,8 @@ export const SURE_ORACLE_VOTE_SEED =
 export const SURE_ORACLE_REVEAL_ARRAY_SEED = anchor.utils.bytes.utf8.encode(
 	'sure-oracle-reveal-array'
 );
+export const SURE_ORACLE_CONFIG_SEED =
+	anchor.utils.bytes.utf8.encode('sure-oracle-config');
 
 /// sure token
 export const SURE_TOKEN: web3.PublicKey = new web3.PublicKey(

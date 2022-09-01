@@ -33,6 +33,11 @@ type RevealVote = {
 	salt: Buffer;
 };
 
+type CollectVoteReward = {
+	voteAccount: PublicKey;
+	tokenMint: PublicKey;
+};
+
 type VoteTransactionEnvelope = {
 	salt: Buffer;
 	transactionEnvelope: TransactionEnvelope;
@@ -275,7 +280,8 @@ export class Vote {
 	 */
 	async collectRewards({
 		voteAccount,
-	}: RevealVote): Promise<TransactionEnvelope> {
+		tokenMint,
+	}: CollectVoteReward): Promise<TransactionEnvelope> {
 		validateKeys([{ v: voteAccount, n: 'voteAccount' }]);
 
 		const voteAccountLoaded = await this.program.account.voteAccount.fetch(
@@ -287,12 +293,14 @@ export class Vote {
 			mint,
 			owner: this.sdk.provider.wallet.publicKey,
 		});
+		const [config] = this.sdk.pda.findOracleConfig({ tokenMint });
 		const [proposalVault] = this.sdk.pda.findProposalVault({ proposal });
 		let ixs: TransactionInstruction[] = [];
 		ixs.push(
 			await this.program.methods
 				.collectVoteReward()
 				.accounts({
+					config,
 					voterAccount,
 					voteAccount,
 					proposal,

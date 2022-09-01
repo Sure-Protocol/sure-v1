@@ -83,10 +83,10 @@ pub fn handler(ctx:Context<SubmitVote>,vote_hash: Vec<u8>) -> Result<()>{
     //initialize vote account
     let mut vote_account = ctx.accounts.vote_account.load_init()?;
     let vote_account_bump = *ctx.bumps.get("vote_account").unwrap();
-    let vote_hash_bytes: [u8;32] =vote_hash.try_into().unwrap();
+    let vote_hash_bytes: [u8;32] =vote_hash.clone().try_into().unwrap();
     msg!("vote hash bytes length: {}",vote_hash_bytes.len());
     // Initialize vote account
-    let vote_update = vote_account.initialize(vote_account_bump, &ctx.accounts.voter.key(), &proposal.key(),&vote_hash_bytes, ctx.accounts.proposal_vault_mint.key(),voting_power,decimals)?;
+    let vote_update = vote_account.initialize(proposal.stake_rate,vote_account_bump, &ctx.accounts.voter.key(), &proposal.key(),&vote_hash_bytes, ctx.accounts.proposal_vault_mint.key(),voting_power,decimals)?;
 
     // Update proposal with vote 
     proposal.cast_vote_at_time(vote_account, time)?;
@@ -96,7 +96,19 @@ pub fn handler(ctx:Context<SubmitVote>,vote_hash: Vec<u8>) -> Result<()>{
 
     // deposit Sure tokens into proposal vote 
     deposit_into_vault(&ctx.accounts.voter, &ctx.accounts.proposal_vault, &ctx.accounts.voter_account, &ctx.accounts.token_program, vote_update.stake_change)?;
-
+    emit!(SubmittedVoteEvent{
+        proposal: proposal.key(),
+        time,
+        vote_hash: vote_hash,
+        vote_power: voting_power,
+    });
     Ok(())
 }
 
+#[event]
+pub struct SubmittedVoteEvent {
+    pub proposal: Pubkey,
+    pub time: i64,
+    pub vote_hash: Vec<u8>,
+    pub vote_power: u64,
+}
