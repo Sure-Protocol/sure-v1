@@ -19,8 +19,11 @@
 		proposalsState,
 		globalStore,
 		hydrateProposals,
-		hydrateConfig
+		hydrateConfig,
+		loadingFailed,
+		loadingSuccessful
 	} from '$stores/index';
+	import { hydrateTokenState } from '$stores/token';
 
 	const localStorageKey = 'walletAdapter';
 	const network = clusterApiUrl('devnet'); // localhost or mainnet
@@ -61,9 +64,15 @@
 		if (val.refresh && !val.isLoading && !$proposalsState.locked) {
 			const oracleSdk = $globalStore.oracleSDK;
 			if (oracleSdk) {
-				await hydrateProposals(oracleSdk);
-
-				await hydrateConfig(oracleSdk);
+				startLoading();
+				try {
+					await hydrateProposals(oracleSdk);
+					await hydrateConfig(oracleSdk);
+					await hydrateTokenState(oracleSdk);
+					loadingSuccessful();
+				} catch {
+					loadingFailed();
+				}
 			}
 		}
 	});

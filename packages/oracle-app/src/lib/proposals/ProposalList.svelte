@@ -2,17 +2,19 @@
 	import { fly, blur, fade } from 'svelte/transition';
 	import { css } from '@emotion/css';
 	import type { ProgramAccount } from '@project-serum/anchor';
-	import type { ProposalType, SureOracleSDK } from '@surec/oracle';
+	import type { ProposalType, Provider, SureOracleSDK } from '@surec/oracle';
 	import { getProposalStatus } from '@surec/oracle';
+	import person from '$assets/icons/person.svg';
 	import {
 		prettyPublicKey,
 		unixToReadable,
 		prettyLargeNumber,
-		calculateAmountInDecimals
+		calculateAmountInDecimals,
+		calculateAmountInGivenDecimals
 	} from '$lib/utils';
 	import MainButton from '$lib/button/MainButton.svelte';
-	import { createProposalState, proposalsState, selectedProposal } from '$stores/index';
-	import { loadingState } from '$stores/global';
+	import { createProposalState, proposalsState, selectedProposal, tokenState } from '$stores/index';
+	import { globalStore, loadingState } from '$stores/index';
 	// Input search
 	export let search: string;
 
@@ -113,11 +115,20 @@
 							`}
 						>
 							<p class="p p--white p--medium p--margin-0 ">{proposal.account.name}</p>
-
-							<div class={'voting-status'}>
-								<p class="p p--small p--pink p--margin-0">
-									{`${getProposalStatus(proposal.account)}`}
-								</p>
+							<div
+								class={css`
+									display: flex;
+									gap: 5px;
+								`}
+							>
+								{#if proposal.account.proposer.toString() == $globalStore?.oracleSDK?.provider.walletKey.toString()}
+									<img height="30px" src={person} alt="owner of proposal" />
+								{/if}
+								<div class={'voting-status'}>
+									<p class="p p--small p--pink p--margin-0">
+										{`${getProposalStatus(proposal.account)}`}
+									</p>
+								</div>
 							</div>
 						</div>
 						<div
@@ -151,7 +162,10 @@
 							/>
 							<p class="p p--small p--margin-0">
 								{`${prettyLargeNumber(proposal.account.votes)} / ${prettyLargeNumber(
-									proposal.account.requiredVotes
+									calculateAmountInGivenDecimals(
+										proposal.account.requiredVotes,
+										$tokenState.mintDecimals
+									)
 								)} required votes`}
 							</p>
 						</div>

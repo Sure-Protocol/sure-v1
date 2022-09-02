@@ -6,7 +6,7 @@
 </script>
 
 <div class="info-box">
-	<p class={cx('p text--margin-vertical__0', 'info-box__title')}>
+	<p class={cx('p p--small text--margin-vertical__0', 'info-box__title')}>
 		{title}
 	</p>
 	<p class="p p--bold info-box__value">{value}</p>
@@ -24,6 +24,7 @@
 		width: 5rem;
 		justify-content: center;
 		align-items: center;
+		margin-bottom: 1rem;
 
 		&__title {
 			position: absolute;

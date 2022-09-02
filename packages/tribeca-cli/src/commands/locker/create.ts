@@ -1,6 +1,6 @@
 import { Command, Flags } from '@oclif/core';
 import * as anchor from '@project-serum/anchor';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { clusterApiUrl, Connection, PublicKey } from '@solana/web3.js';
 import * as saber_contrib from '@saberhq/solana-contrib';
 import { GokiSDK } from '@gokiprotocol/client';
 import { loadKeypairFromEnv } from '../../utils/loadkey';
@@ -50,11 +50,14 @@ export default class SmartWallet extends Command {
 		const { args, flags } = await this.parse(SmartWallet);
 		const keypair = loadKeypairFromEnv();
 		const wallet = new anchor.Wallet(keypair);
-		const network = process.env.NETWORK!;
+		const network = flags.network;
+		if (!network) {
+			this.error(`invalid network: {${network}}`);
+		}
 		const connection = new Connection(network, {});
 
 		const anchorProvider = new anchor.AnchorProvider(connection, wallet, {
-			skipPreflight: false,
+			skipPreflight: true,
 		});
 		anchor.setProvider(anchorProvider);
 		const provider = saber_contrib.SolanaProvider.load({
@@ -76,9 +79,11 @@ export default class SmartWallet extends Command {
 				proposalActivationMinVotes: new anchor.BN(1_000_000),
 				govTokenMint: new PublicKey(flags.mint),
 			});
+			await lockerTx.confirm();
 			this.log('tb.createLocker.success. ');
 			this.log(`governor: ${governor.toString()}`);
 			this.log(`locker: ${locker.toString()}`);
+			this.log(`base public key ${wallet.publicKey.toString()}`);
 		} catch (err) {
 			this.error(`tb.createLocker.error! Cause: ${err}`);
 		}

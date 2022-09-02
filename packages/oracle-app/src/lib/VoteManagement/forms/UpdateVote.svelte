@@ -6,8 +6,13 @@
 	import { saveSalt } from '$lib/utils';
 	import MainButton from '$lib/button/MainButton.svelte';
 	import type { SendTransactionError } from '@solana/web3.js';
+	import SingleInput from '$lib/input/SingleInput.svelte';
 
 	export let proposal: ProgramAccount<ProposalType>;
+	export let title: string = 'Update vote';
+	export let description: string | undefined = undefined;
+	export let buttonTitle: string = 'Update';
+	export let submitAction: () => void = updateVote;
 
 	let formValues = {
 		vote: 0.0
@@ -47,37 +52,36 @@
 		flex-direction: row;
 		gap: 10px;
 	`}
-	on:submit|preventDefault={updateVote}
+	on:submit|preventDefault={submitAction}
 >
 	<div
 		class={css`
 			display: flex;
-			flex-direction: column;
-			width: 5rem;
-		`}
-	>
-		<label
-			class={css`
-				margin-bottom: 2px;
-			`}
-			for="userVote">Update Vote</label
-		>
-		<input
-			bind:value={formValues.vote}
-			id="userVote"
-			name="userVote"
-			type="decimal"
-			class="input-text-field__centered"
-		/>
-	</div>
-	<div
-		class={css`
-			display: flex;
+			flex-direction: row;
+			gap: 10px;
 			justify-content: center;
-			align-items: center;
+			align-items: flex-end;
 		`}
 	>
-		<MainButton title={'Update'} type={'submit'} />
+		<SingleInput {title} {description}>
+			<input
+				slot="input"
+				bind:value={formValues.vote}
+				id="userVote"
+				name="userVote"
+				type="decimal"
+				class="input-text-field__centered"
+			/>
+		</SingleInput>
+		<div
+			class={css`
+				display: flex;
+				justify-content: bottom;
+				align-items: bottom;
+			`}
+		>
+			<MainButton title={buttonTitle} type={'submit'} />
+		</div>
 	</div>
 </form>
 

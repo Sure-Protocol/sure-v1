@@ -19,7 +19,7 @@
 		getNextDeadline,
 		saveSalt
 	} from '$lib/utils';
-	import { selectedProposal, globalStore, newEvent } from '$stores/index';
+	import { selectedProposal, globalStore, newEvent, tokenState } from '$stores/index';
 	import type { ProgramAccount } from '@saberhq/token-utils';
 	import { Steps } from 'svelte-steps';
 	import CreateProposal from './../CreateProposal.svelte';
@@ -105,6 +105,12 @@
 				});
 				const txRec = await voteTx.transactionEnvelope.confirm();
 				saveSalt(voteTx.salt, proposal.account.name);
+
+				const [votePda] = SureOracleSDK.pda().findVoteAccount({
+					proposal: proposal.publicKey,
+					voter: oracleSdk?.provider.wallet.publicKey
+				});
+				vote = await oracleSdk.program.account.voteAccount.fetch(votePda);
 				newEvent.set({
 					name: 'successfully submitted user vote',
 					status: 'success',
@@ -128,6 +134,7 @@
 		class={css`
 			width: 100%;
 			color: white;
+			padding-bottom: 1rem;
 		`}
 	>
 		<h3 class="h3--white">{`Vote management`}</h3>
@@ -136,6 +143,8 @@
 			<div
 				class={css`
 					width: 100%;
+					margin-bottom: 2rem;
+					margin-top: 2rem;
 				`}
 			>
 				{#if steps[currentStep].status == 'Failed'}
@@ -144,7 +153,7 @@
 					<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
 				{/if}
 			</div>
-
+			<h3 class=" h3 h3--white ">Available actions</h3>
 			{#if vote}
 				<div
 					class={css`
@@ -170,36 +179,19 @@
 							<StatBox title="locked" value={'yes'} />
 						{/if}
 					</div>
-					<h3 class=" h3 h3--white">Available actions</h3>
+
 					{#if steps[currentStep].status == 'Voting'}
-						{#if vote}
-							<div>
-								<UpdateVote {proposal} />
-							</div>
-							<div>
-								<CancelVote {proposal} />
-							</div>
-						{:else}
-							<form on:submit|preventDefault={voteOnProposal}>
-								<div
-									class={css`
-										display: flex;
-										flex-direction: column;
-										width: 5rem;
-									`}
-								>
-									<span>Submit Vote</span>
-									<input
-										bind:value={voteValues.userVote}
-										id="userVote"
-										name="userVote"
-										type="decimal"
-										class="input-text-field"
-									/>
-								</div>
-								<button>Vote</button>
-							</form>
-						{/if}
+						<div
+							class={css`
+								display: flex;
+								flex-direction: column;
+								gap: 1rem;
+							`}
+						>
+							<UpdateVote {proposal} />
+							<CancelVote {proposal} />
+						</div>
+						<div />
 					{:else if steps[currentStep].status == 'Reveal vote'}
 						<div>
 							<RevealVote {proposal} />
@@ -220,9 +212,21 @@
 						</div>
 					{/if}
 				</div>
+			{:else if steps[currentStep].status == 'Voting'}
+				<div>
+					<UpdateVote
+						{proposal}
+						description={`voting power: ${$tokenState.veSureAmount}`}
+						title="Vote"
+						buttonTitle={'Vote'}
+						submitAction={voteOnProposal}
+					/>
+				</div>
+			{:else}
+				<p>no available actions for this vote</p>
 			{/if}
 		{:else}
-			<p>Pick a proposal...</p>
+			<p>Pick a proposal to view actions</p>
 		{/if}
 	</div>
 </div>

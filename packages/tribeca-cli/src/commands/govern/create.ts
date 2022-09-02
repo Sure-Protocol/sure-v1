@@ -42,11 +42,14 @@ export default class Govern extends Command {
 		const { args, flags } = await this.parse(Govern);
 		const keypair = loadKeypairFromEnv();
 		const wallet = new anchor.Wallet(keypair);
-		const network = process.env.NETWORK!;
+		const network = flags.network;
+		if (!network) {
+			this.error(`invalid network: {${network}}`);
+		}
 		const connection = new Connection(network, {});
 
 		const anchorProvider = new anchor.AnchorProvider(connection, wallet, {
-			skipPreflight: false,
+			skipPreflight: true,
 		});
 		anchor.setProvider(anchorProvider);
 		const provider = saber_contrib.SolanaProvider.load({
@@ -60,6 +63,11 @@ export default class Govern extends Command {
 		});
 
 		this.log('> create governor');
+		this.log(
+			` expected governor address: ${tribeca.getGovernorAddress(
+				wallet.publicKey
+			)}`
+		);
 		try {
 			// locker as electrorate
 			const smartWalletKey = goki.getSmartWalletAddress(wallet.publicKey);
@@ -69,7 +77,7 @@ export default class Govern extends Command {
 				smartWallet: smartWalletKey,
 				baseKP: (wallet as NodeWallet).payer,
 			});
-
+			await tx2.confirm();
 			this.log('\n tb.govern.success!');
 			this.log(`govern key: ${wrapper.governorKey.toString()}`);
 			this.log(`expected - smart wallet key: ${smartWalletKey}`);

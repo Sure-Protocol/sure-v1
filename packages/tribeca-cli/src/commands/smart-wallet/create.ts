@@ -54,7 +54,7 @@ export default class SmartWallet extends Command {
 		const connection = new Connection(network, {});
 
 		const anchorProvider = new anchor.AnchorProvider(connection, wallet, {
-			skipPreflight: false,
+			skipPreflight: true,
 		});
 		anchor.setProvider(anchorProvider);
 		const provider = saber_contrib.SolanaProvider.load({
@@ -73,6 +73,7 @@ export default class SmartWallet extends Command {
 				threshold: new anchor.BN(1),
 				numOwners: owners.length,
 			});
+			await tx.confirm();
 			this.log(`tb.createSmartWallet.success`);
 			this.log(`smart wallet key: ${smartWalletWrapper.key}`);
 			this.log(`owners: ${flags.owners}`);

@@ -17,7 +17,6 @@
 	let showProposal = false;
 
 	wallet_adapter.walletStore.subscribe((value) => {
-		console.log('<<<>>>> wallet adapter');
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
 		if (value.wallet?.publicKey != null) {
 			const oracleProvider = solana_contrib.SolanaProvider.init({

@@ -47,3 +47,7 @@ export const startLoading = () => {
 export const loadingFailed = () => {
 	loadingState.set({ isLoading: false, loadingFailed: true, refresh: false });
 };
+
+export const loadingSuccessful = () => {
+	loadingState.set({ isLoading: false, loadingFailed: false, refresh: false });
+};

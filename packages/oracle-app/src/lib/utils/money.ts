@@ -32,16 +32,8 @@ export const calculateAmountInDecimals = async (
 	return new anchor.BN(0);
 };
 
-export const calculateAmountInGivenDecimals = async (
-	oracleSdk: SureOracleSDK,
-	amount: anchor.BN,
-	decimals: number
-): Promise<anchor.BN> => {
-	if (oracleSdk) {
-		const sureMint = await spl.getMint(oracleSdk.provider.connection, SURE_MINT);
-		return amount.div(decimals10(sureMint.decimals));
-	}
-	return new anchor.BN(0);
+export const calculateAmountInGivenDecimals = (amount: anchor.BN, decimals: number): anchor.BN => {
+	return amount.div(decimals10(decimals));
 };
 
 export const calculateAccountBalanceFullAmount = async (

@@ -2,7 +2,7 @@
 	import { css, cx } from '@emotion/css';
 
 	export let title: string;
-	export let description: string;
+	export let description: string | undefined = undefined;
 </script>
 
 <div
@@ -14,7 +14,9 @@
 	`}
 >
 	<p class="p p--white text--margin-vertical__0">{title}</p>
-	<p class="p p--small">{description}</p>
+	{#if description}
+		<p class="p p--small text--margin-vertical__s">{description}</p>
+	{/if}
 	<div
 		class={css`
 			display: flex;

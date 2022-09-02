@@ -46,7 +46,6 @@
 		class={css`
 			display: flex;
 			flex-direction: column;
-			width: 5rem;
 		`}
 	>
 		<label

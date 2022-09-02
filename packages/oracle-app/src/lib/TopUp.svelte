@@ -5,7 +5,7 @@
 	import * as web3 from '@solana/spl-token';
 	import * as tribeca from '@tribecahq/tribeca-sdk';
 	import { onMount } from 'svelte';
-	import { globalStore, newEvent } from '$stores/index';
+	import { globalStore, newEvent, tokenState, loadingState } from '$stores/index';
 
 	import * as wallet_adapter from '@svelte-on-solana/wallet-adapter-core';
 	import type { AnchorAccount } from '@saberhq/anchor-contrib/dist/cjs/utils/accounts';
@@ -20,46 +20,12 @@
 	import type { SendTransactionError } from '@solana/web3.js';
 	import TypeInputAmount from './input/TypeInputAmount.svelte';
 	import Amount from './text/Amount.svelte';
-	let sureTokens = '__';
-	let veSureAmount = '__';
 
 	let values = {
 		amount: undefined,
 		days: undefined
 	};
 	let loadingData = true;
-
-	// send to utils
-
-	async function getVeSureAmount() {
-		const oracleSdk = $globalStore.oracleSDK;
-		const lockerSdk = await getLockerSdk($globalStore.oracleSDK);
-		if (lockerSdk && oracleSdk) {
-			try {
-				const escrow = await lockerSdk.fetchEscrowByAuthority();
-				const newVeSureAmount = await calculateAmountInDecimals(oracleSdk, escrow.amount);
-				if (newVeSureAmount) {
-					veSureAmount = newVeSureAmount.toString();
-				}
-			} catch {
-				throw new Error();
-			}
-		} else {
-			throw new Error();
-		}
-	}
-
-	async function getSureAmount() {
-		const oracleSdk = $globalStore.oracleSDK;
-		if (oracleSdk) {
-			const newSureAmount = await calculateAccountBalanceInDecimals(oracleSdk);
-			if (newSureAmount) {
-				sureTokens = newSureAmount.toString();
-			}
-		} else {
-			throw new Error();
-		}
-	}
 
 	async function lockSureTokens() {
 		const oracleSdk = $globalStore.oracleSDK;
@@ -75,7 +41,7 @@
 					});
 					const txRes = await lockTokensTx.confirm();
 					newEvent.set({
-						name: `successfully locked ${lockAmount} for ${values.days} `,
+						name: `successfully locked ${lockAmount} for ${values.days}days`,
 						status: 'success',
 						tx: txRes.signature
 					});
@@ -91,28 +57,6 @@
 			}
 		}
 	}
-
-	onMount(async () => {
-		loadingData = true;
-		Promise.all([getSureAmount(), getVeSureAmount()])
-			.then(() => {
-				loadingData = false;
-			})
-			.catch(() => {
-				loadingData = true;
-			});
-	});
-
-	wallet_adapter.walletStore.subscribe(() => {
-		loadingData = true;
-		Promise.all([getSureAmount(), getVeSureAmount()])
-			.then(() => {
-				loadingData = false;
-			})
-			.catch(() => {
-				loadingData = true;
-			});
-	});
 </script>
 
 <div class="action-container--width-s action-container--padding-h0 ">
@@ -164,8 +108,8 @@
 				gap: 5rem;
 			`}
 		>
-			<Amount title="$sure" amount={sureTokens} loading={loadingData} />
-			<Amount title="veSure" amount={veSureAmount} loading={loadingData} />
+			<Amount title="$sure" amount={$tokenState.sureAmount} loading={$loadingState.isLoading} />
+			<Amount title="veSure" amount={$tokenState.veSureAmount} loading={$loadingState.isLoading} />
 		</div>
 		<div
 			class={css`
