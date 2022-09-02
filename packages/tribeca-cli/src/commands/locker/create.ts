@@ -6,6 +6,7 @@ import { GokiSDK } from '@gokiprotocol/client';
 import { loadKeypairFromEnv } from '../../utils/loadkey';
 import * as tribeca from '@tribecahq/tribeca-sdk';
 import * as spl_token from '@solana/spl-token';
+import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
 export default class SmartWallet extends Command {
 	static description = 'Create locker for storing ve tokens';
@@ -19,7 +20,7 @@ export default class SmartWallet extends Command {
 			parse: async (input: string): Promise<string | undefined> => {
 				if (input == 'dev') {
 					return 'https://api.devnet.solana.com';
-				} else if (input == 'mainnet') {
+				} else if (input == 'mainnet-beta') {
 					return 'https://api.mainnet-beta.solana.com';
 				} else if (input == 'testnet') {
 					return 'https://api.testnet.solana.com';
@@ -30,15 +31,15 @@ export default class SmartWallet extends Command {
 			},
 			defaultHelp: 'hello there',
 			helpValue: '<SOLANA NETWORK>',
-			input: ['dev', 'mainnet', 'testnet', 'local '],
+			input: ['dev', 'mainnet-beta', 'testnet', 'local '],
 			required: true,
-			options: ['dev', 'mainnet', 'testnet', 'local '],
+			options: ['dev', 'mainnet-beta', 'testnet', 'local '],
 			char: 'n',
 		}),
 		mint: Flags.string({
 			name: 'mint',
 			char: 't',
-			required: false,
+			required: true,
 			default: undefined,
 			description:
 				'Token mint to serve as the mint for the locker. If not provided a new mint will be generated',
@@ -66,35 +67,17 @@ export default class SmartWallet extends Command {
 			provider,
 		});
 
-		const [governor] = await tribeca.findGovernorAddress(wallet.publicKey);
-		this.log(`> governor address: ${governor.toString()}`);
-
-		// get mint
-		let govTokenMint: PublicKey;
-		if (flags.mint) {
-			govTokenMint = new PublicKey(flags.mint);
-		} else {
-			this.log('> create new token mint');
-			const tokenMint = await spl_token.Token.createMint(
-				connection,
-				wallet.payer,
-				wallet.payer.publicKey,
-				null,
-				6,
-				spl_token.TOKEN_PROGRAM_ID
-			);
-			govTokenMint = tokenMint.publicKey;
-		}
-		this.log(`> token mint: ${govTokenMint.toString()}`);
-
 		// create locker
 		try {
+			const governor = tribeca.getGovernorAddress(wallet.publicKey);
 			const { locker, tx: lockerTx } = await tribecaSDK.createLocker({
+				baseKP: (wallet as NodeWallet).payer,
 				governor,
 				proposalActivationMinVotes: new anchor.BN(1_000_000),
-				govTokenMint,
+				govTokenMint: new PublicKey(flags.mint),
 			});
 			this.log('tb.createLocker.success. ');
+			this.log(`governor: ${governor.toString()}`);
 			this.log(`locker: ${locker.toString()}`);
 		} catch (err) {
 			this.error(`tb.createLocker.error! Cause: ${err}`);

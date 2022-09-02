@@ -24,7 +24,7 @@ export default class CreateProposal extends Command {
 			parse: async (input: string): Promise<string | undefined> => {
 				if (input == 'dev') {
 					return 'https://api.devnet.solana.com';
-				} else if (input == 'mainnet') {
+				} else if (input == 'mainnet-beta') {
 					return 'https://api.mainnet-beta.solana.com';
 				} else if (input == 'testnet') {
 					return 'https://api.testnet.solana.com';
@@ -35,9 +35,9 @@ export default class CreateProposal extends Command {
 			},
 			defaultHelp: 'hello there',
 			helpValue: '<SOLANA NETWORK>',
-			input: ['dev', 'mainnet', 'testnet', 'local '],
+			input: ['dev', 'mainnet-beta', 'testnet', 'local '],
 			required: true,
-			options: ['dev', 'mainnet', 'testnet', 'local '],
+			options: ['dev', 'mainnet-beta', 'testnet', 'local '],
 			char: 'n',
 		}),
 		governor: Flags.string({

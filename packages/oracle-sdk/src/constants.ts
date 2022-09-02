@@ -15,6 +15,11 @@ export const SURE_ORACLE_CONFIG_SEED =
 	anchor.utils.bytes.utf8.encode('sure-oracle-config');
 
 /// sure token
-export const SURE_TOKEN: web3.PublicKey = new web3.PublicKey(
-	'8mWJ39FzeM4ZqZsa8JSfsUf9mRdkL7AyFSrizFkFtzfi'
+
+export const SURE_MINT: web3.PublicKey = new web3.PublicKey(
+	'SRECjPkvN8TYEycXePc1ix3zGzZkWoYPMfJAKoJkcWj'
+);
+
+export const BASE_PK: web3.PublicKey = new web3.PublicKey(
+	'Acyq4k7tJ38DyG4kppEEUF9AH1Cuiw7cGCfBuoEh8zH9'
 );

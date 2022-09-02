@@ -3,7 +3,7 @@
 	import ProposalList from '$lib/proposals/ProposalList.svelte';
 	import MainButton from '$lib/button/MainButton.svelte';
 	import AddButton from '$lib/button/AddButton.svelte';
-	import { createProposalState } from '$stores/global';
+	import { createProposalState } from '$stores/index';
 
 	let search: string = '';
 </script>

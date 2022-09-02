@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
-	import { globalStore, newEvent } from '../../stores/global';
+	import { globalStore, newEvent } from '$stores/index';
 	import * as web3 from '@solana/web3.js';
+	import * as spl from './../../../node_modules/@solana/spl-token';
 	import {
 		createAccount,
 		createAssociatedTokenAccountInstruction,
@@ -24,8 +25,8 @@
 	import { createInitMintInstructions, getTokenAccount } from '@saberhq/token-utils';
 	import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
 	import { ASSOCIATED_PROGRAM_ID } from '@project-serum/anchor/dist/cjs/utils/token';
-	import { SURE_MINT_DEV } from './../constants';
-	import { getTestKeypairFromSeed } from '$utils';
+	import { getTestKeypairFromSeed } from '$lib/utils';
+	import { SURE_MINT } from '@surec/oracle';
 
 	$: tribecaSdk = $globalStore?.oracleSDK?.provider
 		? tribeca.TribecaSDK.load({ provider: $globalStore.oracleSDK.provider })
@@ -41,6 +42,13 @@
 		if (oracleSdk && $globalStore.wallet?.publicKey) {
 			const mintKeypair = getTestKeypairFromSeed(oracleSdk, 'sure_test_8');
 			try {
+				spl.createMint(
+					oracleSdk.provider.connection,
+					(oracleSdk.provider.wallet as NodeWallet).payer,
+					oracleSdk.provider.walletKey,
+					null,
+					6
+				);
 				const tx = new web3.Transaction().add(
 					web3.SystemProgram.createAccount({
 						fromPubkey: oracleSdk.provider.wallet.publicKey,
@@ -76,7 +84,7 @@
 		const oracleSdk = $globalStore.oracleSDK;
 		if (oracleSdk && $globalStore.wallet?.publicKey && $globalStore.provider) {
 			try {
-				const mintPk = SURE_MINT_DEV;
+				const mintPk = SURE_MINT;
 				const ataPDA = await getAssociatedTokenAddress(mintPk, oracleSdk.provider.wallet.publicKey);
 				const tx = new web3.Transaction();
 				try {
@@ -140,7 +148,7 @@
 		const oracleSdk = $globalStore.oracleSDK;
 		if (oracleSdk && tribecaSdk) {
 			try {
-				const mintPk = SURE_MINT_DEV;
+				const mintPk = SURE_MINT;
 				const base = getTestKeypairFromSeed(oracleSdk, 'sure_base_3');
 				const [governor] = await tribeca.findGovernorAddress(base.publicKey);
 				const createLockerRes = await tribecaSdk.createLocker({

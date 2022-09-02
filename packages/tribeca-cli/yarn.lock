@@ -422,6 +422,27 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@noble/ed25519@npm:^1.7.0":
+  version: 1.7.0
+  resolution: "@noble/ed25519@npm:1.7.0"
+  checksum: 9a2cd37885c46d6fec2d5b08f59601894314e8cb984a1b69c616ed079d9b96ebc288706b3fcfb16a6bb175667c15c7ef80042c7d3b5a173d44dc051101364415
+  languageName: node
+  linkType: hard
+
+"@noble/hashes@npm:^1.1.2":
+  version: 1.1.2
+  resolution: "@noble/hashes@npm:1.1.2"
+  checksum: 3c2a8cb7c2e053811032f242155d870c5eb98844d924d69702244d48804cb03b42d4a666c49c2b71164420d8229cb9a6f242b972d50d5bb2f1d673b98b041de2
+  languageName: node
+  linkType: hard
+
+"@noble/secp256k1@npm:^1.6.3":
+  version: 1.6.3
+  resolution: "@noble/secp256k1@npm:1.6.3"
+  checksum: 16eb3242533e645deb64444c771515f66bdc2ee0759894efd42fdeed4ab226ed29827aaaf6caa27d3d95b831452fd4246aa1007cd688aa462ad48fc084ab76e6
+  languageName: node
+  linkType: hard
+
 "@nodelib/fs.scandir@npm:2.1.5":
   version: 2.1.5
   resolution: "@nodelib/fs.scandir@npm:2.1.5"
@@ -1126,6 +1147,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@solana/buffer-layout-utils@npm:^0.2.0":
+  version: 0.2.0
+  resolution: "@solana/buffer-layout-utils@npm:0.2.0"
+  dependencies:
+    "@solana/buffer-layout": ^4.0.0
+    "@solana/web3.js": ^1.32.0
+    bigint-buffer: ^1.1.5
+    bignumber.js: ^9.0.1
+  checksum: 9284242245b18b49577195ba7548263850be865a4a2d183944fa01bb76382039db589aab8473698e9bb734b515ada9b4d70db0a72e341c5d567c59b83d6d0840
+  languageName: node
+  linkType: hard
+
 "@solana/buffer-layout@npm:^4.0.0":
   version: 4.0.0
   resolution: "@solana/buffer-layout@npm:4.0.0"
@@ -1146,6 +1179,19 @@ __metadata:
     buffer-layout: ^1.2.0
     dotenv: 10.0.0
   checksum: be4971c4af9c56fd30353356d8ca404b4460eb37806499ab1257e7d77afa56f89149cfe03c41a0f8908f50e9c421c5b805502857455281e8d3088a2eae1c3297
+  languageName: node
+  linkType: hard
+
+"@solana/spl-token@npm:^0.3.4":
+  version: 0.3.4
+  resolution: "@solana/spl-token@npm:0.3.4"
+  dependencies:
+    "@solana/buffer-layout": ^4.0.0
+    "@solana/buffer-layout-utils": ^0.2.0
+    buffer: ^6.0.3
+  peerDependencies:
+    "@solana/web3.js": ^1.47.4
+  checksum: 66f2301425a57008112053a82194a154e5e405f079a4ac35fe8a84014d8b229c509d7eeb4e3f296e3ea3eb8525d1688e6053a578908e773b0ecbb9b0ef82e531
   languageName: node
   linkType: hard
 
@@ -1174,6 +1220,30 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@solana/web3.js@npm:^1.32.0":
+  version: 1.56.2
+  resolution: "@solana/web3.js@npm:1.56.2"
+  dependencies:
+    "@babel/runtime": ^7.12.5
+    "@noble/ed25519": ^1.7.0
+    "@noble/hashes": ^1.1.2
+    "@noble/secp256k1": ^1.6.3
+    "@solana/buffer-layout": ^4.0.0
+    bigint-buffer: ^1.1.5
+    bn.js: ^5.0.0
+    borsh: ^0.7.0
+    bs58: ^4.0.1
+    buffer: 6.0.1
+    fast-stable-stringify: ^1.0.0
+    jayson: ^3.4.4
+    js-sha3: ^0.8.0
+    node-fetch: 2
+    rpc-websockets: ^7.5.0
+    superstruct: ^0.14.2
+  checksum: 9c87e82782e5b43299aa2401c14fef66f146749390a43801ef66f2b07b6fb7b965acbac1aec1f61c2fe02d9a81b9a4463a1b959e94d8be5c8d1dec0d5123523f
+  languageName: node
+  linkType: hard
+
 "@surec/tribeca-cli@workspace:.":
   version: 0.0.0-use.local
   resolution: "@surec/tribeca-cli@workspace:."
@@ -1188,6 +1258,7 @@ __metadata:
     "@saberhq/chai-solana": ^1.14.2
     "@saberhq/token-utils": ^1.14.4
     "@solana/buffer-layout": ^4.0.0
+    "@solana/spl-token": ^0.3.4
     "@solana/web3.js": ^1.53.0
     "@tribecahq/tribeca-sdk": ^0.5.8
     "@types/chai": ^4
@@ -1945,6 +2016,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"bignumber.js@npm:^9.0.1":
+  version: 9.1.0
+  resolution: "bignumber.js@npm:9.1.0"
+  checksum: 52ec2bb5a3874d7dc1a1018f28f8f7aff4683515ffd09d6c2d93191343c76567ae0ee32cc45149d53afb2b904bc62ed471a307b35764beea7e9db78e56bef6c6
+  languageName: node
+  linkType: hard
+
 "bin-links@npm:^3.0.0":
   version: 3.0.2
   resolution: "bin-links@npm:3.0.2"
@@ -2112,7 +2190,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"buffer@npm:6.0.3, buffer@npm:~6.0.3":
+"buffer@npm:6.0.3, buffer@npm:^6.0.3, buffer@npm:~6.0.3":
   version: 6.0.3
   resolution: "buffer@npm:6.0.3"
   dependencies:

@@ -13,13 +13,21 @@
 	import * as anchor_adapter from '@svelte-on-solana/wallet-adapter-anchor';
 	import type { Adapter } from '@sveltejs/kit';
 	import { writable } from 'svelte/store';
+	import {
+		startLoading,
+		loadingState,
+		proposalsState,
+		globalStore,
+		hydrateProposals,
+		hydrateConfig
+	} from '$stores/index';
 
 	const localStorageKey = 'walletAdapter';
 	const network = clusterApiUrl('devnet'); // localhost or mainnet
 
 	let wallets: Adapter[];
 
-	let time: string = 0;
+	let time: number = 0;
 	let timeUnix: number = 0;
 
 	onMount(async () => {
@@ -45,6 +53,19 @@
 			time = new Date().toLocaleString();
 			timeUnix = Math.floor(Date.now() / 1000);
 		}, 1000);
+	});
+
+	/// fetch necessary data
+	loadingState.subscribe(async (val) => {
+		console.log('loading state: ', val);
+		if (val.refresh && !val.isLoading && !$proposalsState.locked) {
+			const oracleSdk = $globalStore.oracleSDK;
+			if (oracleSdk) {
+				await hydrateProposals(oracleSdk);
+
+				await hydrateConfig(oracleSdk);
+			}
+		}
 	});
 </script>
 

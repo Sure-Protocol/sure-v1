@@ -4,7 +4,7 @@ import * as token_utils from '@saberhq/token-utils';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from '../../idls/oracle';
 import randomBytes from 'randombytes';
-import { SURE_TOKEN } from './constants';
+import { SURE_MINT } from './constants';
 import { SureOracleSDK } from './sdk';
 import { validateKeys } from './utils';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
@@ -92,7 +92,7 @@ export class Vote {
 		locker,
 		userEscrow,
 	}: SubmitVote): Promise<VoteTransactionEnvelope> {
-		const tokenMint = mint ?? SURE_TOKEN;
+		const tokenMint = mint ?? SURE_MINT;
 		validateKeys([
 			{ v: tokenMint, n: 'tokenMint' },
 			{ v: proposal, n: 'proposal' },

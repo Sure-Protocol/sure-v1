@@ -4,6 +4,7 @@ import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from '../../idls/oracle';
 import { SureOracleSDK } from './sdk';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
+import { ConfigType } from './program';
 
 export type InitializeOracleConfig = {
 	protocolAuthority: PublicKey;
@@ -23,6 +24,17 @@ export class Config {
 	readonly program: anchor.Program<oracleIDL.Oracle>;
 	constructor(readonly sdk: SureOracleSDK) {
 		this.program = sdk.program;
+	}
+
+	async fetchConfig({
+		tokenMint,
+	}: {
+		tokenMint: PublicKey;
+	}): Promise<ConfigType> {
+		const [config] = this.sdk.pda.findOracleConfig({
+			tokenMint,
+		});
+		return this.program.account.config.fetch(config);
 	}
 
 	/**
@@ -62,7 +74,7 @@ export class Config {
 	 *
 	 * @returns TransactionEnvelope
 	 */
-	async updateConfig({
+	async updateConfigInstructions({
 		proposalPk,
 		votingPeriod,
 		revealPeriod,
@@ -70,7 +82,7 @@ export class Config {
 		minimumProposalStake,
 		voteStakeRate,
 		protocolFeeRate,
-	}: UpdateConfig): Promise<TransactionEnvelope> {
+	}: UpdateConfig): Promise<TransactionInstruction[]> {
 		const ixs: TransactionInstruction[] = [];
 		const proposal = await this.sdk.program.account.proposal.fetch(proposalPk);
 
@@ -140,7 +152,7 @@ export class Config {
 			);
 		}
 
-		return this.sdk.provider.newTX(ixs);
+		return ixs;
 	}
 
 	/**

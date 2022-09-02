@@ -1,37 +1,12 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
-	import * as wallet_adapter from '@svelte-on-solana/wallet-adapter-core';
-	import * as oracle from '@surec/oracle';
-	import * as web3 from '@solana/web3.js';
-	import * as solana_contrib from '@saberhq/solana-contrib';
 
-	import { globalStore } from './../stores/global';
 	import TopUp from '$lib/TopUp.svelte';
 	import VoteStats from '$lib/VoteManagement/VoteStats.svelte';
 	import Proposals from '$lib/proposals/Proposals.svelte';
-	import EditProposal from "$lib/proposalManagement/EditProposal.svelte"
-
-	wallet_adapter.walletStore.subscribe((value) => {
-		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
-		if (value.wallet?.publicKey != null) {
-			const oracleProvider = solana_contrib.SolanaProvider.init({
-				connection,
-				wallet: value.wallet,
-				opts: { skipPreflight: true }
-			});
-
-			const oracleSDK = oracle.SureOracleSDK.init({ provider: oracleProvider });
-			$globalStore.oracleSDK = oracleSDK;
-			$globalStore.walletPk = value.wallet.publicKey;
-			$globalStore.wallet = value.wallet;
-			$globalStore.provider = oracleProvider;
-
-			// subscribe on anchor events
-			oracleSDK.program.addEventListener('ProposeVoteEvent', (event) => {
-				console.log('event happened: ', event);
-			});
-		}
-	});
+	import EditProposal from '$lib/proposalManagement/EditProposal.svelte';
+	import Config from '$lib/config/Config.svelte';
+	import { loadingState, proposalsState, hydrateProposals, globalStore } from '$stores/index';
 </script>
 
 <svelte:head>
@@ -53,6 +28,9 @@
 						<TopUp />
 					</div>
 
+					<div class="action-container-inner-content--item">
+						<Config />
+					</div>
 					<div class="action-container-inner-content--item">
 						<EditProposal />
 					</div>

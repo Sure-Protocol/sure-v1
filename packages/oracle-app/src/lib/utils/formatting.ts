@@ -11,6 +11,10 @@ export const unixToReadable = (unixTimestamp: BN): string => {
 	return `${dd.toLocaleDateString()}, ${dd.toLocaleTimeString()}`;
 };
 
+export const unixSecondsToReadableString = (unix: number): string => {
+	return countdownFromUnix(Math.floor(Date.now() / 1000) + unix);
+};
+
 export const countdownFromUnix = (unixDeadline: number): string => {
 	const d = Math.floor(Date.now() / 1000);
 	const remainingTime = unixDeadline - d;

@@ -3,11 +3,15 @@ import * as solana_contrib from '@saberhq/solana-contrib';
 import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
 import { Oracle, IDL } from '../../idls/oracle';
 import { Proposal } from './proposal';
-import { SolanaAugmentedProvider } from '@saberhq/solana-contrib';
+import {
+	SolanaAugmentedProvider,
+	TransactionEnvelope,
+} from '@saberhq/solana-contrib';
 import { Vote } from './vote';
 import { PDA } from './pda';
 import { SURE_ADDRESSES } from './constants';
 import { Config } from './config';
+import { TransactionInstruction } from '@solana/web3.js';
 
 export type ProviderProps = {
 	connection: anchor.web3.Connection;
@@ -72,5 +76,11 @@ export class SureOracleSDK {
 
 	vote(): Vote {
 		return new Vote(this);
+	}
+
+	executeTransactionInstructions(
+		tx: TransactionInstruction[]
+	): TransactionEnvelope {
+		return this.provider.newTX(tx);
 	}
 }

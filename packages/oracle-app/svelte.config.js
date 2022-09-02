@@ -16,7 +16,6 @@ const config = {
 		},
 		alias: {
 			'$static/*': 'static/*',
-			'$utils/*': 'src/utils/*',
 			'$lib/*': 'src/lib/*',
 			'$stores/*': 'src/stores/*'
 		}

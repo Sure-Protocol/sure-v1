@@ -1,18 +1,21 @@
 <script lang="ts">
 	import { css, cx } from '@emotion/css';
-	import { calculateAccountBalanceFullAmount, calculateAmountInDecimals } from '$utils';
 	import close from './../../../sure-static/assets/icons/close.svg';
-	import { createProposalState } from './../stores/global';
-	import { globalStore, newEvent } from './../stores/global';
+	import {
+		createProposalState,
+		globalStore,
+		hydrateProposalCallback,
+		newEvent
+	} from '$stores/index';
 	import * as anchor from '@project-serum/anchor';
-	import { SURE_MINT_DEV } from './constants';
-	import { calculateFullAmount } from '$utils';
+	import { calculateFullAmount } from '$lib/utils';
 	import type { SendTransactionError, TransactionError } from '@solana/web3.js';
 	import CloseButton from './button/CloseButton.svelte';
 	import MainButton from './button/MainButton.svelte';
 	import TypeInputAmount from './input/TypeInputAmount.svelte';
 	import SingleInput from './input/SingleInput.svelte';
 	import InputText from './input/InputText.svelte';
+	import { SURE_MINT } from '@surec/oracle';
 
 	let proposalValues = {
 		name: '',
@@ -20,15 +23,17 @@
 		stake: undefined
 	};
 
+	function validateProposal() {}
+
 	async function submitProposal() {
 		const oracleSdk = $globalStore.oracleSDK;
-		if (oracleSdk) {
+		if (oracleSdk && proposalValues.stake) {
 			try {
 				const proposeVoteTx = await oracleSdk.proposal().proposeVote({
 					name: proposalValues.name,
 					description: proposalValues.desription,
 					stake: await calculateFullAmount(oracleSdk, new anchor.BN(proposalValues.stake)),
-					mint: SURE_MINT_DEV
+					mint: SURE_MINT
 				});
 				const txrRes = await proposeVoteTx.confirm();
 				newEvent.set({
@@ -36,14 +41,15 @@
 					status: 'success',
 					tx: txrRes.signature
 				});
+				createProposalState.set(false);
 			} catch (err) {
 				const error = err as SendTransactionError;
-				console.log('could not propose vote. cause: ', err);
 				newEvent.set({
 					name: 'could not create a new proposal',
 					status: 'error',
-					tx: error.message
+					message: error.message
 				});
+				throw new Error(err);
 			}
 		}
 	}
@@ -55,7 +61,8 @@
 </svelte:head>
 
 <form
-	on:submit|preventDefault={submitProposal}
+	on:submit|preventDefault={async () =>
+		hydrateProposalCallback(submitProposal, $globalStore.oracleSDK)}
 	class={css`
 		display: flex;
 		justify-content: center;

@@ -5,16 +5,15 @@
 	import type { ProposalType, VoteStatus, ProposalStatus, VoteAccount } from '@surec/oracle';
 	import { getProposalStatus, SureOracleSDK, getVoteStatus } from '@surec/oracle';
 	import { findEscrowAddress } from '@tribecahq/tribeca-sdk';
-	import { countdownFromUnix, isInFuture, getNextDeadline, saveSalt } from '$utils';
-	import { selectedProposal, globalStore, newEvent } from './../../stores/global';
-	import { SURE_MINT_DEV } from './../constants';
+	import { countdownFromUnix, isInFuture, getNextDeadline, saveSalt } from '$lib/utils';
+	import { selectedProposal, globalStore, newEvent } from '$stores/index';
 	import type { ProgramAccount } from '@saberhq/token-utils';
 	import { Steps } from 'svelte-steps';
 	import CreateProposal from './../CreateProposal.svelte';
 	import type { SendTransactionError } from '@solana/web3.js';
 	import StatBox from '$lib/box/StatBox.svelte';
 	import { to_number } from 'svelte/internal';
-	import { calculateAmountInDecimals } from '$utils/money';
+	import { calculateAmountInDecimals } from '$lib/utils/money';
 
 	let steps: { status: VoteStatus; text: string }[] = [
 		{ status: 'Voting', text: 'Voting' },

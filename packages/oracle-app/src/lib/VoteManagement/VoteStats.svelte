@@ -2,7 +2,13 @@
 	import { css } from '@emotion/css';
 	import { BN } from '@project-serum/anchor';
 	import { onDestroy } from 'svelte';
-	import type { ProposalType, VoteStatus, ProposalStatus, VoteAccount } from '@surec/oracle';
+	import {
+		type ProposalType,
+		type VoteStatus,
+		type ProposalStatus,
+		type VoteAccount,
+		SURE_MINT
+	} from '@surec/oracle';
 	import { getProposalStatus, SureOracleSDK, getVoteStatus } from '@surec/oracle';
 	import { findEscrowAddress } from '@tribecahq/tribeca-sdk';
 	import {
@@ -12,9 +18,8 @@
 		isInFuture,
 		getNextDeadline,
 		saveSalt
-	} from '$utils';
-	import { selectedProposal, globalStore, newEvent } from './../../stores/global';
-	import { SURE_MINT_DEV } from './../constants';
+	} from '$lib/utils';
+	import { selectedProposal, globalStore, newEvent } from '$stores/index';
 	import type { ProgramAccount } from '@saberhq/token-utils';
 	import { Steps } from 'svelte-steps';
 	import CreateProposal from './../CreateProposal.svelte';
@@ -93,7 +98,7 @@
 				);
 				const voteTx = await oracleSdk.vote().submitVote({
 					vote: userVoteQ32,
-					mint: SURE_MINT_DEV,
+					mint: SURE_MINT,
 					proposal: proposal.publicKey,
 					locker: lockerSdk?.locker,
 					userEscrow: escrowKey

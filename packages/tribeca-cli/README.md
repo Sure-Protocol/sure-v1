@@ -15,6 +15,22 @@ the cli enables you to
 - create governance around a token
 - offer locking of tokens to have veToken capabilities
 
+## usage
+
+the environment variable ** WALLET ** needs to be present in environment.
+
+### Build
+
+```
+    > yarn run build
+```
+
+### test out
+
+```
+    > ./bin/run help
+```
+
 ## Status
 
 ### Smart wallet

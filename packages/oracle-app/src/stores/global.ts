@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { SureOracleSDK, type ProposalType } from '@surec/oracle';
+import type { SureOracleSDK } from '@surec/oracle';
 import type { PublicKey } from '@solana/web3.js';
 import type { Adapter } from '@solana/wallet-adapter-base';
 import type { Provider } from '@project-serum/anchor';
@@ -20,27 +20,30 @@ export const globalStore = writable<GlobalStoreT>({
 	provider: undefined
 });
 
-// create writable store
-export const createProposalState = writable(false, () => {
-	console.log('subscribe');
-	return () => console.log('unsubsribe');
-});
-
-export type EventStatus = 'success' | 'error' | 'info';
-
-export type Event = {
-	name: string;
-	message?: string;
-	status: EventStatus;
-	tx?: string;
+export type LoadingStateT = {
+	isLoading: boolean;
+	loadingFailed: boolean;
+	refresh: boolean;
 };
-export const newEvent = writable<Event>({ name: '', message: '', status: 'info', tx: '' }, () => {
-	console.log('subscribe');
-});
 
-export const selectedProposal = writable<ProgramAccount<ProposalType> | undefined>(
-	undefined,
-	() => {
-		console.log('Subsribe');
+export const loadingState = writable<LoadingStateT>(
+	{
+		isLoading: false,
+		loadingFailed: false,
+		refresh: true
+	},
+	(set) => {
+		const interval = setInterval(() => {
+			set({ isLoading: false, loadingFailed: false, refresh: true });
+		}, 20000);
+		() => clearInterval(interval);
 	}
 );
+
+export const startLoading = () => {
+	loadingState.set({ isLoading: true, loadingFailed: false, refresh: false });
+};
+
+export const loadingFailed = () => {
+	loadingState.set({ isLoading: false, loadingFailed: true, refresh: false });
+};

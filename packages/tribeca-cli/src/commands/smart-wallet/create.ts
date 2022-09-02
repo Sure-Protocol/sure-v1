@@ -4,6 +4,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import * as saber_contrib from '@saberhq/solana-contrib';
 import { GokiSDK } from '@gokiprotocol/client';
 import { loadKeypairFromEnv } from '../../utils/loadkey';
+import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 
 export default class SmartWallet extends Command {
 	static description = 'Create Goki Smart Wallet';
@@ -17,7 +18,7 @@ export default class SmartWallet extends Command {
 			parse: async (input: string): Promise<string | undefined> => {
 				if (input == 'dev') {
 					return 'https://api.devnet.solana.com';
-				} else if (input == 'mainnet') {
+				} else if (input == 'mainnet-beta') {
 					return 'https://api.mainnet-beta.solana.com';
 				} else if (input == 'testnet') {
 					return 'https://api.testnet.solana.com';
@@ -28,19 +29,13 @@ export default class SmartWallet extends Command {
 			},
 			defaultHelp: 'hello there',
 			helpValue: '<SOLANA NETWORK>',
-			input: ['dev', 'mainnet', 'testnet', 'local '],
+			input: ['dev', 'mainnet-beta', 'testnet', 'local '],
 			required: true,
-			options: ['dev', 'mainnet', 'testnet', 'local '],
+			options: ['dev', 'mainnet-beta', 'testnet', 'local '],
 			char: 'n',
 		}),
-		numOwners: Flags.integer({
-			required: false,
-			default: 3,
-			char: 'o',
-			description: 'number of smart wallet owners',
-			min: 1,
-		}),
 		owners: Flags.string({
+			helpValue: '<LIST OF OWNERS []>',
 			required: true,
 			description: 'owners in addition to you.',
 			char: 'p',
@@ -69,23 +64,18 @@ export default class SmartWallet extends Command {
 		});
 		const gokiSDK = GokiSDK.load({ provider });
 
-		const owners = flags.owners
-			.split(',')
-			.map((owner) => new PublicKey(owner))
-			.concat([wallet.payer.publicKey]);
-		this.log(`> owners: ${owners}`);
-		const numOwners = flags.numOwners;
-		if (numOwners < owners.length) {
-			this.error('numOwners must be larger than the lenght of owners');
-		}
+		const owners = flags.owners.split(',').map((owner) => new PublicKey(owner));
+
 		try {
 			const { smartWalletWrapper, tx } = await gokiSDK.newSmartWallet({
+				base: (wallet as NodeWallet).payer,
 				owners: owners,
 				threshold: new anchor.BN(1),
-				numOwners: numOwners,
+				numOwners: owners.length,
 			});
 			this.log(`tb.createSmartWallet.success`);
 			this.log(`smart wallet key: ${smartWalletWrapper.key}`);
+			this.log(`owners: ${flags.owners}`);
 		} catch (err) {
 			this.log(`tb.createSmartWallet.fail. Cause: ${err}`);
 		}

@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
-	import { globalStore, newEvent } from './../../../stores/global';
+	import { globalStore, newEvent } from '$stores/index';
 	import type { ProposalType } from '@surec/oracle';
 	import { BN, type ProgramAccount } from '@project-serum/anchor';
-	import { getSalt } from '$utils';
+	import { getSalt } from '$lib/utils';
 	import MainButton from '$lib/button/MainButton.svelte';
 	import type { SendTransactionError } from '@solana/web3.js';
 

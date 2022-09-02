@@ -1,53 +1,41 @@
 <script lang="ts">
 	import { fly, blur, fade } from 'svelte/transition';
-	import { backOut, bounceOut, cubicIn, cubicOut } from 'svelte/easing';
 	import { css } from '@emotion/css';
-	import { BN, type ProgramAccount } from '@project-serum/anchor';
+	import type { ProgramAccount } from '@project-serum/anchor';
 	import type { ProposalType, SureOracleSDK } from '@surec/oracle';
-	import { writable } from 'svelte/store';
 	import { getProposalStatus } from '@surec/oracle';
-	import { onMount } from 'svelte';
-	import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
-	import { globalStore, createProposalState, selectedProposal } from '$stores/global';
 	import {
 		prettyPublicKey,
 		unixToReadable,
 		prettyLargeNumber,
 		calculateAmountInDecimals
-	} from '$utils';
-	import { SURE_MINT_DEV } from './../constants';
+	} from '$lib/utils';
 	import MainButton from '$lib/button/MainButton.svelte';
-
+	import { createProposalState, proposalsState, selectedProposal } from '$stores/index';
+	import { loadingState } from '$stores/global';
 	// Input search
 	export let search: string;
 
 	let filteredProposals: ProgramAccount<ProposalType>[] = [];
+	let proposals: ProgramAccount<ProposalType>[] = [];
 
-	const progress = writable(0);
-	const proposals = writable<ProgramAccount<ProposalType>[]>([]);
-
-	onMount(async () => {
-		const oracleSdk = $globalStore.oracleSDK;
-		if (oracleSdk) {
-			proposals.set(await oracleSdk.proposal().fetchAllProposals());
-		}
-	});
-
-	walletStore.subscribe(async () => {
-		const oracleSdk = $globalStore.oracleSDK;
-		const currentTime = new BN(new Date().getUTCSeconds());
-		if (oracleSdk) {
-			const dd = Math.floor(Date.now() / 1000);
-			filteredProposals = await oracleSdk.proposal().fetchAllProposals();
-			proposals.set(filteredProposals);
+	proposalsState.subscribe((p) => {
+		if (p.proposals) {
+			filteredProposals = p.proposals;
+			proposals = p.proposals;
 		}
 	});
 
 	function filterProposals(search: string) {
-		filteredProposals = $proposals.filter(
-			(val) => val.account.name.includes(search) || val.account.description.includes(search)
-		);
+		if (search.length > 2)
+			filteredProposals = proposals.filter(
+				(val) => val.account.name.includes(search) || val.account.description.includes(search)
+			);
+		else {
+			filteredProposals = proposals;
+		}
 	}
+
 	$: o = filterProposals(search);
 </script>
 
@@ -59,7 +47,11 @@
 		width: 100%;
 	`}
 >
-	{#if filteredProposals.length > 0}
+	{#if $proposalsState.isLoading}
+		<p>Loading...</p>
+	{:else if $proposalsState.loadingFailed}
+		<p>Weird we accounted an error</p>
+	{:else if filteredProposals.length > 0}
 		<ul
 			class={css`
 				display: flex;
@@ -186,8 +178,7 @@
 		>
 			<h3 class="h3 p--bold p--pink">we couldn't find any proposals</h3>
 			<MainButton click={() => createProposalState.set(true)} title="Create a proposal" />
-		</div>
-	{/if}
+		</div>{/if}
 </div>
 
 <style lang="scss"></style>

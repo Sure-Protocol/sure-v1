@@ -5,8 +5,8 @@
 	import * as web3 from '@solana/spl-token';
 	import * as tribeca from '@tribecahq/tribeca-sdk';
 	import { onMount } from 'svelte';
-	import { globalStore, newEvent } from '../stores/global';
-	import { SURE_MINT_DEV } from './constants';
+	import { globalStore, newEvent } from '$stores/index';
+
 	import * as wallet_adapter from '@svelte-on-solana/wallet-adapter-core';
 	import type { AnchorAccount } from '@saberhq/anchor-contrib/dist/cjs/utils/accounts';
 	import {
@@ -15,7 +15,7 @@
 		calculateFullAmount,
 		calculateAccountBalanceInDecimals,
 		calculateAmountInDecimals
-	} from './../utils/';
+	} from '$lib/utils';
 	import MainButton from './button/MainButton.svelte';
 	import type { SendTransactionError } from '@solana/web3.js';
 	import TypeInputAmount from './input/TypeInputAmount.svelte';
@@ -103,7 +103,7 @@
 			});
 	});
 
-	wallet_adapter.walletStore.subscribe(async (value) => {
+	wallet_adapter.walletStore.subscribe(() => {
 		loadingData = true;
 		Promise.all([getSureAmount(), getVeSureAmount()])
 			.then(() => {

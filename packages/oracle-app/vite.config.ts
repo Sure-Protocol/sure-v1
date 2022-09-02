@@ -16,7 +16,6 @@ const config: UserConfig = {
 	},
 	resolve: {
 		alias: {
-			$utils: path.resolve('src/utils/'),
 			$assets: path.resolve('src/assets'),
 			stream: 'rollup-plugin-node-polyfills/polyfills/stream'
 		}
@@ -39,7 +38,6 @@ const config: UserConfig = {
 		alias: {
 			'@solana/spl-token': './node_modules/@solana/spl-token',
 			'$assets/*': 'src/assets/*',
-			'$utils/*': 'src/utils/*',
 			'$lib/*': 'src/lib/*'
 		}
 	}

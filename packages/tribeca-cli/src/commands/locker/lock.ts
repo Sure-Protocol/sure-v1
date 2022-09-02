@@ -11,6 +11,7 @@ import { LockerWrapper } from '@tribecahq/tribeca-sdk';
 import { program } from '@project-serum/anchor/dist/cjs/spl/associated-token';
 import { TransactionBuilder } from '@metaplex-foundation/js-next';
 import { getMintInfo } from '@saberhq/token-utils';
+import * as spl from './../../../node_modules/@solana/spl-token';
 
 const NUMBER_SECONDS_IN_DAY = 86400;
 const NUMBER_MS_IN_DAY = NUMBER_SECONDS_IN_DAY * 1000;
@@ -27,7 +28,7 @@ export default class SmartWallet extends Command {
 			parse: async (input: string): Promise<string | undefined> => {
 				if (input == 'dev') {
 					return 'https://api.devnet.solana.com';
-				} else if (input == 'mainnet') {
+				} else if (input == 'mainnet-beta') {
 					return 'https://api.mainnet-beta.solana.com';
 				} else if (input == 'testnet') {
 					return 'https://api.testnet.solana.com';
@@ -38,9 +39,9 @@ export default class SmartWallet extends Command {
 			},
 			defaultHelp: 'hello there',
 			helpValue: '<SOLANA NETWORK>',
-			input: ['dev', 'mainnet', 'testnet', 'local '],
+			input: ['dev', 'mainnet-beta', 'testnet', 'local '],
 			required: true,
-			options: ['dev', 'mainnet', 'testnet', 'local '],
+			options: ['dev', 'mainnet-beta', 'testnet', 'local '],
 			char: 'n',
 		}),
 		locker: Flags.string({
@@ -99,8 +100,10 @@ export default class SmartWallet extends Command {
 
 		// load amount
 		const amount = flags.amount;
-		const decimals = (await getMintInfo(provider, lockerAccount.tokenMint))
-			.decimals;
+		const decimals = (
+			await spl.getMint(provider.connection, lockerAccount.tokenMint)
+		).decimals;
+
 		const lockAmountBN = new anchor.BN(parseFloat(amount)).mul(
 			new anchor.BN(10).pow(new anchor.BN(decimals))
 		);

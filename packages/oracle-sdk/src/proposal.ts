@@ -2,7 +2,7 @@ import * as anchor from '@project-serum/anchor';
 import * as token_utils from '@saberhq/token-utils';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from '../../idls/oracle';
-import { SURE_TOKEN } from './constants';
+import { SURE_MINT } from './constants';
 import { SureOracleSDK } from './sdk';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
 import { createProposalHash, validateKeys } from './utils';
@@ -59,7 +59,7 @@ export class Proposal {
 		stake,
 		mint,
 	}: ProposeVote): Promise<TransactionEnvelope> {
-		const tokenMint = mint ?? SURE_TOKEN;
+		const tokenMint = mint ?? SURE_MINT;
 		validateKeys([{ v: tokenMint, n: 'mint' }]);
 		if (name.length == 0) {
 			throw new Error('proposal name cannot be empty');

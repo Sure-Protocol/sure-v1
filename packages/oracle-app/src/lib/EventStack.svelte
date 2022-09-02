@@ -4,11 +4,11 @@
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
-	import { prettyPublicKey } from '$utils';
-	import { newEvent, type Event } from '../stores/global';
+	import { prettyPublicKey } from '$lib/utils';
+	import { newEvent, type Event } from '$stores/index';
 	import logo from '$assets/icons/openInNew.svg';
 	import close from '$assets/icons/close.svg';
-	import { prettySolanaExplorerLink } from '$utils/formatting';
+	import { prettySolanaExplorerLink } from '$lib/utils/formatting';
 	import CloseButton from './button/CloseButton.svelte';
 	import { EventEmitter } from '@solana/wallet-adapter-base';
 
