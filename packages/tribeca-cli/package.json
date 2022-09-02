@@ -1,6 +1,6 @@
 {
 	"name": "@surec/tribeca-cli",
-	"version": "0.0.25",
+	"version": "0.0.26",
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
