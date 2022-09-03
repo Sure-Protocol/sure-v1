@@ -13,10 +13,12 @@
 	import * as web3 from '@solana/web3.js';
 	import * as solana_contrib from '@saberhq/solana-contrib';
 	import { newEvent } from '$stores/index';
+	import { getLocalStorage, setLocalStorage } from '@svelte-on-solana/wallet-adapter-core';
 
 	let showProposal = false;
-
-	wallet_adapter.walletStore.subscribe((value) => {
+	let testModeActivated = false;
+	let keyCombo = '';
+	let testMethodsOn = wallet_adapter.walletStore.subscribe((value) => {
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
 		if (value.wallet?.publicKey != null) {
 			const oracleProvider = solana_contrib.SolanaProvider.init({
@@ -34,11 +36,38 @@
 	});
 
 	onMount(() => {
+		setInterval(() => {
+			keyCombo = '';
+			if (getLocalStorage('testMode') == 'on') {
+				testModeActivated = true;
+			} else {
+				testModeActivated = false;
+			}
+		}, 2000);
+	});
+
+	onMount(() => {
 		createProposalState.subscribe((val) => {
 			showProposal = val;
 		});
 	});
+
+	const testModeListener = (event: KeyboardEvent) => {
+		if (keyCombo.length > 4) {
+			keyCombo = '';
+		}
+		keyCombo = `${keyCombo}${event.key}`;
+		if (keyCombo == 'awds') {
+			if (getLocalStorage('testMode') == 'on') {
+				setLocalStorage('testMode', 'off');
+			} else {
+				setLocalStorage('testMode', 'on');
+			}
+		}
+	};
 </script>
+
+<svelte:window on:keydown={testModeListener} />
 
 <div
 	class={css`
@@ -55,7 +84,7 @@
 	{/if}
 
 	<EventStack />
-	{#if process.env.SURE_ENV == 'dev'}
+	{#if testModeActivated}
 		<TestPanel />
 	{/if}
 </div>

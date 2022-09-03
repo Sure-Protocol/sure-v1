@@ -41,6 +41,20 @@ export const getProposalStatus = (proposal: ProposalType): ProposalStatus => {
 	}
 };
 
+export type CauseOfFailedProposal = 'NotEnoughVotes' | 'Unknown';
+
+export const proposalFailReason = (
+	proposal: ProposalType
+): CauseOfFailedProposal => {
+	if (getProposalStatus(proposal) == 'Failed') {
+		const hasReachedQuorum = proposal.votes >= proposal.requiredVotes;
+		if (!hasReachedQuorum) {
+			return 'NotEnoughVotes';
+		}
+	}
+	return 'Unknown';
+};
+
 export type VoteStatus =
 	| 'Voting'
 	| 'Reveal vote'

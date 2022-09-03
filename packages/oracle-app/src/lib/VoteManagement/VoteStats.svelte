@@ -7,7 +7,8 @@
 		type VoteStatus,
 		type ProposalStatus,
 		type VoteAccount,
-		SURE_MINT
+		SURE_MINT,
+		proposalFailReason
 	} from '@surec/oracle';
 	import { getProposalStatus, SureOracleSDK, getVoteStatus } from '@surec/oracle';
 	import { findEscrowAddress } from '@tribecahq/tribeca-sdk';
@@ -30,6 +31,7 @@
 	import type { SendTransactionError } from '@solana/web3.js';
 	import StatBox from '$lib/box/StatBox.svelte';
 	import { to_number } from 'svelte/internal';
+	import errorCircle from '$assets/icons/errorCircle.svg';
 
 	let steps: { status: VoteStatus; text: string }[] = [
 		{ status: 'Voting', text: 'Voting' },
@@ -104,7 +106,7 @@
 					userEscrow: escrowKey
 				});
 				const txRec = await voteTx.transactionEnvelope.confirm();
-				saveSalt(voteTx.salt, proposal.account.name);
+				saveSalt(voteTx.salt.toString(), proposal.account.name);
 
 				const [votePda] = SureOracleSDK.pda().findVoteAccount({
 					proposal: proposal.publicKey,
@@ -118,8 +120,37 @@
 				});
 			} catch (err) {
 				const error = err as SendTransactionError;
-				console.log('failed to submit vote: cause: ', err);
-				newEvent.set({ name: 'failed to submit vote', status: 'error', tx: error.message });
+				newEvent.set({ name: 'failed to submit vote', status: 'error', message: error.message });
+			}
+		}
+	}
+
+	async function collectReward() {
+		const oracleSdk = $globalStore.oracleSDK;
+		if (oracleSdk && proposal) {
+			try {
+				const [voteAccount] = await oracleSdk.pda.findVoteAccount({
+					proposal: proposal.publicKey,
+					voter: oracleSdk.provider.wallet.publicKey
+				});
+				const voteTx = await oracleSdk.vote().collectRewards({
+					voteAccount,
+					tokenMint: SURE_MINT
+				});
+				const txRec = await voteTx.confirm();
+				newEvent.set({
+					name: 'successfully collected vote rewards',
+					status: 'success',
+					tx: txRec.signature
+				});
+			} catch (err) {
+				const error = err as SendTransactionError;
+				console.log('failed to collect vote rewards: ', err);
+				newEvent.set({
+					name: 'failed to collect vote rewards',
+					status: 'error',
+					message: error.message
+				});
 			}
 		}
 	}
@@ -140,20 +171,7 @@
 		<h3 class="h3--white">{`Vote management`}</h3>
 		{#if proposal !== undefined}
 			<p class="p p--italic">{proposal.account.name}</p>
-			<div
-				class={css`
-					width: 100%;
-					margin-bottom: 2rem;
-					margin-top: 2rem;
-				`}
-			>
-				{#if steps[currentStep].status == 'Failed'}
-					<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
-				{:else}
-					<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
-				{/if}
-			</div>
-			<h3 class=" h3 h3--white ">Available actions</h3>
+
 			{#if vote}
 				<div
 					class={css`
@@ -179,6 +197,7 @@
 							<StatBox title="locked" value={'yes'} />
 						{/if}
 					</div>
+					<h3 class=" h3 h3--white ">Available actions</h3>
 
 					{#if steps[currentStep].status == 'Voting'}
 						<div
@@ -200,15 +219,18 @@
 						<div>Calculate reward</div>
 					{:else if steps[currentStep].status == 'Collect Reward'}
 						<div>
-							<CollectRewards {proposal} />
+							<CollectRewards title={'Collect rewards'} submitAction={() => collectReward()} />
 						</div>
 					{:else if vote.locked}
 						<div>
-							<p>The vote rewards are collected and the vote is closed.</p>
+							<p>
+								the vote rewards are collected and the vote is closed. There are no more available
+								actions.
+							</p>
 						</div>
 					{:else}
 						<div>
-							<CollectRewards {proposal} />
+							<CollectRewards title={'Collect stake'} submitAction={() => collectReward()} />
 						</div>
 					{/if}
 				</div>

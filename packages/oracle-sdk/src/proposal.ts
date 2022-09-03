@@ -20,10 +20,12 @@ type ProposeVote = {
 
 type FinalizeVoteResults = {
 	proposal: PublicKey;
-	tokenMint: PublicKey;
 };
 
-type CollectProposerReward = FinalizeVoteResults;
+type CollectProposerReward = {
+	proposal: PublicKey;
+	tokenMint: PublicKey;
+};
 
 export class Proposal {
 	readonly program: anchor.Program<oracleIDL.Oracle>;

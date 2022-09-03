@@ -16,14 +16,16 @@
 
 	newEvent.subscribe((event) => {
 		if (event.name.length > 0) {
+			console.log('new event: ');
 			let eventStackTemp = eventStack;
 			if (eventStack.length == 4) {
 				eventStackTemp = eventStackTemp.slice(1, 4);
 			}
 			eventStack = [...eventStackTemp, event];
+
 			setTimeout(() => {
 				eventStack = eventStack.slice(0, eventStack.length - 1);
-			}, 5000);
+			}, 500000);
 		}
 	});
 
@@ -33,16 +35,17 @@
 </script>
 
 <ul
+	id="eventStack"
 	class={css`
 		display: flex;
 		flex-direction: column;
 		background-color: transparent;
-		position: absolute;
+		position: fixed;
 		bottom: 1rem;
 		right: 1rem;
 		list-style: none;
 		margin: 0;
-
+		z-index: 10;
 		gap: 1rem;
 	`}
 >

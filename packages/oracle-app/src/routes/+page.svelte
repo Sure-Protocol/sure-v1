@@ -7,6 +7,7 @@
 	import EditProposal from '$lib/proposalManagement/EditProposal.svelte';
 	import Config from '$lib/config/Config.svelte';
 	import { loadingState, proposalsState, hydrateProposals, globalStore } from '$stores/index';
+	import ProposalStatus from '$lib/ProposalStatus.svelte';
 </script>
 
 <svelte:head>
@@ -27,9 +28,8 @@
 					<div class="action-container-inner-content--item">
 						<TopUp />
 					</div>
-
 					<div class="action-container-inner-content--item">
-						<Config />
+						<ProposalStatus />
 					</div>
 					<div class="action-container-inner-content--item">
 						<EditProposal />
@@ -37,6 +37,9 @@
 
 					<div class="action-container-inner-content--item">
 						<VoteStats />
+					</div>
+					<div class="action-container-inner-content--item">
+						<Config />
 					</div>
 				</div>
 			</div>
