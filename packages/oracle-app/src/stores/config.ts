@@ -51,7 +51,6 @@ export const hydrateConfig = async (oracleSdk: SureOracleSDK) => {
 	loadConfig();
 	try {
 		const config = await oracleSdk.config().fetchConfig({ tokenMint: SURE_MINT });
-		console.log('loaded config: ', config);
 		loadedSuccessfully(config);
 	} catch (err) {
 		failedLoading();

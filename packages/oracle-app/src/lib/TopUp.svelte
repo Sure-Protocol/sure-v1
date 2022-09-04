@@ -48,7 +48,6 @@
 				}
 			} catch (err) {
 				const error = err as SendTransactionError;
-				console.log('could not lock tokens. Cause: ', err);
 				newEvent.set({
 					name: 'could not lock tokens.',
 					message: error.message,

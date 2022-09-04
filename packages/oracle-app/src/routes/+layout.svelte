@@ -28,10 +28,12 @@
 			});
 
 			const oracleSdk = oracle.SureOracleSDK.init({ provider: oracleProvider });
-			$globalStore.oracleSDK = oracleSdk;
-			$globalStore.walletPk = value.wallet.publicKey;
-			$globalStore.wallet = value.wallet;
-			$globalStore.provider = oracleProvider;
+			$globalStore = {
+				oracleSDK: oracleSdk,
+				walletPk: value.wallet.publicKey,
+				wallet: value.wallet,
+				provider: oracleProvider
+			};
 		}
 	});
 

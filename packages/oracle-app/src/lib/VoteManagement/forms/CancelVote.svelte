@@ -27,7 +27,6 @@
 				});
 			} catch (err) {
 				const error = err as SendTransactionError;
-				console.log('failed to cancel vote: cause: ', err);
 				newEvent.set({ name: 'failed to cancel vote', status: 'error', tx: error.message });
 			}
 		}

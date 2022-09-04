@@ -46,3 +46,7 @@ export const prettyLargeNumber = (number: BN): string => {
 export const prettySolanaExplorerLink = (tx: string, network: string): string => {
 	return `https://explorer.solana.com/tx/${tx}?cluster=${network}`;
 };
+
+export const maxXCharacters = (str: string, maxChar: number): string => {
+	return str.slice(0, maxChar) + '...';
+};

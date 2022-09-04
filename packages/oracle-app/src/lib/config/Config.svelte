@@ -115,8 +115,12 @@
 							value={100 * oneDivXToFloat($configState.config.protocolFeeRate)}
 						/>
 					</div>
+				{:else if $configState.isLoading}
+					<p>Loading config ...</p>
+				{:else if $configState.loadingFailed}
+					<p>failed to load config</p>
 				{:else}
-					<p>Could not load config</p>
+					<p>config does not exist</p>
 					<MainButton title="create config" click={() => createConfig()} />
 				{/if}
 			</div>

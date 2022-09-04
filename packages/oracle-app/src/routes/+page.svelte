@@ -6,8 +6,16 @@
 	import Proposals from '$lib/proposals/Proposals.svelte';
 	import EditProposal from '$lib/proposalManagement/EditProposal.svelte';
 	import Config from '$lib/config/Config.svelte';
-	import { loadingState, proposalsState, hydrateProposals, globalStore } from '$stores/index';
+	import {
+		loadingState,
+		proposalsState,
+		hydrateProposals,
+		globalStore,
+		selectedProposal,
+		isOwnerOfProposal
+	} from '$stores/index';
 	import ProposalStatus from '$lib/ProposalStatus.svelte';
+	import { Provider, SureOracleSDK } from '@surec/oracle';
 </script>
 
 <svelte:head>
@@ -28,9 +36,12 @@
 					<div class="action-container-inner-content--item">
 						<TopUp />
 					</div>
-					<div class="action-container-inner-content--item">
-						<ProposalStatus />
-					</div>
+					{#if isOwnerOfProposal($selectedProposal?.account, $globalStore?.oracleSDK?.provider.walletKey)}
+						<div class="action-container-inner-content--item">
+							<ProposalStatus />
+						</div>
+					{/if}
+
 					<div class="action-container-inner-content--item">
 						<EditProposal />
 					</div>

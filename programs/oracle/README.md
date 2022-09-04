@@ -10,3 +10,4 @@
 - [x] add protocol config to control parameters
 - [ ] reduce size of proposal and structure proposal methods
 - [ ] update unit tests for config
+- [ ] test reward calculation

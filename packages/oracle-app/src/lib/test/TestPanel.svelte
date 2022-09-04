@@ -74,7 +74,6 @@
 				});
 			} catch (err) {
 				const error = err as web3.SendTransactionError;
-				console.log('could not create mint account cause', err);
 				newEvent.set({ name: `could not create mint account`, status: 'error', tx: error.message });
 			}
 		}
@@ -106,11 +105,9 @@
 
 				const txRes = await oracleSdk.provider.send(tx);
 				const txRec = await txRes.confirm({});
-				console.log('txRes: ', txRes);
 				newEvent.set({ name: `minted 100 sure tokens`, status: 'success', tx: txRec });
 			} catch (err) {
 				const error = err as web3.SendTransactionError;
-				console.log('could not mint tokens to user cause', err);
 				newEvent.set({ name: `could not mint new tokens`, status: 'error', tx: error.message });
 			}
 		}
@@ -138,7 +135,6 @@
 				await govern.tx.confirm();
 				newEvent.set({ name: 'created smart wallet', success: true });
 			} catch (err) {
-				console.log('could not create smart wallet: cause', err);
 				newEvent.set({ name: `could not create smart wallet`, success: false });
 			}
 		}
@@ -160,7 +156,6 @@
 				newEvent.set({ name: 'created sure locker!', status: 'success', tx: txRec.signature });
 			} catch (err) {
 				const error = err as web3.SendTransactionError;
-				console.log('could not create Sure locker: cause', err);
 				newEvent.set({ name: `could not create sure locker`, status: 'error', tx: error.message });
 			}
 		}

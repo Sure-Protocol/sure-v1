@@ -8,7 +8,7 @@
 	import { newEvent, type Event } from '$stores/index';
 	import logo from '$assets/icons/openInNew.svg';
 	import close from '$assets/icons/close.svg';
-	import { prettySolanaExplorerLink } from '$lib/utils/formatting';
+	import { maxXCharacters, prettySolanaExplorerLink } from '$lib/utils/formatting';
 	import CloseButton from './button/CloseButton.svelte';
 	import { EventEmitter } from '@solana/wallet-adapter-base';
 
@@ -16,7 +16,6 @@
 
 	newEvent.subscribe((event) => {
 		if (event.name.length > 0) {
-			console.log('new event: ');
 			let eventStackTemp = eventStack;
 			if (eventStack.length == 4) {
 				eventStackTemp = eventStackTemp.slice(1, 4);
@@ -60,7 +59,7 @@
 			<CloseButton onClick={() => pop(idx)} />
 			<h4 class="h4 h4--white text--margin-vertical__0">{`${event.name}`}</h4>
 			{#if event.message}
-				<p class={'p p--small'}>{event.message}</p>
+				<p class={'p p--small'}>{maxXCharacters(event.message, 20)}</p>
 			{/if}
 			{#if event.tx}
 				<a
@@ -88,6 +87,7 @@
 		flex-direction: column;
 		width: 20rem;
 		height: 7rem;
+		background-color: #05152f;
 		border: transparent 1px solid;
 		border-radius: 10px;
 		box-shadow: 1px 1px 1px 1px #09e85d;

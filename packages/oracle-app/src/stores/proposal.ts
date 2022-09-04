@@ -8,6 +8,7 @@ import {
 import type { ProgramAccount } from '@saberhq/token-utils';
 import { newEvent } from './event';
 import { countdownFromUnix, getNextDeadline, isInFuture } from '$lib/utils';
+import type { PublicKey } from '@solana/web3.js';
 
 // load proposals
 export type ProposalsState = {
@@ -71,18 +72,18 @@ export const hydrateProposals = async (oracleSdk: SureOracleSDK) => {
 };
 
 // whether create proposal is open
-export const createProposalState = writable(false, () => {
-	console.log('subscribe');
-	return () => console.log('unsubsribe');
-});
+export const createProposalState = writable(false);
 
 // selected proposal
-export const selectedProposal = writable<ProgramAccount<ProposalType> | undefined>(
-	undefined,
-	() => {
-		console.log('Subsribe');
-	}
-);
+export const selectedProposal = writable<ProgramAccount<ProposalType> | undefined>(undefined);
+
+export const isOwnerOfProposal = (
+	proposal: ProposalType | undefined,
+	walletPk: PublicKey | undefined
+): boolean => {
+	if (proposal && walletPk) return proposal.proposer.toString() == walletPk.toString();
+	return false;
+};
 
 // proposal steps
 
@@ -104,34 +105,45 @@ const initialProposalSteps: ProposalSteps = {
 
 let timer: NodeJS.Timer | null = null;
 export const proposalSteps = writable<ProposalSteps>(initialProposalSteps, () => {
-	selectedProposal.subscribe(async (proposal) => {
-		// update steps
-		console.log('Subscribe to proposalSteps');
-		if (proposal) {
-			const currentStep = initialProposalSteps.steps.findIndex(
-				(val) => val.text == getVoteStatus(proposal.account)
-			);
+	selectedProposal.subscribe(
+		async (proposal) => {
+			// update steps
+			if (proposal) {
+				const currentStep = initialProposalSteps.steps.findIndex(
+					(val) => val.text == getVoteStatus(proposal.account)
+				);
 
-			timer = setInterval(() => {
-				const voteEndTime = proposal?.account.voteEndAt;
-				const revealEndTime = proposal?.account.voteEndRevealAt;
-				const endTime = getNextDeadline([voteEndTime, revealEndTime]);
-				let updatedText = initialProposalSteps.steps[currentStep]?.status.toString() ?? 'PH';
-				if (isInFuture(endTime)) {
-					const countdown = countdownFromUnix(endTime);
-					updatedText = `${updatedText} ${countdown.toString()}`;
-				}
+				timer = setInterval(() => {
+					const voteEndTime = proposal?.account.voteEndAt;
+					const revealEndTime = proposal?.account.voteEndRevealAt;
+					const endTime = getNextDeadline([voteEndTime.toNumber(), revealEndTime.toNumber()]);
 
-				const currentSteps = initialProposalSteps.steps;
-				currentSteps[currentStep] = {
-					...currentSteps[currentStep],
-					text: updatedText
-				};
-				proposalSteps.set({
-					steps: currentSteps,
-					currentStep
-				});
-			}, 1000);
+					let updatedText = initialProposalSteps.steps[currentStep]?.status.toString() ?? 'PH';
+					if (isInFuture(endTime)) {
+						const countdown = countdownFromUnix(endTime);
+						updatedText = `${updatedText} ${countdown.toString()}`;
+					}
+
+					const currentSteps = initialProposalSteps.steps;
+					currentSteps[currentStep] = {
+						...currentSteps[currentStep],
+						text: updatedText
+					};
+					proposalSteps.set({
+						steps: currentSteps,
+						currentStep
+					});
+				}, 1000);
+			}
+		},
+		() => {
+			initialProposalSteps.steps = initialProposalSteps.steps.map((step) => ({
+				status: step.status,
+				text: step.status
+			}));
+			if (timer) {
+				clearInterval(timer);
+			}
 		}
-	});
+	);
 });

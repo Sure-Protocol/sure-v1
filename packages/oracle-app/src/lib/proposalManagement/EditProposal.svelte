@@ -60,21 +60,6 @@
 				await calculateAmountInDecimals(oracleSdk, proposal.account.staked)
 			).toNumber();
 		}
-
-		timer = setInterval(() => {
-			let voteEndTime = proposal?.account.voteEndAt;
-			let revealEndTime = proposal?.account.voteEndRevealAt;
-			const endTime = getNextDeadline([voteEndTime, revealEndTime]);
-			let updatedText = steps[currentStep]?.status.toString() ?? 'PH';
-			if (isInFuture(endTime)) {
-				countdown = countdownFromUnix(endTime);
-				updatedText = `${updatedText} ${countdown.toString()}`;
-			}
-			steps[currentStep] = {
-				...steps[currentStep],
-				text: updatedText
-			};
-		}, 1000);
 	});
 
 	onDestroy(() => {
@@ -134,33 +119,7 @@
 			<h3 class="h3--white">{`Proposal management`}</h3>
 			{#if proposal !== undefined}
 				<p class="p p--italic">{proposal.account.name}</p>
-				<div
-					class={css`
-						width: 100%;
-					`}
-				>
-					{#if steps[currentStep].status == 'Failed'}
-						<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
-					{:else}
-						<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
-					{/if}
-				</div>
-				{#if steps[currentStep].status == 'Failed'}
-					<div>
-						{#if proposalFailReason(proposal.account) == 'NotEnoughVotes'}
-							<div
-								class={css`
-									display: flex;
-									gap: 10px;
-									align-items: center;
-								`}
-							>
-								<img src={errorCircle} height={'20px'} alt="failed" />
-								<p class="p ">{'the proposal failed to reach quorum'}</p>
-							</div>
-						{/if}
-					</div>
-				{/if}
+
 				<h3 class=" h3 h3--white ">Available actions</h3>
 				{#if steps[currentStep].status == 'Calculate Reward'}
 					<CollectRewards title="calculate reward" submitAction={() => calculateRewards()} />

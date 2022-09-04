@@ -33,15 +33,6 @@
 	import StatBox from '$lib/box/StatBox.svelte';
 	import { to_number } from 'svelte/internal';
 	import errorCircle from '$assets/icons/errorCircle.svg';
-
-	let steps: { status: VoteStatus; text: string }[] = [
-		{ status: 'Voting', text: 'Voting' },
-		{ status: 'Reveal vote', text: 'Reveal vote' },
-		{ status: 'Calculate Reward', text: 'Calculate Reward' },
-		{ status: 'Collect Reward', text: 'Collect Reward' },
-		{ status: 'Failed', text: 'Failed' }
-	];
-	let currentStep: number = 0;
 </script>
 
 <div class="action-container--width-s action-container--padding-h0 ">
@@ -63,9 +54,21 @@
 				`}
 			>
 				{#if $proposalSteps.steps[$proposalSteps.currentStep].status == 'Failed'}
-					<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
+					<Steps
+						primary={'#d4100b'}
+						current={$proposalSteps.currentStep}
+						size="1rem"
+						line="1px"
+						steps={$proposalSteps.steps}
+					/>
 				{:else}
-					<Steps primary={'#d4100b'} current={currentStep} size="1rem" line="1px" {steps} />
+					<Steps
+						primary={'#d4100b'}
+						current={$proposalSteps.currentStep}
+						size="1rem"
+						line="1px"
+						steps={$proposalSteps.steps}
+					/>
 				{/if}
 			</div>
 			{#if $proposalSteps.steps[$proposalSteps.currentStep].status == 'Failed'}

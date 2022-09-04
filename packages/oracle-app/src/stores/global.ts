@@ -33,6 +33,7 @@ export const loadingState = writable<LoadingStateT>(
 		refresh: true
 	},
 	(set) => {
+		set({ isLoading: false, loadingFailed: false, refresh: true });
 		const interval = setInterval(() => {
 			set({ isLoading: false, loadingFailed: false, refresh: true });
 		}, 20000);

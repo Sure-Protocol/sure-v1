@@ -14,7 +14,10 @@
 - [ ] create governance page to propose votes
 - [ ] implement a dex to buy and sell sure
 - [ ] update metadata for token
+- [ ] voter statistics
+- [ ]
 
 `Config`
 
-- [ ] format the config stats
+- [x] format the config stats
+- [ ] allow users to propose config changes

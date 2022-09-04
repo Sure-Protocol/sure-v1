@@ -8,6 +8,4 @@ export type Event = {
 	status: EventStatus;
 	tx?: string;
 };
-export const newEvent = writable<Event>({ name: '', message: '', status: 'info', tx: '' }, () => {
-	console.log('subscribe');
-});
+export const newEvent = writable<Event>({ name: '', message: '', status: 'info', tx: '' });

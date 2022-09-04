@@ -71,21 +71,6 @@
 			// update steps
 			currentStep = steps.findIndex((val) => val.text == getVoteStatus(p?.account));
 		}
-
-		timer = setInterval(() => {
-			let voteEndTime = proposal?.account.voteEndAt;
-			let revealEndTime = proposal?.account.voteEndRevealAt;
-			const endTime = getNextDeadline([voteEndTime, revealEndTime]);
-			let updatedText = steps[currentStep]?.status.toString() ?? 'PH';
-			if (isInFuture(endTime)) {
-				countdown = countdownFromUnix(endTime);
-				updatedText = `${updatedText} ${countdown.toString()}`;
-			}
-			steps[currentStep] = {
-				...steps[currentStep],
-				text: updatedText
-			};
-		}, 1000);
 	});
 
 	async function voteOnProposal() {
@@ -145,7 +130,6 @@
 				});
 			} catch (err) {
 				const error = err as SendTransactionError;
-				console.log('failed to collect vote rewards: ', err);
 				newEvent.set({
 					name: 'failed to collect vote rewards',
 					status: 'error',

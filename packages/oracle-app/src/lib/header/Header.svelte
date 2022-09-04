@@ -58,10 +58,28 @@
 		}, 1000);
 	});
 
+	globalStore.subscribe((store) => {
+		if (store.oracleSDK && $loadingState.refresh) {
+			startLoading();
+			try {
+				Promise.all([
+					hydrateProposals(store.oracleSDK),
+					hydrateConfig(store.oracleSDK),
+					hydrateTokenState(store.oracleSDK)
+				])
+					.then(() => loadingSuccessful())
+					.catch(() => {
+						loadingFailed();
+					});
+			} catch {
+				loadingFailed();
+			}
+		}
+	});
+
 	/// fetch necessary data
 	loadingState.subscribe(async (val) => {
-		console.log('loading state: ', val);
-		if (val.refresh && !val.isLoading && !$proposalsState.locked) {
+		if (val.refresh && !val.isLoading) {
 			const oracleSdk = $globalStore.oracleSDK;
 			if (oracleSdk) {
 				startLoading();
