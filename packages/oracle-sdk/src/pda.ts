@@ -1,4 +1,4 @@
-import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
+import * as anchor from '@project-serum/anchor';
 import { PublicKey } from '@solana/web3.js';
 import {
 	SURE_ADDRESSES,
@@ -18,7 +18,7 @@ export class PDA {
 		proposalName: string;
 	}): [PublicKey, number] {
 		const id = createProposalHash({ name: proposalName });
-		return findProgramAddressSync(
+		return anchor.utils.publicKey.findProgramAddressSync(
 			[SURE_ORACLE_SEED, id],
 			SURE_ADDRESSES.Oracle
 		);
@@ -31,7 +31,7 @@ export class PDA {
 		proposal: PublicKey;
 		voter: PublicKey;
 	}) {
-		return findProgramAddressSync(
+		return anchor.utils.publicKey.findProgramAddressSync(
 			[SURE_ORACLE_VOTE_SEED, proposal.toBuffer(), voter.toBuffer()],
 			SURE_ADDRESSES.Oracle
 		);
@@ -42,7 +42,7 @@ export class PDA {
 	}: {
 		proposal: PublicKey;
 	}): [PublicKey, number] {
-		return findProgramAddressSync(
+		return anchor.utils.publicKey.findProgramAddressSync(
 			[SURE_ORACLE_REVEAL_ARRAY_SEED, proposal.toBuffer()],
 			SURE_ADDRESSES.Oracle
 		);
@@ -53,7 +53,7 @@ export class PDA {
 	}: {
 		proposal: PublicKey;
 	}): [PublicKey, number] {
-		return findProgramAddressSync(
+		return anchor.utils.publicKey.findProgramAddressSync(
 			[SURE_ORACLE_SEED, proposal.toBuffer()],
 			SURE_ADDRESSES.Oracle
 		);
@@ -64,7 +64,7 @@ export class PDA {
 	}: {
 		tokenMint: PublicKey;
 	}): [PublicKey, number] {
-		return findProgramAddressSync(
+		return anchor.utils.publicKey.findProgramAddressSync(
 			[SURE_ORACLE_CONFIG_SEED, tokenMint.toBuffer()],
 			SURE_ADDRESSES.Oracle
 		);

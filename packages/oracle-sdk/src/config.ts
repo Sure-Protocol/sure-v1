@@ -1,10 +1,10 @@
 import * as anchor from '@project-serum/anchor';
-import * as token_utils from '@saberhq/token-utils';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
-import * as oracleIDL from './idls/oracle';
-import { SureOracleSDK } from './sdk';
+import { Oracle } from './idls/oracle.js';
+import { SureOracleSDK } from './sdk.js';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
-import { ConfigType } from './program';
+import { ConfigType } from './program.js';
+import { getOrCreateAssociatedTokenAccountIx } from './utils.js';
 
 export type InitializeOracleConfig = {
 	protocolAuthority: PublicKey;
@@ -21,7 +21,7 @@ export type UpdateConfig = {
 	protocolFeeRate?: number;
 };
 export class Config {
-	readonly program: anchor.Program<oracleIDL.Oracle>;
+	readonly program: anchor.Program<Oracle>;
 	constructor(readonly sdk: SureOracleSDK) {
 		this.program = sdk.program;
 	}
@@ -86,7 +86,7 @@ export class Config {
 		const ixs: TransactionInstruction[] = [];
 		const proposal = await this.sdk.program.account.proposal.fetch(proposalPk);
 
-		if (votingPeriod) {
+		if (votingPeriod && this.sdk.program) {
 			ixs.push(
 				await this.sdk.program.methods
 					.updateVotingPeriod(votingPeriod)
@@ -175,9 +175,12 @@ export class Config {
 		const [config] = this.sdk.pda.findOracleConfig({ tokenMint });
 		const [proposal] = this.sdk.pda.findProposalAddress({ proposalName });
 		const [proposalVault] = this.sdk.pda.findProposalVault({ proposal });
-		const proposerAccount = await token_utils.getOrCreateATA({
-			provider: this.sdk.provider,
+
+		const proposerAccount = await getOrCreateAssociatedTokenAccountIx({
+			connection: this.sdk.provider.connection,
+			payer: (this.sdk.provider.wallet as anchor.Wallet).payer,
 			mint: tokenMint,
+			owner: this.sdk.provider.walletKey,
 		});
 		const ixs: TransactionInstruction[] = [];
 		if (proposerAccount.instruction) {

@@ -1,6 +1,7 @@
 {
 	"name": "@surec/oracle",
 	"version": "0.0.27",
+	"type": "module",
 	"description": "Typescript SDK for the Sure Oracle to be used to bring off-chain data on-chain",
 	"keywords": [
 		"solana",
@@ -19,32 +20,32 @@
 	],
 	"exports": {
 		".": {
-			"import": "./dist/esm/oracle-sdk/src/index.js",
-			"require": "./dist/cjs/oracle-sdk/src/index.js"
+			"import": "./dist/esm/index.js",
+			"require": "./dist/cjs/index.js"
 		}
 	},
-	"main": "dist/cjs/oracle-sdk/src/index.js",
-	"module": "dist/esm/oracle-sdk/src/index.js",
+	"main": "dist/cjs/index.js",
+	"module": "dist/esm/index.js",
 	"packageManager": "yarn@3.2.1",
-	"dependencies": {
-		"@project-serum/anchor": "^0.25.0",
-		"@saberhq/anchor-contrib": "^1.13",
-		"@saberhq/solana-contrib": "^1.13",
-		"@saberhq/token-utils": "^1.13",
-		"@solana/spl-token": "^0.3.4",
-		"@solana/web3.js": "^1.54.1",
-		"bn.js": "^5.2.1",
-		"randombytes": "^2.1.0"
-	},
 	"scripts": {
-		"build": "tsc --p tsconfig.json && tsc --p tsconfig.esm.json",
-		"build:esm": "tsc --p tsconfig.esm.json",
+		"build": "tsc --p tsconfig.json && tsc --p tsconfig.cjs.json",
+		"build:esm": "tsc --p tsconfig.json",
 		"idl:update": "cp ./../../target/types/oracle.ts ./../idls/oracle.ts"
 	},
 	"devDependencies": {
+		"@project-serum/anchor": "^0.25.0",
+		"@saberhq/anchor-contrib": "^1.13",
+		"@saberhq/solana-contrib": "^1.13",
 		"@saberhq/tsconfig": "^2.0.4",
+		"@solana/spl-token": "^0.3.4",
+		"@solana/web3.js": "^1.54.1",
 		"@types/randombytes": "^2.0.0",
+		"bn.js": "^5.2.1",
+		"randombytes": "^2.1.0",
 		"typescript": "^4.7.4"
+	},
+	"peerDependencies": {
+		"@saberhq/solana-contrib": "^1.13"
 	},
 	"gitHead": "6f7ccb488260e96b69afb4780e2a5e2f092bce05"
 }

@@ -13,7 +13,6 @@
 	import { findEscrowAddress } from '@tribecahq/tribeca-sdk';
 	import { countdownFromUnix, isInFuture, getNextDeadline, saveSalt } from '$lib/utils';
 	import { selectedProposal, globalStore, newEvent } from '$stores/index';
-	import type { ProgramAccount } from '@saberhq/token-utils';
 	import { Steps } from 'svelte-steps';
 	import CreateProposal from './../CreateProposal.svelte';
 	import { SendTransactionError } from '@solana/web3.js';
@@ -38,7 +37,7 @@
 	let timer: NodeJS.Timer;
 	let countdown: string = '^';
 
-	let proposal: ProgramAccount<ProposalType> | undefined = undefined;
+	let proposal: ProposalType | undefined = undefined;
 
 	selectedProposal.subscribe(async (p) => {
 		proposal = p;

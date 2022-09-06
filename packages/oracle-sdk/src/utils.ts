@@ -1,7 +1,24 @@
-import { PublicKey } from '@solana/web3.js';
+import {
+	Commitment,
+	Connection,
+	PublicKey,
+	Signer,
+	TransactionInstruction,
+} from '@solana/web3.js';
 import { ProposalType } from './program';
+import * as anchor from '@project-serum/anchor';
 import { SHAKE } from 'sha3';
-import { u64 } from '@saberhq/token-utils';
+import {
+	TOKEN_PROGRAM_ID,
+	getAssociatedTokenAddress,
+	getAccount,
+	createAssociatedTokenAccountInstruction,
+	TokenInvalidMintError,
+	TokenInvalidOwnerError,
+	TokenAccountNotFoundError,
+	Account,
+	ASSOCIATED_TOKEN_PROGRAM_ID,
+} from '@solana/spl-token';
 export const validateKeys = (keys: { v: PublicKey; n: string }[]) => {
 	const undefinedErrors = keys
 		.filter((k) => k.v === undefined)
@@ -21,7 +38,7 @@ export type ProposalStatus =
 	| 'Failed';
 
 export const getProposalStatus = (proposal: ProposalType): ProposalStatus => {
-	const currentTime = new u64(Math.floor(Date.now() / 1000));
+	const currentTime = new anchor.BN(Math.floor(Date.now() / 1000));
 	const hasReachedQuorum = proposal.votes >= proposal.requiredVotes;
 	const isScaleParameterCalculated = proposal.scaleParameterCalculated;
 	const isLocked = proposal.locked;
@@ -81,7 +98,7 @@ export const getVoteStatus = (proposal: ProposalType): VoteStatus => {
 
 const isBlindVoteOngoing = (
 	proposal: ProposalType,
-	currentTime: u64
+	currentTime: anchor.BN
 ): Boolean => {
 	return (
 		currentTime >= proposal.voteStartAt && currentTime < proposal.voteEndAt
@@ -90,7 +107,7 @@ const isBlindVoteOngoing = (
 
 const isBlindVoteFinished = (
 	proposal: ProposalType,
-	currentTime: u64
+	currentTime: anchor.BN
 ): Boolean => {
 	return (
 		currentTime >= proposal.voteEndAt && currentTime < proposal.voteEndRevealAt
@@ -99,7 +116,7 @@ const isBlindVoteFinished = (
 
 const isRevealVoteFinished = (
 	proposal: ProposalType,
-	currentTime: u64
+	currentTime: anchor.BN
 ): Boolean => {
 	return currentTime >= proposal.voteEndRevealAt;
 };
@@ -108,4 +125,99 @@ export const createProposalHash = ({ name }: { name: string }): Buffer => {
 	const hash = new SHAKE(128);
 	hash.update(name);
 	return hash.digest();
+};
+
+type ATAInput = {
+	connection: Connection;
+	payer: Signer;
+	mint: PublicKey;
+	owner: PublicKey;
+	allowOwnerOffCurve?: boolean;
+	commitment?: Commitment;
+	programId?: PublicKey;
+	associatedTokenProgramId?: PublicKey;
+};
+
+export const getOrCreateAssociatedTokenAccountIx = async ({
+	connection,
+	payer,
+	mint,
+	owner,
+	allowOwnerOffCurve = false,
+	commitment,
+	programId = TOKEN_PROGRAM_ID,
+	associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID,
+}: ATAInput): Promise<{
+	instruction: TransactionInstruction | null;
+	address: PublicKey;
+}> => {
+	const associatedToken = await getAssociatedTokenAddress(
+		mint,
+		owner,
+		allowOwnerOffCurve,
+		programId,
+		associatedTokenProgramId
+	);
+
+	// This is the optimal logic, considering TX fee, client-side computation, RPC roundtrips and guaranteed idempotent.
+	// Sadly we can't do this atomically.
+	let account: Account;
+	try {
+		account = await getAccount(
+			connection,
+			associatedToken,
+			commitment,
+			programId
+		);
+		return {
+			instruction: null,
+			address: associatedToken,
+		};
+	} catch (error: unknown) {
+		// TokenAccountNotFoundError can be possible if the associated address has already received some lamports,
+		// becoming a system account. Assuming program derived addressing is safe, this is the only case for the
+		// TokenInvalidAccountOwnerError in this code path.
+		if (
+			error instanceof TokenAccountNotFoundError ||
+			error instanceof TokenInvalidOwnerError
+		) {
+			// As this isn't atomic, it's possible others can create associated accounts meanwhile.
+			try {
+				const transaction = new TransactionInstruction(
+					createAssociatedTokenAccountInstruction(
+						payer.publicKey,
+						associatedToken,
+						owner,
+						mint,
+						programId,
+						associatedTokenProgramId
+					)
+				);
+				return {
+					instruction: transaction,
+					address: associatedToken,
+				};
+			} catch (error: unknown) {
+				// Ignore all errors; for now there is no API-compatible way to selectively ignore the expected
+				// instruction error if the associated account exists already.
+			}
+
+			// Now this should always succeed
+			account = await getAccount(
+				connection,
+				associatedToken,
+				commitment,
+				programId
+			);
+		} else {
+			throw error;
+		}
+	}
+	if (!account.mint.equals(mint)) throw new TokenInvalidMintError();
+	if (!account.owner.equals(owner)) throw new TokenInvalidOwnerError();
+
+	return {
+		address: associatedToken,
+		instruction: null,
+	};
 };

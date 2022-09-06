@@ -2,7 +2,6 @@
 	import { css } from '@emotion/css';
 	import { globalStore, newEvent } from '$stores/index';
 	import type { ProposalType } from '@surec/oracle';
-	import type { ProgramAccount } from '@project-serum/anchor';
 	import { BN } from 'bn.js';
 
 	import { saveSalt } from '$lib/utils';
@@ -10,7 +9,7 @@
 	import type { SendTransactionError } from '@solana/web3.js';
 	import SingleInput from '$lib/input/SingleInput.svelte';
 
-	export let proposal: ProgramAccount<ProposalType>;
+	export let proposal: ProposalType;
 	export let title: string = 'Update vote';
 	export let description: string | undefined = undefined;
 	export let buttonTitle: string = 'Update';

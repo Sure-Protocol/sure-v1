@@ -7,6 +7,7 @@ import nodePolyfills from 'rollup-plugin-node-polyfills';
 
 const config: UserConfig = {
 	plugins: [sveltekit()],
+	logLevel: 'warn',
 	optimizeDeps: {
 		include: ['@solana/web3.js', 'buffer'],
 		esbuildOptions: {

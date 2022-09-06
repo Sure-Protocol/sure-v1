@@ -1,14 +1,18 @@
 import * as anchor from '@project-serum/anchor';
-import * as token_utils from '@saberhq/token-utils';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from './idls/oracle';
 import { SURE_MINT } from './constants';
 import { SureOracleSDK } from './sdk';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
-import { createProposalHash, validateKeys } from './utils';
-import { getATAAddressSync } from '@saberhq/token-utils';
+import {
+	createProposalHash,
+	getOrCreateAssociatedTokenAccountIx,
+	validateKeys,
+} from './utils';
 import { ProposalType } from './program';
 import { ProgramAccount } from '@project-serum/anchor';
+import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 
 // ================== Types ==================
 type ProposeVote = {
@@ -70,9 +74,12 @@ export class Proposal {
 		if (description.length == 0) {
 			throw new Error('proposal description cannot be empty');
 		}
-		const proposerAccount = await token_utils.getOrCreateATA({
-			provider: this.sdk.provider,
+
+		const proposerAccount = await getOrCreateAssociatedTokenAccountIx({
+			connection: this.sdk.provider.connection,
+			payer: (this.sdk.provider.wallet as NodeWallet).payer,
 			mint: tokenMint,
+			owner: this.sdk.provider.walletKey,
 		});
 		const ixs: TransactionInstruction[] = [];
 		if (proposerAccount.instruction) {
@@ -134,10 +141,10 @@ export class Proposal {
 		proposal,
 		tokenMint,
 	}: CollectProposerReward): Promise<TransactionEnvelope> {
-		const proposerTokenAccount = getATAAddressSync({
-			mint: tokenMint,
-			owner: this.sdk.provider.wallet.publicKey,
-		});
+		const proposerTokenAccount = await getAssociatedTokenAddress(
+			tokenMint,
+			this.sdk.provider.wallet.publicKey
+		);
 
 		const [config] = this.sdk.pda.findOracleConfig({ tokenMint });
 		const [proposalVault] = this.sdk.pda.findProposalVault({ proposal });

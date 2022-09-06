@@ -5,8 +5,9 @@
 	import MainButton from '$lib/button/MainButton.svelte';
 	import type { SendTransactionError } from '@solana/web3.js';
 
+	type action<T> = () => Promise<T>;
 	export let title: string;
-	export let submitAction: () => Promise<void>;
+	export let submitAction: action<void>;
 </script>
 
 <form

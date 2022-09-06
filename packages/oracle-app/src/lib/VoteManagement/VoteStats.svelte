@@ -21,7 +21,6 @@
 		saveSalt
 	} from '$lib/utils';
 	import { selectedProposal, globalStore, newEvent, tokenState } from '$stores/index';
-	import type { ProgramAccount } from '@saberhq/token-utils';
 	import { Steps } from 'svelte-steps';
 	import CreateProposal from './../CreateProposal.svelte';
 	import UpdateVote from './forms/UpdateVote.svelte';
@@ -49,7 +48,7 @@
 		userVote: 0.0
 	};
 
-	let proposal: ProgramAccount<ProposalType> | undefined = undefined;
+	let proposal: ProposalType | undefined = undefined;
 
 	selectedProposal.subscribe(async (p) => {
 		proposal = p;

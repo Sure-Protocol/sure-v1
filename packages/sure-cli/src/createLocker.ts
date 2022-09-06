@@ -1,6 +1,5 @@
 import * as anchor from '@project-serum/anchor';
 import { program } from '@project-serum/anchor/dist/cjs/spl/token';
-import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 import { Connection, Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import { SmartWallet } from './smart_wallet';
 import * as goki from '@gokiprotocol/client';
@@ -14,7 +13,6 @@ import {
 	SmartWalletWrapper,
 } from '@gokiprotocol/client';
 import * as tribeca from '@tribecahq/tribeca-sdk';
-import { Provider } from '@project-serum/anchor/dist/esm';
 import { expect } from 'chai';
 import * as spl_token from '@solana/spl-token';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';

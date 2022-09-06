@@ -1,9 +1,9 @@
 import * as anchor from '@project-serum/anchor';
 import * as solana_contrib from '@saberhq/solana-contrib';
-import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
+import { Wallet } from '@project-serum/anchor/dist/esm/provider';
 import { Oracle, IDL } from './idls/oracle';
 import { Proposal } from './proposal';
-import { SolanaAugmentedProvider } from '@saberhq/solana-contrib';
+import * as pkg from '@saberhq/solana-contrib';
 import type { TransactionEnvelope } from '@saberhq/solana-contrib';
 import { Vote } from './vote';
 import { PDA } from './pda';
@@ -55,7 +55,7 @@ export class SureOracleSDK {
 		);
 		const pda = new PDA();
 		return new SureOracleSDK(
-			new SolanaAugmentedProvider(provider),
+			new pkg.SolanaAugmentedProvider(provider),
 			program,
 			pda
 		);

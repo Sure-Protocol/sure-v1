@@ -1,5 +1,5 @@
 import type { ProgramAccount } from '@project-serum/anchor';
-import * as spl from './../../node_modules/@solana/spl-token';
+import * as spl from './../../../../node_modules/@solana/spl-token';
 import type { TransactionInstruction } from '@solana/web3';
 import type { SureOracleSDK, ConfigType, UpdateConfig } from '@surec/oracle';
 import { SURE_MINT, BASE_PK } from '@surec/oracle';

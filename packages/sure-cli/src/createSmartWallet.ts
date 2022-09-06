@@ -1,6 +1,5 @@
 import * as anchor from '@project-serum/anchor';
 import { program } from '@project-serum/anchor/dist/cjs/spl/token';
-import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 import { Connection, Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import { SmartWallet } from './smart_wallet';
 import * as goki from '@gokiprotocol/client';

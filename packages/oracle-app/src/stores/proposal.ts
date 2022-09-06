@@ -5,7 +5,6 @@ import {
 	type VoteStatus,
 	getVoteStatus
 } from '@surec/oracle';
-import type { ProgramAccount } from '@saberhq/token-utils';
 import { newEvent } from './event';
 import { countdownFromUnix, getNextDeadline, isInFuture } from '$lib/utils';
 import type { PublicKey } from '@solana/web3.js';
@@ -15,7 +14,7 @@ export type ProposalsState = {
 	locked: boolean;
 	isLoading: boolean;
 	loadingFailed: boolean;
-	proposals: ProgramAccount<ProposalType>[] | null;
+	proposals: ProposalType[] | null;
 };
 
 export const proposalsState = writable<ProposalsState>({
@@ -75,7 +74,7 @@ export const hydrateProposals = async (oracleSdk: SureOracleSDK) => {
 export const createProposalState = writable(false);
 
 // selected proposal
-export const selectedProposal = writable<ProgramAccount<ProposalType> | undefined>(undefined);
+export const selectedProposal = writable<ProposalType | undefined>(undefined);
 
 export const isOwnerOfProposal = (
 	proposal: ProposalType | undefined,

@@ -26,7 +26,6 @@
 		tokenState,
 		proposalSteps
 	} from '$stores/index';
-	import type { ProgramAccount } from '@saberhq/token-utils';
 	import { Steps } from 'svelte-steps';
 	import type { SendTransactionError } from '@solana/web3.js';
 	import StatBox from '$lib/box/StatBox.svelte';

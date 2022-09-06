@@ -2,7 +2,7 @@
 	import { css } from '@emotion/css';
 	import { globalStore, newEvent } from '$stores/index';
 	import * as web3 from '@solana/web3.js';
-	import * as spl from './../../../node_modules/@solana/spl-token';
+	import * as spl from './../../../../../node_modules/@solana/spl-token';
 	import {
 		createAssociatedTokenAccountInstruction,
 		createInitializeMintInstruction,
@@ -11,7 +11,7 @@
 		getAssociatedTokenAddress,
 		getMinimumBalanceForRentExemptMint,
 		MINT_SIZE
-	} from './../../../node_modules/@solana/spl-token';
+	} from './../../../../../node_modules/@solana/spl-token';
 	import * as tribeca from '@tribecahq/tribeca-sdk';
 	import * as goki from '@gokiprotocol/client';
 	import * as anchor from '@project-serum/anchor';

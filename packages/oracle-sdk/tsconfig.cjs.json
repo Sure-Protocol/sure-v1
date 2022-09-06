@@ -1,0 +1,10 @@
+{
+  "extends": "@saberhq/tsconfig/tsconfig.cjs.json",
+  "compilerOptions": {
+    "outDir": "dist/cjs/"
+  },
+  "include": ["src/"],
+  "paths": {
+    "@solana/spl-token": ["./../../node_modules/@solana/spl-token"] // This mapping is relative to "baseUrl"
+  }
+}

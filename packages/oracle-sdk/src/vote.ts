@@ -1,14 +1,13 @@
 import * as anchor from '@project-serum/anchor';
 import { SHA3 } from 'sha3';
-import * as token_utils from '@saberhq/token-utils';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from './idls/oracle';
 import randomBytes from 'randombytes';
 import { SURE_MINT } from './constants';
 import { SureOracleSDK } from './sdk';
-import { validateKeys } from './utils';
+import { getOrCreateAssociatedTokenAccountIx, validateKeys } from './utils';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';
-import { getATAAddressSync } from '@saberhq/token-utils';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 
 type SubmitVote = {
 	vote: anchor.BN;
@@ -103,9 +102,12 @@ export class Vote {
 		const salt = randomBytes(16);
 		const voteHash = createVoteHash({ vote, salt });
 		let ixs: TransactionInstruction[] = [];
-		const createATA = await token_utils.getOrCreateATA({
-			provider: this.sdk.provider,
+
+		const createATA = await getOrCreateAssociatedTokenAccountIx({
+			connection: this.sdk.provider.connection,
+			payer: (this.sdk.provider.wallet as anchor.Wallet).payer,
 			mint: tokenMint,
+			owner: this.sdk.provider.walletKey,
 		});
 		const [proposalVault] = await this.sdk.pda.findProposalVault({ proposal });
 
@@ -186,10 +188,10 @@ export class Vote {
 		const proposal = voteAccountLoaded.proposal;
 
 		const [proposalVault] = await this.sdk.pda.findProposalVault({ proposal });
-		const voterAccount = await token_utils.getATAAddressSync({
-			mint: stakeMint,
-			owner: voter,
-		});
+		const voterAccount = await getAssociatedTokenAddress(
+			voteAccountLoaded.tokenMint,
+			voter
+		);
 
 		let ixs: TransactionInstruction[] = [];
 		ixs.push(
@@ -289,19 +291,25 @@ export class Vote {
 		);
 		const proposal = voteAccountLoaded.proposal;
 		const mint = voteAccountLoaded.stakeMint;
-		const voterAccount = getATAAddressSync({
+
+		const voterAccount = await getOrCreateAssociatedTokenAccountIx({
+			connection: this.sdk.provider.connection,
+			payer: (this.sdk.provider.wallet as anchor.Wallet).payer,
 			mint,
-			owner: this.sdk.provider.wallet.publicKey,
+			owner: this.sdk.provider.walletKey,
 		});
 		const [config] = this.sdk.pda.findOracleConfig({ tokenMint });
 		const [proposalVault] = this.sdk.pda.findProposalVault({ proposal });
 		let ixs: TransactionInstruction[] = [];
+		if (voterAccount.instruction) {
+			ixs.push(voterAccount.instruction);
+		}
 		ixs.push(
 			await this.program.methods
 				.collectVoteReward()
 				.accounts({
 					config,
-					voterAccount,
+					voterAccount: voterAccount.address,
 					voteAccount,
 					proposal,
 					proposalVaultMint: mint,

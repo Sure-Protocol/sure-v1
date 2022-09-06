@@ -10,7 +10,7 @@
 	import { configState, globalStore, newEvent, oneDivXToFloat, tokenState } from '$stores/index';
 	import { css } from '@emotion/css';
 	import { SURE_MINT } from '@surec/oracle';
-	import * as spl from './../../../node_modules/@solana/spl-token';
+	import * as spl from './../../../../../node_modules/@solana/spl-token';
 	import expand from '$assets/icons/expandMore.svg';
 
 	let isOpen = false;

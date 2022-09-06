@@ -8,7 +8,7 @@ import {
 import { SURE_MINT, type SureOracleSDK } from '@surec/oracle';
 import { LockerWrapper, TribecaSDK, VoteEscrow } from '@tribecahq/tribeca-sdk';
 import { writable } from 'svelte/store';
-import * as spl from './../../node_modules/@solana/spl-token';
+import * as spl from './../../../../node_modules/@solana/spl-token';
 import { newEvent } from './event';
 
 export type TokenState = {
