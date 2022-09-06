@@ -3,6 +3,272 @@ export type Oracle = {
   "name": "oracle",
   "instructions": [
     {
+      "name": "initializeConfig",
+      "docs": [
+        "initialize config",
+        "",
+        "config will be used in proposals to set voting parameters",
+        "and limit protocol fee collectors to the protocol_authority",
+        "",
+        "### args",
+        "* protocol_authority<Pubkey>: unique for vault mint. the authority can",
+        "- change config parameters",
+        "- collect protocol fees"
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "type": "string",
+                "value": "sure-oracle-config"
+              },
+              {
+                "kind": "account",
+                "type": "publicKey",
+                "account": "Mint",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "protocolAuthority",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "updateVotingPeriod",
+      "docs": [
+        "update config: voting period",
+        "",
+        "change the voting period and reveal period",
+        "",
+        "### args",
+        "* voting_period<i64>: period for which the voter can submit a vote hash. In seconds",
+        "* reveal_period<i64>: period for which the voter can reveal the vote. In seconds"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "votingPeriod",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "updateRevealPeriod",
+      "docs": [
+        "update config: reveal period",
+        "",
+        "change the reveal period and reveal period",
+        "",
+        "### args",
+        "* voting_period<i64>: period for which the voter can submit a vote hash. In seconds",
+        "* reveal_period<i64>: period for which the voter can reveal the vote. In seconds"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "votingPeriod",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "updateRequiredVotes",
+      "docs": [
+        "update required votes",
+        "",
+        "required votes to reach quorum",
+        "",
+        "### args",
+        "* require_votes<u64>: number of votes needed to conclude vote"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "requiredVotes",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "updateProposalMinimumStake",
+      "docs": [
+        "update proposal minimum stake",
+        "",
+        "the minimum amount that needs to be staked in order to create a",
+        "proposal",
+        "",
+        "### args",
+        "* minimum_stake<u64>: stake needed to propose vote"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "minimumStake",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "updateVoteStakeRate",
+      "docs": [
+        "update vote stake rate",
+        "",
+        "the stake rate sets requirements to how much a",
+        "voter needs to stake in order to vote. typically 1% of voting",
+        "power",
+        "",
+        "### args",
+        "* vote_stake_rate<u32>: 1/x of voting power"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "voteStakeRate",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "updateProtocolFeeRate",
+      "docs": [
+        "update protocol fee rate",
+        "",
+        "the amount the protocol can take in fees",
+        "",
+        "### args",
+        "* protocol_fee_rate<u32>: 1/x of the voting pool"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "protocolFeeRate",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "proposeVote",
       "docs": [
         "Propose vote",
@@ -23,6 +289,14 @@ export type Oracle = {
           "isSigner": true
         },
         {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "configuration for the proposal"
+          ]
+        },
+        {
           "name": "proposal",
           "isMut": true,
           "isSigner": false,
@@ -35,8 +309,8 @@ export type Oracle = {
               },
               {
                 "kind": "arg",
-                "type": "string",
-                "path": "name"
+                "type": "bytes",
+                "path": "id"
               }
             ]
           }
@@ -113,6 +387,10 @@ export type Oracle = {
         }
       ],
       "args": [
+        {
+          "name": "id",
+          "type": "bytes"
+        },
         {
           "name": "name",
           "type": "string"
@@ -236,12 +514,12 @@ export type Oracle = {
       "accounts": [
         {
           "name": "voter",
-          "isMut": true,
+          "isMut": false,
           "isSigner": true
         },
         {
           "name": "proposal",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -357,7 +635,7 @@ export type Oracle = {
         },
         {
           "name": "proposal",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "pda": {
             "seeds": [
@@ -368,9 +646,14 @@ export type Oracle = {
               },
               {
                 "kind": "account",
-                "type": "string",
+                "type": {
+                  "array": [
+                    "u8",
+                    16
+                  ]
+                },
                 "account": "Proposal",
-                "path": "proposal.name"
+                "path": "proposal.id"
               }
             ]
           }
@@ -499,7 +782,27 @@ export type Oracle = {
         {
           "name": "proposal",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "type": "string",
+                "value": "sure-oracle"
+              },
+              {
+                "kind": "account",
+                "type": {
+                  "array": [
+                    "u8",
+                    16
+                  ]
+                },
+                "account": "Proposal",
+                "path": "proposal.id"
+              }
+            ]
+          }
         },
         {
           "name": "systemProgram",
@@ -522,6 +825,11 @@ export type Oracle = {
           "name": "proposer",
           "isMut": true,
           "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "proposerTokenAccount",
@@ -570,6 +878,11 @@ export type Oracle = {
           "isSigner": true
         },
         {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "voterAccount",
           "isMut": true,
           "isSigner": false
@@ -591,7 +904,7 @@ export type Oracle = {
         },
         {
           "name": "proposalVault",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -606,14 +919,151 @@ export type Oracle = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "collectProtocolFees",
+      "docs": [
+        "collect protocol fees",
+        "",
+        "the config authority can at any time collect the protocol fees"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "type": "string",
+                "value": "sure-oracle-config"
+              },
+              {
+                "kind": "account",
+                "type": "publicKey",
+                "account": "Config",
+                "path": "config.token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposalVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "feeDestination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
+    {
+      "name": "config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "votingLengthSeconds",
+            "docs": [
+              "voting period in seconds"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "revealLengthSeconds",
+            "docs": [
+              "the lenght of the reveal period",
+              "in seconds"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "defaultRequiredVotes",
+            "docs": [
+              "the default required votes to reach",
+              "quorum."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "minimumProposalStake",
+            "docs": [
+              "the minimum amount of tokens that must",
+              "be staked on a proposal"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "voteStakeRate",
+            "docs": [
+              "the 1/x of the voting power that needs",
+              "to be staked in order to vote"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "protocolFeeRate",
+            "docs": [
+              "the 1/x of the total voting escrow",
+              "that's going to the protocol"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "tokenMint",
+            "docs": [
+              "official mint of pool"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "protocolAuthority",
+            "docs": [
+              "who can collect the rewards"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "initialized",
+            "type": "bool"
+          }
+        ]
+      }
+    },
     {
       "name": "proposal",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "config",
+            "type": "publicKey"
+          },
           {
             "name": "bump",
             "docs": [
@@ -631,11 +1081,42 @@ export type Oracle = {
             }
           },
           {
+            "name": "locked",
+            "docs": [
+              "when the vote is finished and",
+              "users can reap rewards"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "optimistic",
+            "docs": [
+              "Optimistic"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "status",
+            "type": "u8"
+          },
+          {
             "name": "name",
             "docs": [
               "name of vote"
             ],
             "type": "string"
+          },
+          {
+            "name": "id",
+            "docs": [
+              "id - hashed name"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
           },
           {
             "name": "description",
@@ -659,7 +1140,14 @@ export type Oracle = {
             "type": "publicKey"
           },
           {
-            "name": "proposedStaked",
+            "name": "stakeRate",
+            "docs": [
+              "1/x of vote power that must be staked"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "staked",
             "docs": [
               "amount staked by propose Q32.32"
             ],
@@ -673,16 +1161,19 @@ export type Oracle = {
             "type": "publicKey"
           },
           {
-            "name": "vaultMint",
-            "type": "publicKey"
-          },
-          {
             "name": "requiredVotes",
             "docs": [
               "% of ve tokens needed to conclude",
               "represented as basis points 1% = 100bp"
             ],
             "type": "u64"
+          },
+          {
+            "name": "protocolFeeRate",
+            "docs": [
+              "as 1/x of revealed vote staked"
+            ],
+            "type": "u32"
           },
           {
             "name": "votes",
@@ -735,6 +1226,13 @@ export type Oracle = {
             "type": "u128"
           },
           {
+            "name": "protocolFees",
+            "docs": [
+              "protocol fees"
+            ],
+            "type": "u128"
+          },
+          {
             "name": "scaleParameter",
             "docs": [
               "Scale parameter in exp(L)",
@@ -744,14 +1242,6 @@ export type Oracle = {
           },
           {
             "name": "scaleParameterCalculated",
-            "type": "bool"
-          },
-          {
-            "name": "locked",
-            "docs": [
-              "when the vote is finished and",
-              "users can reap rewards"
-            ],
             "type": "bool"
           },
           {
@@ -849,6 +1339,10 @@ export type Oracle = {
             "type": "i64"
           },
           {
+            "name": "staked",
+            "type": "u64"
+          },
+          {
             "name": "voteFactor",
             "docs": [
               "F = V * l * exp(-l*(x-X))"
@@ -940,6 +1434,210 @@ export type Oracle = {
       ]
     },
     {
+      "name": "CollectProposerRewardEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "reward",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CollectedProtocolFees",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "fees",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "destination",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CollectVoteRewardEvent",
+      "fields": [
+        {
+          "name": "vote",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "reward",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "InitializedConfigEvent",
+      "fields": []
+    },
+    {
+      "name": "UpdatedVotingPeriod",
+      "fields": [
+        {
+          "name": "oldVotingPeriod",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "votingPeriod",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedRevealPeriod",
+      "fields": [
+        {
+          "name": "oldRevealPeriod",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "revealPeriod",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedRequiredVotes",
+      "fields": [
+        {
+          "name": "oldRequiredVotes",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "requiredVotes",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedProposalMinumumStake",
+      "fields": [
+        {
+          "name": "oldMinimumStake",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "minimumStake",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedVoteStakeRate",
+      "fields": [
+        {
+          "name": "oldVoteStakeRate",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "voteStakeRate",
+          "type": "u32",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedProtocolFeerate",
+      "fields": [
+        {
+          "name": "oldProtocolFeeRate",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "protocolFeeRate",
+          "type": "u32",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "FinalizedVoteResultsEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "revealedVotes",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "consensus",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "status",
+          "type": "u8",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "FinalizedVoteEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
       "name": "ProposeVoteEvent",
       "fields": [
         {
@@ -948,8 +1646,93 @@ export type Oracle = {
           "index": false
         },
         {
+          "name": "description",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "id",
+          "type": "bytes",
+          "index": false
+        },
+        {
           "name": "proposer",
           "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "stake",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "RevealedVoteEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "revealedVote",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "votePower",
+          "type": "u32",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "SubmittedVoteEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "voteHash",
+          "type": "bytes",
+          "index": false
+        },
+        {
+          "name": "votePower",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedVoteEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "voteHash",
+          "type": "bytes",
           "index": false
         }
       ]
@@ -1045,6 +1828,46 @@ export type Oracle = {
       "code": 6017,
       "name": "InvalidOwnerOfVoteAccount",
       "msg": "The owner of the vote account is not the signer"
+    },
+    {
+      "code": 6018,
+      "name": "ProposalVaultMintKeyDoesNotMatchProposalStateVaultMint",
+      "msg": "Proposal.vault_mint does not match the input proposal_vault_mint key"
+    },
+    {
+      "code": 6019,
+      "name": "ProposalVaultMintKeyDoesNotMatchVaultMint",
+      "msg": "Proposal.vault_mint does not match the vault mint key"
+    },
+    {
+      "code": 6020,
+      "name": "NotEnoughProposalStake",
+      "msg": "Not enough stake to propose a vote "
+    },
+    {
+      "code": 6021,
+      "name": "InvalidRequiredVotesParam",
+      "msg": "Quorum requirements are too low"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidMinimumStakedParam",
+      "msg": "Invalid minimum staked on proposal"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidVoteStakeRateParam",
+      "msg": "Invalid vote stake rate param. Probably less than 1"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidProtocolFeeRateParam",
+      "msg": "Invalid protocol fee rate param. Probably less than 1"
+    },
+    {
+      "code": 6025,
+      "name": "UnauthorizedSigner",
+      "msg": "Unauthorized signer"
     }
   ]
 };
@@ -1054,6 +1877,272 @@ export const IDL: Oracle = {
   "name": "oracle",
   "instructions": [
     {
+      "name": "initializeConfig",
+      "docs": [
+        "initialize config",
+        "",
+        "config will be used in proposals to set voting parameters",
+        "and limit protocol fee collectors to the protocol_authority",
+        "",
+        "### args",
+        "* protocol_authority<Pubkey>: unique for vault mint. the authority can",
+        "- change config parameters",
+        "- collect protocol fees"
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "type": "string",
+                "value": "sure-oracle-config"
+              },
+              {
+                "kind": "account",
+                "type": "publicKey",
+                "account": "Mint",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "protocolAuthority",
+          "type": "publicKey"
+        }
+      ]
+    },
+    {
+      "name": "updateVotingPeriod",
+      "docs": [
+        "update config: voting period",
+        "",
+        "change the voting period and reveal period",
+        "",
+        "### args",
+        "* voting_period<i64>: period for which the voter can submit a vote hash. In seconds",
+        "* reveal_period<i64>: period for which the voter can reveal the vote. In seconds"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "votingPeriod",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "updateRevealPeriod",
+      "docs": [
+        "update config: reveal period",
+        "",
+        "change the reveal period and reveal period",
+        "",
+        "### args",
+        "* voting_period<i64>: period for which the voter can submit a vote hash. In seconds",
+        "* reveal_period<i64>: period for which the voter can reveal the vote. In seconds"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "votingPeriod",
+          "type": "i64"
+        }
+      ]
+    },
+    {
+      "name": "updateRequiredVotes",
+      "docs": [
+        "update required votes",
+        "",
+        "required votes to reach quorum",
+        "",
+        "### args",
+        "* require_votes<u64>: number of votes needed to conclude vote"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "requiredVotes",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "updateProposalMinimumStake",
+      "docs": [
+        "update proposal minimum stake",
+        "",
+        "the minimum amount that needs to be staked in order to create a",
+        "proposal",
+        "",
+        "### args",
+        "* minimum_stake<u64>: stake needed to propose vote"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "minimumStake",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "updateVoteStakeRate",
+      "docs": [
+        "update vote stake rate",
+        "",
+        "the stake rate sets requirements to how much a",
+        "voter needs to stake in order to vote. typically 1% of voting",
+        "power",
+        "",
+        "### args",
+        "* vote_stake_rate<u32>: 1/x of voting power"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "voteStakeRate",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "updateProtocolFeeRate",
+      "docs": [
+        "update protocol fee rate",
+        "",
+        "the amount the protocol can take in fees",
+        "",
+        "### args",
+        "* protocol_fee_rate<u32>: 1/x of the voting pool"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "protocolFeeRate",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "proposeVote",
       "docs": [
         "Propose vote",
@@ -1074,6 +2163,14 @@ export const IDL: Oracle = {
           "isSigner": true
         },
         {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "configuration for the proposal"
+          ]
+        },
+        {
           "name": "proposal",
           "isMut": true,
           "isSigner": false,
@@ -1086,8 +2183,8 @@ export const IDL: Oracle = {
               },
               {
                 "kind": "arg",
-                "type": "string",
-                "path": "name"
+                "type": "bytes",
+                "path": "id"
               }
             ]
           }
@@ -1164,6 +2261,10 @@ export const IDL: Oracle = {
         }
       ],
       "args": [
+        {
+          "name": "id",
+          "type": "bytes"
+        },
         {
           "name": "name",
           "type": "string"
@@ -1287,12 +2388,12 @@ export const IDL: Oracle = {
       "accounts": [
         {
           "name": "voter",
-          "isMut": true,
+          "isMut": false,
           "isSigner": true
         },
         {
           "name": "proposal",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1408,7 +2509,7 @@ export const IDL: Oracle = {
         },
         {
           "name": "proposal",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false,
           "pda": {
             "seeds": [
@@ -1419,9 +2520,14 @@ export const IDL: Oracle = {
               },
               {
                 "kind": "account",
-                "type": "string",
+                "type": {
+                  "array": [
+                    "u8",
+                    16
+                  ]
+                },
                 "account": "Proposal",
-                "path": "proposal.name"
+                "path": "proposal.id"
               }
             ]
           }
@@ -1550,7 +2656,27 @@ export const IDL: Oracle = {
         {
           "name": "proposal",
           "isMut": false,
-          "isSigner": false
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "type": "string",
+                "value": "sure-oracle"
+              },
+              {
+                "kind": "account",
+                "type": {
+                  "array": [
+                    "u8",
+                    16
+                  ]
+                },
+                "account": "Proposal",
+                "path": "proposal.id"
+              }
+            ]
+          }
         },
         {
           "name": "systemProgram",
@@ -1573,6 +2699,11 @@ export const IDL: Oracle = {
           "name": "proposer",
           "isMut": true,
           "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
         },
         {
           "name": "proposerTokenAccount",
@@ -1621,6 +2752,11 @@ export const IDL: Oracle = {
           "isSigner": true
         },
         {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
           "name": "voterAccount",
           "isMut": true,
           "isSigner": false
@@ -1642,7 +2778,7 @@ export const IDL: Oracle = {
         },
         {
           "name": "proposalVault",
-          "isMut": false,
+          "isMut": true,
           "isSigner": false
         },
         {
@@ -1657,14 +2793,151 @@ export const IDL: Oracle = {
         }
       ],
       "args": []
+    },
+    {
+      "name": "collectProtocolFees",
+      "docs": [
+        "collect protocol fees",
+        "",
+        "the config authority can at any time collect the protocol fees"
+      ],
+      "accounts": [
+        {
+          "name": "protocolAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "type": "string",
+                "value": "sure-oracle-config"
+              },
+              {
+                "kind": "account",
+                "type": "publicKey",
+                "account": "Config",
+                "path": "config.token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "proposal",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "proposalVault",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "feeDestination",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
     }
   ],
   "accounts": [
+    {
+      "name": "config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "votingLengthSeconds",
+            "docs": [
+              "voting period in seconds"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "revealLengthSeconds",
+            "docs": [
+              "the lenght of the reveal period",
+              "in seconds"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "defaultRequiredVotes",
+            "docs": [
+              "the default required votes to reach",
+              "quorum."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "minimumProposalStake",
+            "docs": [
+              "the minimum amount of tokens that must",
+              "be staked on a proposal"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "voteStakeRate",
+            "docs": [
+              "the 1/x of the voting power that needs",
+              "to be staked in order to vote"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "protocolFeeRate",
+            "docs": [
+              "the 1/x of the total voting escrow",
+              "that's going to the protocol"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "tokenMint",
+            "docs": [
+              "official mint of pool"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "protocolAuthority",
+            "docs": [
+              "who can collect the rewards"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "initialized",
+            "type": "bool"
+          }
+        ]
+      }
+    },
     {
       "name": "proposal",
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "config",
+            "type": "publicKey"
+          },
           {
             "name": "bump",
             "docs": [
@@ -1682,11 +2955,42 @@ export const IDL: Oracle = {
             }
           },
           {
+            "name": "locked",
+            "docs": [
+              "when the vote is finished and",
+              "users can reap rewards"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "optimistic",
+            "docs": [
+              "Optimistic"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "status",
+            "type": "u8"
+          },
+          {
             "name": "name",
             "docs": [
               "name of vote"
             ],
             "type": "string"
+          },
+          {
+            "name": "id",
+            "docs": [
+              "id - hashed name"
+            ],
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
           },
           {
             "name": "description",
@@ -1710,7 +3014,14 @@ export const IDL: Oracle = {
             "type": "publicKey"
           },
           {
-            "name": "proposedStaked",
+            "name": "stakeRate",
+            "docs": [
+              "1/x of vote power that must be staked"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "staked",
             "docs": [
               "amount staked by propose Q32.32"
             ],
@@ -1724,16 +3035,19 @@ export const IDL: Oracle = {
             "type": "publicKey"
           },
           {
-            "name": "vaultMint",
-            "type": "publicKey"
-          },
-          {
             "name": "requiredVotes",
             "docs": [
               "% of ve tokens needed to conclude",
               "represented as basis points 1% = 100bp"
             ],
             "type": "u64"
+          },
+          {
+            "name": "protocolFeeRate",
+            "docs": [
+              "as 1/x of revealed vote staked"
+            ],
+            "type": "u32"
           },
           {
             "name": "votes",
@@ -1786,6 +3100,13 @@ export const IDL: Oracle = {
             "type": "u128"
           },
           {
+            "name": "protocolFees",
+            "docs": [
+              "protocol fees"
+            ],
+            "type": "u128"
+          },
+          {
             "name": "scaleParameter",
             "docs": [
               "Scale parameter in exp(L)",
@@ -1795,14 +3116,6 @@ export const IDL: Oracle = {
           },
           {
             "name": "scaleParameterCalculated",
-            "type": "bool"
-          },
-          {
-            "name": "locked",
-            "docs": [
-              "when the vote is finished and",
-              "users can reap rewards"
-            ],
             "type": "bool"
           },
           {
@@ -1900,6 +3213,10 @@ export const IDL: Oracle = {
             "type": "i64"
           },
           {
+            "name": "staked",
+            "type": "u64"
+          },
+          {
             "name": "voteFactor",
             "docs": [
               "F = V * l * exp(-l*(x-X))"
@@ -1991,6 +3308,210 @@ export const IDL: Oracle = {
       ]
     },
     {
+      "name": "CollectProposerRewardEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "reward",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CollectedProtocolFees",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "fees",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "destination",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CollectVoteRewardEvent",
+      "fields": [
+        {
+          "name": "vote",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "reward",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "InitializedConfigEvent",
+      "fields": []
+    },
+    {
+      "name": "UpdatedVotingPeriod",
+      "fields": [
+        {
+          "name": "oldVotingPeriod",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "votingPeriod",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedRevealPeriod",
+      "fields": [
+        {
+          "name": "oldRevealPeriod",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "revealPeriod",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedRequiredVotes",
+      "fields": [
+        {
+          "name": "oldRequiredVotes",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "requiredVotes",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedProposalMinumumStake",
+      "fields": [
+        {
+          "name": "oldMinimumStake",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "minimumStake",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedVoteStakeRate",
+      "fields": [
+        {
+          "name": "oldVoteStakeRate",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "voteStakeRate",
+          "type": "u32",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedProtocolFeerate",
+      "fields": [
+        {
+          "name": "oldProtocolFeeRate",
+          "type": "u32",
+          "index": false
+        },
+        {
+          "name": "protocolFeeRate",
+          "type": "u32",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "FinalizedVoteResultsEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "revealedVotes",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "consensus",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "status",
+          "type": "u8",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "FinalizedVoteEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        }
+      ]
+    },
+    {
       "name": "ProposeVoteEvent",
       "fields": [
         {
@@ -1999,8 +3520,93 @@ export const IDL: Oracle = {
           "index": false
         },
         {
+          "name": "description",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "id",
+          "type": "bytes",
+          "index": false
+        },
+        {
           "name": "proposer",
           "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "stake",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "RevealedVoteEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "revealedVote",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "votePower",
+          "type": "u32",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "SubmittedVoteEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "voteHash",
+          "type": "bytes",
+          "index": false
+        },
+        {
+          "name": "votePower",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "UpdatedVoteEvent",
+      "fields": [
+        {
+          "name": "proposal",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "time",
+          "type": "i64",
+          "index": false
+        },
+        {
+          "name": "voteHash",
+          "type": "bytes",
           "index": false
         }
       ]
@@ -2096,6 +3702,46 @@ export const IDL: Oracle = {
       "code": 6017,
       "name": "InvalidOwnerOfVoteAccount",
       "msg": "The owner of the vote account is not the signer"
+    },
+    {
+      "code": 6018,
+      "name": "ProposalVaultMintKeyDoesNotMatchProposalStateVaultMint",
+      "msg": "Proposal.vault_mint does not match the input proposal_vault_mint key"
+    },
+    {
+      "code": 6019,
+      "name": "ProposalVaultMintKeyDoesNotMatchVaultMint",
+      "msg": "Proposal.vault_mint does not match the vault mint key"
+    },
+    {
+      "code": 6020,
+      "name": "NotEnoughProposalStake",
+      "msg": "Not enough stake to propose a vote "
+    },
+    {
+      "code": 6021,
+      "name": "InvalidRequiredVotesParam",
+      "msg": "Quorum requirements are too low"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidMinimumStakedParam",
+      "msg": "Invalid minimum staked on proposal"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidVoteStakeRateParam",
+      "msg": "Invalid vote stake rate param. Probably less than 1"
+    },
+    {
+      "code": 6024,
+      "name": "InvalidProtocolFeeRateParam",
+      "msg": "Invalid protocol fee rate param. Probably less than 1"
+    },
+    {
+      "code": 6025,
+      "name": "UnauthorizedSigner",
+      "msg": "Unauthorized signer"
     }
   ]
 };

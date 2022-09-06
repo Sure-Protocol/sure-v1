@@ -1,8 +1,7 @@
 import { PublicKey } from '@solana/web3.js';
-import { BN } from '@project-serum/anchor';
 import { ProposalType } from './program';
 import { SHAKE } from 'sha3';
-
+import { u64 } from '@saberhq/token-utils';
 export const validateKeys = (keys: { v: PublicKey; n: string }[]) => {
 	const undefinedErrors = keys
 		.filter((k) => k.v === undefined)
@@ -22,7 +21,7 @@ export type ProposalStatus =
 	| 'Failed';
 
 export const getProposalStatus = (proposal: ProposalType): ProposalStatus => {
-	const currentTime = new BN(Math.floor(Date.now() / 1000));
+	const currentTime = new u64(Math.floor(Date.now() / 1000));
 	const hasReachedQuorum = proposal.votes >= proposal.requiredVotes;
 	const isScaleParameterCalculated = proposal.scaleParameterCalculated;
 	const isLocked = proposal.locked;
@@ -82,7 +81,7 @@ export const getVoteStatus = (proposal: ProposalType): VoteStatus => {
 
 const isBlindVoteOngoing = (
 	proposal: ProposalType,
-	currentTime: BN
+	currentTime: u64
 ): Boolean => {
 	return (
 		currentTime >= proposal.voteStartAt && currentTime < proposal.voteEndAt
@@ -91,7 +90,7 @@ const isBlindVoteOngoing = (
 
 const isBlindVoteFinished = (
 	proposal: ProposalType,
-	currentTime: BN
+	currentTime: u64
 ): Boolean => {
 	return (
 		currentTime >= proposal.voteEndAt && currentTime < proposal.voteEndRevealAt
@@ -100,7 +99,7 @@ const isBlindVoteFinished = (
 
 const isRevealVoteFinished = (
 	proposal: ProposalType,
-	currentTime: BN
+	currentTime: u64
 ): Boolean => {
 	return currentTime >= proposal.voteEndRevealAt;
 };

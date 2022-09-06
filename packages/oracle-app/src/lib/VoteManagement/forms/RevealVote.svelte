@@ -2,7 +2,9 @@
 	import { css } from '@emotion/css';
 	import { globalStore, newEvent } from '$stores/index';
 	import type { ProposalType } from '@surec/oracle';
-	import { BN, type ProgramAccount } from '@project-serum/anchor';
+	import type { ProgramAccount } from '@project-serum/anchor';
+	import { BN } from 'bn.js';
+
 	import { getSalt } from '$lib/utils';
 	import MainButton from '$lib/button/MainButton.svelte';
 	import type { SendTransactionError } from '@solana/web3.js';

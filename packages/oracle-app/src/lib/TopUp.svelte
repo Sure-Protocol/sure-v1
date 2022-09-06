@@ -1,14 +1,9 @@
 <script lang="ts">
 	import { css, cx } from '@emotion/css';
 	import * as anchor from '@project-serum/anchor';
-	import * as spl from './../../node_modules/@solana/spl-token';
-	import * as web3 from '@solana/spl-token';
-	import * as tribeca from '@tribecahq/tribeca-sdk';
-	import { onMount } from 'svelte';
+	import { BN } from 'bn.js';
 	import { globalStore, newEvent, tokenState, loadingState } from '$stores/index';
 
-	import * as wallet_adapter from '@svelte-on-solana/wallet-adapter-core';
-	import type { AnchorAccount } from '@saberhq/anchor-contrib/dist/cjs/utils/accounts';
 	import {
 		getLockerSdk,
 		daysToSecond,
@@ -25,14 +20,13 @@
 		amount: undefined,
 		days: undefined
 	};
-	let loadingData = true;
 
 	async function lockSureTokens() {
 		const oracleSdk = $globalStore.oracleSDK;
 		const lockerSdk = await getLockerSdk(oracleSdk);
 		if (lockerSdk && oracleSdk) {
 			try {
-				const lockAmount = await calculateFullAmount(oracleSdk, new anchor.BN(values.amount));
+				const lockAmount = await calculateFullAmount(oracleSdk, new BN(values.amount));
 				if (lockAmount) {
 					newEvent.set({ name: `lock ${lockAmount} for ${values.days} days `, status: 'info' });
 					const lockTokensTx = await lockerSdk.lockTokens({

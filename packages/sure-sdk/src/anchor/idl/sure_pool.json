@@ -1030,8 +1030,5 @@
       "name": "InvalidProductTypeId",
       "msg": "Invalid product type id"
     }
-  ],
-  "metadata": {
-    "address": "D47wvD2bTDXR9XqqHdP8bwYSXu2QPMW6fGHg2aEBKunM"
-  }
+  ]
 }

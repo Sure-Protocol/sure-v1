@@ -8,6 +8,7 @@
 		newEvent
 	} from '$stores/index';
 	import * as anchor from '@project-serum/anchor';
+	import { BN } from 'bn.js';
 	import { calculateFullAmount } from '$lib/utils';
 	import type { SendTransactionError, TransactionError } from '@solana/web3.js';
 	import CloseButton from './button/CloseButton.svelte';
@@ -32,7 +33,7 @@
 				const proposeVoteTx = await oracleSdk.proposal().proposeVote({
 					name: proposalValues.name,
 					description: proposalValues.desription,
-					stake: await calculateFullAmount(oracleSdk, new anchor.BN(proposalValues.stake)),
+					stake: await calculateFullAmount(oracleSdk, new BN(proposalValues.stake)),
 					mint: SURE_MINT
 				});
 				const txrRes = await proposeVoteTx.confirm();

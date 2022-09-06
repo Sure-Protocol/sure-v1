@@ -18,6 +18,7 @@
 		"@rollup/plugin-inject": "^4.0.4",
 		"@sveltejs/adapter-auto": "next",
 		"@sveltejs/kit": "next",
+		"@sveltejs/vite-plugin-svelte": "^1.0.5",
 		"@tsconfig/svelte": "^3.0.0",
 		"@types/cookie": "^0.5.1",
 		"@typescript-eslint/eslint-plugin": "^5.27.0",
@@ -49,6 +50,7 @@
 		"@svelte-on-solana/wallet-adapter-anchor": "^1.0.16-alpha.0",
 		"@svelte-on-solana/wallet-adapter-core": "^1.0.8-alpha.0",
 		"@svelte-on-solana/wallet-adapter-ui": "^1.0.20-alpha.0",
+		"bn.js": "^5.2.1",
 		"cookie": "^0.4.1",
 		"decimal.js": "3.0.0",
 		"sass": "^1.54.5"

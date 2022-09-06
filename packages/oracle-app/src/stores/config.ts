@@ -9,7 +9,6 @@ import * as goki from '@gokiprotocol/client';
 import * as tribeca from '@tribecahq/tribeca-sdk';
 import { getTestKeypairFromSeed } from '$lib/utils';
 import type { Update } from 'vite';
-import { BN } from 'bn.js';
 
 export type ConfigState = {
 	isLoading: boolean;

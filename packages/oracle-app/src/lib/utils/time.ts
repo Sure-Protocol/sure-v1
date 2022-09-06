@@ -1,8 +1,8 @@
-import * as anchor from '@project-serum/anchor';
+import { BN } from 'bn.js';
 import * as tribeca from '@tribecahq/tribeca-sdk';
 
-export const daysToSecond = (days: number): anchor.BN => {
-	return new anchor.BN(days).mul(tribeca.ONE_DAY);
+export const daysToSecond = (days: number): BN => {
+	return new BN(days).mul(tribeca.ONE_DAY);
 };
 
 export const isInFuture = (unix: number): boolean => {

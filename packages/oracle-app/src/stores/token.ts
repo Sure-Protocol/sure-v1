@@ -5,7 +5,6 @@ import {
 	getEscrowSdk,
 	getLockerSdk
 } from '$lib/utils';
-import type { BN } from '@project-serum/anchor';
 import { SURE_MINT, type SureOracleSDK } from '@surec/oracle';
 import { LockerWrapper, TribecaSDK, VoteEscrow } from '@tribecahq/tribeca-sdk';
 import { writable } from 'svelte/store';

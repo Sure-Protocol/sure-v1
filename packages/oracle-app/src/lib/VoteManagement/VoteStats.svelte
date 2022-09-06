@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
-	import { BN } from '@project-serum/anchor';
+	import { BN } from 'bn.js';
 	import { onDestroy } from 'svelte';
 	import {
 		type ProposalType,

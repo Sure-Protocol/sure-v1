@@ -1,7 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 import * as token_utils from '@saberhq/token-utils';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
-import * as oracleIDL from '../../idls/oracle';
+import * as oracleIDL from './idls/oracle';
 import { SURE_MINT } from './constants';
 import { SureOracleSDK } from './sdk';
 import { TransactionEnvelope } from '@saberhq/solana-contrib';

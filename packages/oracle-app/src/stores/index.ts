@@ -1,5 +1,4 @@
 import { AnchorConnectionProvider } from '@svelte-on-solana/wallet-adapter-anchor';
-import { BN } from 'bn.js';
 
 export * from './event';
 export * from './global';

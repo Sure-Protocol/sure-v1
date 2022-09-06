@@ -6,12 +6,7 @@ import * as token_utils from '@saberhq/token-utils';
 import * as web3 from '@solana/web3.js';
 import * as spl from '@solana/spl-token';
 import { Transaction } from '@solana/web3.js';
-import {
-	createVoteHash,
-	Provider,
-	revealVote,
-	SureOracleSDK,
-} from '../packages/oracle-sdk/src';
+import * as oracle from '../../packages/oracle-sdk/dist/esm/oracle-sdk/src';
 import {
 	createAssociatedTokenAccount,
 	transfer,
@@ -37,7 +32,7 @@ describe('Test Sure Oracle', () => {
 		wallet: provider.wallet,
 		opts: provider.opts,
 	});
-	const oracleSdk = SureOracleSDK.init({ provider: oracleProvider });
+	const oracleSdk = oracle.SureOracleSDK.init({ provider: oracleProvider });
 	const tribecaSDK = tribeca.TribecaSDK.load({ provider: oracleProvider });
 
 	/// create mock smart wallet
@@ -155,7 +150,7 @@ describe('Test Sure Oracle', () => {
 	});
 	it('Vote on proposal', async () => {
 		try {
-			const [proposal] = SureOracleSDK.pda().findProposalAddress({
+			const [proposal] = oracle.SureOracleSDK.pda().findProposalAddress({
 				proposalName,
 			});
 			const lockerWrapperSDK = new tribeca.LockerWrapper(
@@ -191,7 +186,7 @@ describe('Test Sure Oracle', () => {
 	});
 	it('Update vote ', async () => {
 		try {
-			const [proposal] = SureOracleSDK.pda().findProposalAddress({
+			const [proposal] = oracle.SureOracleSDK.pda().findProposalAddress({
 				proposalName,
 			});
 			eggVote = new anchor.BN(4.3);
@@ -201,16 +196,18 @@ describe('Test Sure Oracle', () => {
 				proposal,
 			});
 			await voteTx.transactionEnvelope.confirm();
-			const [voteAccountPDA] = await SureOracleSDK.pda().findVoteAccount({
-				proposal,
-				voter: provider.wallet.publicKey,
-			});
+			const [voteAccountPDA] = await oracle.SureOracleSDK.pda().findVoteAccount(
+				{
+					proposal,
+					voter: provider.wallet.publicKey,
+				}
+			);
 			const voteAccount = await oracleSdk.program.account.voteAccount.fetch(
 				voteAccountPDA
 			);
 
 			// validate vote hash
-			const isCorrectVote = revealVote({
+			const isCorrectVote = oracle.revealVote({
 				expectedVoteHash: voteAccount.voteHash,
 				vote: eggVote,
 				salt: voteTx.salt,
@@ -225,13 +222,15 @@ describe('Test Sure Oracle', () => {
 	});
 	it('Cancel vote', async () => {
 		try {
-			const [proposal] = SureOracleSDK.pda().findProposalAddress({
+			const [proposal] = oracle.SureOracleSDK.pda().findProposalAddress({
 				proposalName,
 			});
-			const [voteAccountPDA] = await SureOracleSDK.pda().findVoteAccount({
-				proposal,
-				voter: provider.wallet.publicKey,
-			});
+			const [voteAccountPDA] = await oracle.SureOracleSDK.pda().findVoteAccount(
+				{
+					proposal,
+					voter: provider.wallet.publicKey,
+				}
+			);
 			const cancelVoteEnvelope = await oracleSdk
 				.vote()
 				.cancelVote({ voteAccount: voteAccountPDA });
@@ -245,7 +244,7 @@ describe('Test Sure Oracle', () => {
 	it('Create and reveal vote', async () => {
 		try {
 			// create a new vote
-			const [proposal] = SureOracleSDK.pda().findProposalAddress({
+			const [proposal] = oracle.SureOracleSDK.pda().findProposalAddress({
 				proposalName,
 			});
 			const [userEscrow] = await tribeca.findEscrowAddress(
@@ -261,10 +260,12 @@ describe('Test Sure Oracle', () => {
 			});
 			await voteTx.transactionEnvelope.confirm();
 
-			const [voteAccountPDA] = await SureOracleSDK.pda().findVoteAccount({
-				proposal,
-				voter: provider.wallet.publicKey,
-			});
+			const [voteAccountPDA] = await oracle.SureOracleSDK.pda().findVoteAccount(
+				{
+					proposal,
+					voter: provider.wallet.publicKey,
+				}
+			);
 			const revealVoteEnvelope = await oracleSdk.vote().revealVote({
 				voteAccount: voteAccountPDA,
 				vote: eggVote,

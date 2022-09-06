@@ -4,27 +4,20 @@
 	import * as web3 from '@solana/web3.js';
 	import * as spl from './../../../node_modules/@solana/spl-token';
 	import {
-		createAccount,
 		createAssociatedTokenAccountInstruction,
 		createInitializeMintInstruction,
-		createMint,
 		createMintToInstruction,
 		getAccount,
 		getAssociatedTokenAddress,
 		getMinimumBalanceForRentExemptMint,
-		getOrCreateAssociatedTokenAccount,
-		mintTo,
 		MINT_SIZE
 	} from './../../../node_modules/@solana/spl-token';
 	import * as tribeca from '@tribecahq/tribeca-sdk';
 	import * as goki from '@gokiprotocol/client';
 	import * as anchor from '@project-serum/anchor';
+	import { BN } from 'bn.js';
 	import type NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
-	import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 	import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
-	import { createInitMintInstructions, getTokenAccount } from '@saberhq/token-utils';
-	import { walletStore } from '@svelte-on-solana/wallet-adapter-core';
-	import { ASSOCIATED_PROGRAM_ID } from '@project-serum/anchor/dist/cjs/utils/token';
 	import { getTestKeypairFromSeed } from '$lib/utils';
 	import { SURE_MINT } from '@surec/oracle';
 
@@ -120,7 +113,7 @@
 				const [governor] = await tribeca.findGovernorAddress(base.publicKey);
 				const smartWallet = await gokiSdk.newSmartWallet({
 					owners: [governor],
-					threshold: new anchor.BN(1),
+					threshold: new BN(1),
 					numOwners: 2,
 					base
 				});

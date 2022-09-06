@@ -1,10 +1,10 @@
 import { web3 } from '@project-serum/anchor';
-import { SureOracleSDK } from '../../packages/oracle-sdk/src';
+import * as oracle from '../../packages/oracle-sdk/dist/esm/oracle-sdk/src';
 import * as anchor from '@project-serum/anchor';
 import { TransactionReceipt } from '@saberhq/solana-contrib';
 
 export const createTestProposal = async (
-	oracleSdk: SureOracleSDK,
+	oracleSdk: oracle.SureOracleSDK,
 	mint: web3.PublicKey,
 	proposalName: string,
 	proposedStake: anchor.BN

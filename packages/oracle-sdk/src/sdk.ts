@@ -1,12 +1,10 @@
 import * as anchor from '@project-serum/anchor';
 import * as solana_contrib from '@saberhq/solana-contrib';
 import { Wallet } from '@project-serum/anchor/dist/cjs/provider';
-import { Oracle, IDL } from '../../idls/oracle';
+import { Oracle, IDL } from './idls/oracle';
 import { Proposal } from './proposal';
-import {
-	SolanaAugmentedProvider,
-	TransactionEnvelope,
-} from '@saberhq/solana-contrib';
+import { SolanaAugmentedProvider } from '@saberhq/solana-contrib';
+import type { TransactionEnvelope } from '@saberhq/solana-contrib';
 import { Vote } from './vote';
 import { PDA } from './pda';
 import { SURE_ADDRESSES } from './constants';
