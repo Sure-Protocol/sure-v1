@@ -3,7 +3,7 @@
 	import CreateProposal from '$lib/CreateProposal.svelte';
 	import { css } from '@emotion/css';
 	import { writable } from 'svelte/store';
-	import { globalStore, loadingState } from './../stores/global';
+	import { globalStore } from '$stores/global';
 	import { createProposalState, hydrateProposals, proposalsState } from '$stores/index';
 	import TestPanel from '$lib/test/TestPanel.svelte';
 	import { onMount } from 'svelte';
@@ -11,7 +11,6 @@
 	import * as wallet_adapter from '@svelte-on-solana/wallet-adapter-core';
 	import * as oracle from '@surec/oracle';
 	import * as web3 from '@solana/web3.js';
-	import * as solana_contrib from '@saberhq/solana-contrib';
 	import { newEvent } from '$stores/index';
 	import { getLocalStorage, setLocalStorage } from '@svelte-on-solana/wallet-adapter-core';
 
@@ -21,18 +20,16 @@
 	let testMethodsOn = wallet_adapter.walletStore.subscribe((value) => {
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
 		if (value.wallet?.publicKey != null) {
-			const oracleProvider = solana_contrib.SolanaProvider.init({
+			const oracleSdk = oracle.SureOracleSDK.init({
 				connection,
 				wallet: value.wallet,
 				opts: { skipPreflight: true }
 			});
-
-			const oracleSdk = oracle.SureOracleSDK.init({ provider: oracleProvider });
 			$globalStore = {
 				oracleSDK: oracleSdk,
 				walletPk: value.wallet.publicKey,
 				wallet: value.wallet,
-				provider: oracleProvider
+				provider: oracleSdk.provider
 			};
 		}
 	});

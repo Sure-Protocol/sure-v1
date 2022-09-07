@@ -1,4 +1,5 @@
-import { BN } from 'bn.js';
+import { BN } from '@project-serum/anchor';
+
 import { SURE_MINT, type SureOracleSDK } from '@surec/oracle';
 import * as spl from '@solana/spl-token';
 

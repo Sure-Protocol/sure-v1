@@ -2,7 +2,7 @@ import * as anchor from '@project-serum/anchor';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { Oracle } from './idls/oracle.js';
 import { SureOracleSDK } from './sdk.js';
-import { TransactionEnvelope } from '@saberhq/solana-contrib';
+import { TransactionEnvelope } from '@saberhq/solana-contrib/dist/cjs';
 import { ConfigType } from './program.js';
 import { getOrCreateAssociatedTokenAccountIx } from './utils.js';
 

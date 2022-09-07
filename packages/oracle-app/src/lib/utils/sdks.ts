@@ -1,18 +1,24 @@
 import { BASE_PK, type SureOracleSDK } from '@surec/oracle';
-import type { LockerWrapper, VoteEscrow } from '@tribecahq/tribeca-sdk';
-import * as tribeca from '@tribecahq/tribeca-sdk';
+import {
+	LockerWrapper,
+	VoteEscrow,
+	getLockerAddress,
+	getGovernorAddress,
+	getEscrowAddress,
+	TribecaSDK
+} from '@tribecahq/tribeca-sdk';
 
 export const getLockerSdk = async (
 	oracleSdk: SureOracleSDK | undefined
 ): Promise<LockerWrapper | undefined> => {
 	if (oracleSdk) {
-		const tribecaSdk = tribeca.TribecaSDK.load({ provider: oracleSdk.provider });
+		const tribecaSdk = TribecaSDK.load({ provider: oracleSdk.provider });
 		const basePk = BASE_PK;
 
-		const lockerKey = tribeca.getLockerAddress(basePk);
-		const governorKey = tribeca.getGovernorAddress(basePk);
+		const lockerKey = getLockerAddress(basePk);
+		const governorKey = getGovernorAddress(basePk);
 
-		return await tribeca.LockerWrapper.load(tribecaSdk, lockerKey, governorKey);
+		return await LockerWrapper.load(tribecaSdk, lockerKey, governorKey);
 	}
 	return undefined;
 };
@@ -21,20 +27,14 @@ export const getEscrowSdk = async (
 	oracleSdk: SureOracleSDK | undefined
 ): Promise<VoteEscrow | undefined> => {
 	if (oracleSdk) {
-		const tribecaSdk = tribeca.TribecaSDK.load({ provider: oracleSdk.provider });
+		const tribecaSdk = TribecaSDK.load({ provider: oracleSdk.provider });
 		const basePk = BASE_PK;
 
-		const lockerKey = tribeca.getLockerAddress(basePk);
-		const governorKey = tribeca.getGovernorAddress(basePk);
-		const escrow = tribeca.getEscrowAddress(lockerKey, oracleSdk.provider.wallet.publicKey);
+		const lockerKey = getLockerAddress(basePk);
+		const governorKey = getGovernorAddress(basePk);
+		const escrow = getEscrowAddress(lockerKey, oracleSdk.provider.wallet.publicKey);
 
-		return new tribeca.VoteEscrow(
-			tribecaSdk,
-			lockerKey,
-			governorKey,
-			escrow,
-			oracleSdk.provider.walletKey
-		);
+		return new VoteEscrow(tribecaSdk, lockerKey, governorKey, escrow, oracleSdk.provider.walletKey);
 	}
 	return undefined;
 };

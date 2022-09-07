@@ -42,18 +42,15 @@
 	},
 	"dependencies": {
 		"@emotion/css": "^11.10.0",
-		"@fontsource/fira-mono": "^4.5.0",
 		"@solana/spl-token": "^0.3.4",
 		"@solana/wallet-adapter-base": "^0.9.16",
 		"@solana/wallet-adapter-wallets": "^0.18.5",
 		"@solana/web3.js": "^1.54.0",
-		"@surec/oracle": "^0.0.28",
+		"@surec/oracle": "workspace:^",
 		"@svelte-on-solana/wallet-adapter-anchor": "^1.0.16-alpha.0",
 		"@svelte-on-solana/wallet-adapter-core": "^1.0.8-alpha.0",
 		"@svelte-on-solana/wallet-adapter-ui": "^1.0.20-alpha.0",
-		"bn.js": "^5.2.1",
 		"cookie": "^0.4.1",
-		"decimal.js": "3.0.0",
 		"sass": "^1.54.5"
 	}
 }

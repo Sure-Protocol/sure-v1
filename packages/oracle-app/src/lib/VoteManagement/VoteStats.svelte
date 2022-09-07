@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
-	import { BN } from 'bn.js';
+	import { BN } from '@project-serum/anchor';
 	import { onDestroy } from 'svelte';
 	import {
 		type ProposalType,
@@ -78,7 +78,7 @@
 		if (oracleSdk && proposal && lockerSdk?.locker) {
 			const userVoteQ32 = new BN(Math.floor(voteValues.userVote * Math.pow(2, 32)));
 			try {
-				const [escrowKey] = await findEscrowAddress(
+				const [escrowKey] = await tribeca.findEscrowAddress(
 					lockerSdk.locker,
 					oracleSdk.provider.wallet.publicKey
 				);

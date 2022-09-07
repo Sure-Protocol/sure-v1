@@ -1,4 +1,3 @@
-import adapter from '@sveltejs/adapter-auto';
 import node from '@sveltejs/adapter-node';
 import preprocess from 'svelte-preprocess';
 
@@ -7,13 +6,8 @@ const config = {
 	// Consult https://github.com/sveltejs/svelte-preprocess
 	// for more information about preprocessors
 	preprocess: preprocess(),
-	vitePlugin: {
-		experimental: {
-			prebundleSvelteLibraries: true
-		}
-	},
+	vitePlugin: {},
 	kit: {
-		//adapter: adapter(),
 		adapter: node(),
 		// Override http methods in the Todo forms
 		methodOverride: {
@@ -22,7 +16,8 @@ const config = {
 		alias: {
 			'$static/*': 'static/*',
 			'$lib/*': 'src/lib/*',
-			'$stores/*': 'src/stores/*'
+			'$stores/*': 'src/stores/*',
+			'$assets/*': 'src/assets/*'
 		}
 	}
 };

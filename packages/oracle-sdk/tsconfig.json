@@ -1,14 +1,14 @@
 {
-  "extends": "@saberhq/tsconfig/tsconfig.mono.json",
-    "compilerOptions": {
-    "rootDir": "src/",
-      "outDir": "dist/esm/",
-      "lib": ["ES2021.Promise", "ES2019","ESNext"],
-      "moduleResolution": "Node"
-    },
-    "include": ["src/","idls/"],
-    "paths": {
-      "@solana/spl-token": ["./../../node_modules/@solana/spl-token"] // This mapping is relative to "baseUrl"
-    }
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "./src"
+  ],
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "module": "es2022",
+    "target": "es2019",
+    "outDir": "dist/esm/",
+    "rootDir": "./src",
+    "skipLibCheck": true
+  }
 }
-  

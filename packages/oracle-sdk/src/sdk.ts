@@ -1,15 +1,17 @@
 import * as anchor from '@project-serum/anchor';
-import * as solana_contrib from '@saberhq/solana-contrib';
+import * as solanaContrib from '@saberhq/solana-contrib';
 import { Wallet } from '@project-serum/anchor/dist/esm/provider';
 import { Oracle, IDL } from './idls/oracle';
 import { Proposal } from './proposal';
-import * as pkg from '@saberhq/solana-contrib';
-import type { TransactionEnvelope } from '@saberhq/solana-contrib';
 import { Vote } from './vote';
 import { PDA } from './pda';
 import { SURE_ADDRESSES } from './constants';
 import { Config } from './config';
-import { TransactionInstruction } from '@solana/web3.js';
+import {
+	ConfirmOptions,
+	Connection,
+	TransactionInstruction,
+} from '@solana/web3.js';
 
 export type ProviderProps = {
 	connection: anchor.web3.Connection;
@@ -32,21 +34,30 @@ export class Provider {
 
 export class SureOracleSDK {
 	constructor(
-		readonly provider: solana_contrib.AugmentedProvider,
+		readonly provider: solanaContrib.AugmentedProvider,
 		readonly program: anchor.Program<Oracle>,
 		readonly pda: PDA
 	) {}
 
 	static init({
-		provider,
+		connection,
+		wallet,
+		opts,
 	}: {
-		provider: solana_contrib.Provider;
+		connection: Connection;
+		wallet: Wallet;
+		opts?: ConfirmOptions;
 	}): SureOracleSDK {
-		const anchorProvider = new anchor.AnchorProvider(
-			provider.connection,
-			provider.wallet,
-			{ skipPreflight: true }
-		);
+		const oracleProvider = solanaContrib.SolanaProvider.init({
+			connection,
+			wallet: wallet,
+			opts,
+		});
+
+		const anchorProvider = new anchor.AnchorProvider(connection, wallet, {
+			skipPreflight: true,
+		});
+
 		// get anchorprogram properly
 		const program = new anchor.Program(
 			IDL,
@@ -55,7 +66,7 @@ export class SureOracleSDK {
 		);
 		const pda = new PDA();
 		return new SureOracleSDK(
-			new pkg.SolanaAugmentedProvider(provider),
+			new solanaContrib.SolanaAugmentedProvider(oracleProvider),
 			program,
 			pda
 		);
@@ -78,7 +89,7 @@ export class SureOracleSDK {
 
 	executeTransactionInstructions(
 		tx: TransactionInstruction[]
-	): TransactionEnvelope {
+	): solanaContrib.TransactionEnvelope {
 		return this.provider.newTX(tx);
 	}
 }

@@ -3,7 +3,7 @@
 	import { globalStore, newEvent } from '$stores/index';
 	import type { ProposalType } from '@surec/oracle';
 	import type { ProgramAccount } from '@project-serum/anchor';
-	import { BN } from 'bn.js';
+	import { BN } from '@project-serum/anchor';
 
 	import { getSalt } from '$lib/utils';
 	import MainButton from '$lib/button/MainButton.svelte';

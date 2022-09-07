@@ -10,7 +10,6 @@
 		proposalFailReason
 	} from '@surec/oracle';
 	import { getProposalStatus, SureOracleSDK, getVoteStatus } from '@surec/oracle';
-	import { findEscrowAddress } from '@tribecahq/tribeca-sdk';
 	import {
 		getLockerSdk,
 		unixToReadable,

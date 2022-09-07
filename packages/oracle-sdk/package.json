@@ -30,6 +30,8 @@
 	"scripts": {
 		"build": "tsc --p tsconfig.json && tsc --p tsconfig.cjs.json",
 		"build:esm": "tsc --p tsconfig.json",
+		"build:cjs": "tsc --p tsconfig.cjs.json",
+		"build:up": "rollup --config",
 		"idl:update": "cp ./../../target/types/oracle.ts ./../idls/oracle.ts"
 	},
 	"devDependencies": {
@@ -43,9 +45,6 @@
 		"bn.js": "^5.2.1",
 		"randombytes": "^2.1.0",
 		"typescript": "^4.7.4"
-	},
-	"peerDependencies": {
-		"@saberhq/solana-contrib": "^1.13"
 	},
 	"gitHead": "6f7ccb488260e96b69afb4780e2a5e2f092bce05"
 }

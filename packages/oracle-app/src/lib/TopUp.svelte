@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { css, cx } from '@emotion/css';
 	import * as anchor from '@project-serum/anchor';
-	import { BN } from 'bn.js';
+	import { BN } from '@project-serum/anchor';
 	import { globalStore, newEvent, tokenState, loadingState } from '$stores/index';
 
 	import {

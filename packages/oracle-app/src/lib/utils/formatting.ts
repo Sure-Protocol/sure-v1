@@ -1,5 +1,5 @@
 import type { PublicKey } from '@solana/web3';
-import type BN from 'bn.js';
+import { BN } from '@project-serum/anchor';
 
 export const prettyPublicKey = (pk: PublicKey): string => {
 	const pkString = pk.toString();

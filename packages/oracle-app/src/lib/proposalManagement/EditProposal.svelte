@@ -10,7 +10,6 @@
 		proposalFailReason
 	} from '@surec/oracle';
 	import { getProposalStatus, SureOracleSDK, getVoteStatus } from '@surec/oracle';
-	import { findEscrowAddress } from '@tribecahq/tribeca-sdk';
 	import { countdownFromUnix, isInFuture, getNextDeadline, saveSalt } from '$lib/utils';
 	import { selectedProposal, globalStore, newEvent } from '$stores/index';
 	import { Steps } from 'svelte-steps';
@@ -20,7 +19,7 @@
 	import { to_number } from 'svelte/internal';
 	import { calculateAmountInDecimals } from '$lib/utils/money';
 	import CollectRewards from '$lib/VoteManagement/forms/CollectRewards.svelte';
-	import type { TransactionReceipt } from '@saberhq/solana-contrib';
+	import type { TransactionResult } from '@surec/oracle';
 	import errorCircle from '$assets/icons/errorCircle.svg';
 
 	let steps: { status: VoteStatus; text: string }[] = [
@@ -64,7 +63,7 @@
 		clearInterval(timer);
 	});
 
-	async function requestHandler(actionType: string, action: () => Promise<TransactionReceipt>) {
+	async function requestHandler(actionType: string, action: () => Promise<TransactionResult>) {
 		try {
 			const receipt = await action();
 			newEvent.set({
@@ -81,7 +80,7 @@
 			});
 		}
 	}
-	async function collectProposerReward(): Promise<TransactionReceipt> {
+	async function collectProposerReward(): Promise<TransactionResult> {
 		const oracleSdk = $globalStore.oracleSDK;
 		if (oracleSdk && proposal) {
 			const collectTx = await oracleSdk
@@ -93,7 +92,7 @@
 		}
 	}
 
-	async function calculateRewards(): Promise<TransactionReceipt> {
+	async function calculateRewards(): Promise<TransactionResult> {
 		const oracleSdk = $globalStore.oracleSDK;
 		if (oracleSdk && proposal) {
 			const finalizeTx = await oracleSdk

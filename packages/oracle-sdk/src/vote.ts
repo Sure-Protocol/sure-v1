@@ -6,7 +6,7 @@ import randomBytes from 'randombytes';
 import { SURE_MINT } from './constants';
 import { SureOracleSDK } from './sdk';
 import { getOrCreateAssociatedTokenAccountIx, validateKeys } from './utils';
-import { TransactionEnvelope } from '@saberhq/solana-contrib';
+import { TransactionEnvelope } from '@saberhq/solana-contrib/dist/cjs';
 import { getAssociatedTokenAddress } from '@solana/spl-token';
 
 type SubmitVote = {

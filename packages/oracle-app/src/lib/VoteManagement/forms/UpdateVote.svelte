@@ -2,7 +2,7 @@
 	import { css } from '@emotion/css';
 	import { globalStore, newEvent } from '$stores/index';
 	import type { ProposalType } from '@surec/oracle';
-	import { BN } from 'bn.js';
+	import { BN } from '@project-serum/anchor';
 
 	import { saveSalt } from '$lib/utils';
 	import MainButton from '$lib/button/MainButton.svelte';

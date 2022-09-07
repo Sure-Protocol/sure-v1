@@ -6,7 +6,7 @@ import { SURE_MINT, BASE_PK } from '@surec/oracle';
 import { writable } from 'svelte/store';
 import { newEvent } from './event';
 import * as goki from '@gokiprotocol/client';
-import * as tribeca from '@tribecahq/tribeca-sdk';
+import { TribecaSDK, getGovernorAddress, GovernorWrapper } from '@tribecahq/tribeca-sdk';
 import { getTestKeypairFromSeed } from '$lib/utils';
 import type { Update } from 'vite';
 
@@ -106,9 +106,9 @@ export const proposeConfigChange = async ({
 		const basePk = BASE_PK;
 
 		// tribeca
-		const tribecaSdk = tribeca.TribecaSDK.load({ provider: oracleSdk.provider });
-		const governor = tribeca.getGovernorAddress(basePk);
-		const govern = new tribeca.GovernorWrapper(tribecaSdk, governor);
+		const tribecaSdk = TribecaSDK.load({ provider: oracleSdk.provider });
+		const governor = getGovernorAddress(basePk);
+		const govern = new GovernorWrapper(tribecaSdk, governor);
 		const ixs: TransactionInstruction[] = [];
 		ixs.push(...(await oracleSdk.config().updateConfigInstructions(configUpdate)));
 

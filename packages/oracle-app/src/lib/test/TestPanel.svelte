@@ -12,17 +12,22 @@
 		getMinimumBalanceForRentExemptMint,
 		MINT_SIZE
 	} from './../../../../../node_modules/@solana/spl-token';
-	import * as tribeca from '@tribecahq/tribeca-sdk';
+	import {
+		TribecaSDK,
+		GovernWrapper,
+		getLockerAddress,
+		findGovernorAddress
+	} from '@tribecahq/tribeca-sdk';
 	import * as goki from '@gokiprotocol/client';
-	import * as anchor from '@project-serum/anchor';
-	import { BN } from 'bn.js';
+	import { BN } from '@project-serum/anchor';
+
 	import type NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 	import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 	import { getTestKeypairFromSeed } from '$lib/utils';
 	import { SURE_MINT } from '@surec/oracle';
 
 	$: tribecaSdk = $globalStore?.oracleSDK?.provider
-		? tribeca.TribecaSDK.load({ provider: $globalStore.oracleSDK.provider })
+		? TribecaSDK.load({ provider: $globalStore.oracleSDK.provider })
 		: undefined;
 
 	$: gokiSdk = $globalStore?.oracleSDK?.provider
@@ -110,7 +115,7 @@
 		if (oracleSdk && gokiSdk && tribecaSdk) {
 			try {
 				const base = getTestKeypairFromSeed(oracleSdk, 'sure_base_3');
-				const [governor] = await tribeca.findGovernorAddress(base.publicKey);
+				const [governor] = await findGovernorAddress(base.publicKey);
 				const smartWallet = await gokiSdk.newSmartWallet({
 					owners: [governor],
 					threshold: new BN(1),
@@ -118,8 +123,8 @@
 					base
 				});
 				await smartWallet.tx.confirm();
-				const governSdk = new tribeca.GovernWrapper(tribecaSdk);
-				const locker = tribeca.getLockerAddress(base.publicKey);
+				const governSdk = new GovernWrapper(tribecaSdk);
+				const locker = getLockerAddress(base.publicKey);
 				const govern = await governSdk.createGovernor({
 					electorate: locker,
 					smartWallet: smartWallet.smartWalletWrapper.key,
@@ -139,7 +144,7 @@
 			try {
 				const mintPk = SURE_MINT;
 				const base = getTestKeypairFromSeed(oracleSdk, 'sure_base_3');
-				const [governor] = await tribeca.findGovernorAddress(base.publicKey);
+				const [governor] = await findGovernorAddress(base.publicKey);
 				const createLockerRes = await tribecaSdk.createLocker({
 					governor: governor,
 					govTokenMint: mintPk,

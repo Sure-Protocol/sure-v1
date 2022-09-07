@@ -1,47 +1,46 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import type { UserConfig } from 'vite';
+import { readFileSync } from 'fs';
+import { defineConfig } from 'vite';
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill';
 import path from 'path';
 import inject from '@rollup/plugin-inject';
-import nodePolyfills from 'rollup-plugin-node-polyfills';
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 
-const config: UserConfig = {
-	plugins: [sveltekit()],
-	logLevel: 'warn',
-	optimizeDeps: {
-		include: ['@solana/web3.js', 'buffer'],
-		esbuildOptions: {
-			target: 'esnext',
-			plugins: [NodeGlobalsPolyfillPlugin({ buffer: true })]
-		}
-	},
-	resolve: {
-		alias: {
-			$assets: path.resolve('src/assets'),
-			stream: 'rollup-plugin-node-polyfills/polyfills/stream'
-		}
-	},
-	define: {
-		'process.env.BROWSER': true,
-		'process.env.NODE_DEBUG': JSON.stringify(''),
-		'process.env.SURE_ENV': JSON.stringify(process.env.SURE_ENV)
-	},
-	build: {
-		target: 'esnext',
-		commonjsOptions: {
-			transformMixedEsModules: true
+export default defineConfig(({ command }) => {
+	return {
+		plugins: [sveltekit()],
+		// logLevel: 'warn',
+		optimizeDeps: {
+			esbuildOptions: {
+				target: 'esnext'
+			}
 		},
-		rollupOptions: {
-			plugins: [inject({ Buffer: ['buffer', 'Buffer'] }), nodePolyfills({ crypto: true })]
+		ssr: command === 'build' && {
+			external: Object.keys(pkg.dependencies),
+			noExternal: ['@tribecahq/tribeca-sdk', 'oracle-sdk', '@surec/oracle']
+		},
+		resolve: {
+			alias: {
+				stream: 'rollup-plugin-node-polyfills/polyfills/stream',
+				http: 'rollup-plugin-node-polyfills/polyfills/http',
+				https: 'rollup-plugin-node-polyfills/polyfills/http',
+				zlib: 'rollup-plugin-node-polyfills/polyfills/zlib'
+			}
+		},
+		define: {
+			//global: {},
+			'process.env.BROWSER': true,
+			'process.env.NODE_DEBUG': JSON.stringify(''),
+			'process.env.SURE_ENV': JSON.stringify(process.env.SURE_ENV)
+		},
+		build: {
+			target: 'esnext'
+			// commonjsOptions: {
+			// 	transformMixedEsModules: false
+			// },
+			// rollupOptions: {
+			// 	plugins: [inject({ Buffer: ['buffer', 'Buffer'] }), nodePolyfills({ crypto: true })]
+			// }
 		}
-	},
-	kit: {
-		alias: {
-			'@solana/spl-token': './node_modules/@solana/spl-token',
-			'$assets/*': 'src/assets/*',
-			'$lib/*': 'src/lib/*'
-		}
-	}
-};
-
-export default config;
+	};
+});

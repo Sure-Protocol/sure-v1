@@ -8,7 +8,7 @@
 		newEvent
 	} from '$stores/index';
 	import * as anchor from '@project-serum/anchor';
-	import { BN } from 'bn.js';
+	import { BN } from '@project-serum/anchor';
 	import { calculateFullAmount } from '$lib/utils';
 	import type { SendTransactionError, TransactionError } from '@solana/web3.js';
 	import CloseButton from './button/CloseButton.svelte';
