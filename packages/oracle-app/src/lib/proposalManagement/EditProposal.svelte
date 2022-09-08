@@ -1,15 +1,8 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
 	import { onDestroy } from 'svelte';
-	import {
-		type ProposalType,
-		type VoteStatus,
-		type ProposalStatus,
-		type VoteAccount,
-		SURE_MINT,
-		proposalFailReason
-	} from '@surec/oracle';
-	import { getProposalStatus, SureOracleSDK, getVoteStatus } from '@surec/oracle';
+	import type { ProposalType, VoteStatus, TransactionResult } from '@surec/oracle';
+	import { getVoteStatus, SURE_MINT } from '@surec/oracle';
 	import { countdownFromUnix, isInFuture, getNextDeadline, saveSalt } from '$lib/utils';
 	import { selectedProposal, globalStore, newEvent } from '$stores/index';
 	import { Steps } from 'svelte-steps';
@@ -19,7 +12,6 @@
 	import { to_number } from 'svelte/internal';
 	import { calculateAmountInDecimals } from '$lib/utils/money';
 	import CollectRewards from '$lib/VoteManagement/forms/CollectRewards.svelte';
-	import type { TransactionResult } from '@surec/oracle';
 	import errorCircle from '$assets/icons/errorCircle.svg';
 
 	let steps: { status: VoteStatus; text: string }[] = [

@@ -2,7 +2,7 @@
 	import { css } from '@emotion/css';
 	import { globalStore, newEvent } from '$stores/index';
 	import type { ProposalType } from '@surec/oracle';
-	import { BN } from '@project-serum/anchor';
+	import * as anchor from '@project-serum/anchor';
 
 	import { saveSalt } from '$lib/utils';
 	import MainButton from '$lib/button/MainButton.svelte';
@@ -22,7 +22,7 @@
 	async function updateVote() {
 		const oracleSdk = $globalStore.oracleSDK;
 		if (oracleSdk && proposal) {
-			const userVoteQ32 = new BN(Math.floor(formValues.vote * Math.pow(2, 32)));
+			const userVoteQ32 = new anchor.BN(Math.floor(formValues.vote * Math.pow(2, 32)));
 			try {
 				const voteTx = await oracleSdk.vote().updateVote({
 					vote: userVoteQ32,

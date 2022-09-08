@@ -2,7 +2,6 @@ import * as anchor from '@project-serum/anchor';
 import * as solana_contrib from '@saberhq/solana-contrib';
 import * as tribeca from '@tribecahq/tribeca-sdk';
 import * as goki from '@gokiprotocol/client';
-import * as token_utils from '@saberhq/token-utils';
 import * as web3 from '@solana/web3.js';
 import * as spl from '@solana/spl-token';
 import { Transaction } from '@solana/web3.js';

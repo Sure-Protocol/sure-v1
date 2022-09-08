@@ -11,7 +11,7 @@
 		"strict": true
 	},
 	"paths": {
-		"@solana/spl-token": ["node_modules/@solana/spl-token"] // This mapping is relative to "baseUrl"
+		"@solana/spl-token": ["./../../node_modules/@solana/spl-token"] // This mapping is relative to "baseUrl"
 	  }
 	// Path aliases are handled by https://kit.svelte.dev/docs/configuration#alias
 	//

@@ -2,7 +2,6 @@ import { Command, Flags } from '@oclif/core';
 import * as anchor from '@project-serum/anchor';
 import { Connection, PublicKey } from '@solana/web3.js';
 import * as saber_contrib from '@saberhq/solana-contrib';
-import * as token_utils from '@saberhq/token-utils';
 import { GokiSDK } from '@gokiprotocol/client';
 import { loadKeypairFromEnv } from '../../utils/loadkey';
 import * as tribeca from '@tribecahq/tribeca-sdk';
@@ -10,7 +9,6 @@ import * as spl_token from '@solana/spl-token';
 import { LockerWrapper } from '@tribecahq/tribeca-sdk';
 import { program } from '@project-serum/anchor/dist/cjs/spl/associated-token';
 import { TransactionBuilder } from '@metaplex-foundation/js-next';
-import { getMintInfo } from '@saberhq/token-utils';
 import * as spl from './../../../node_modules/@solana/spl-token';
 
 const NUMBER_SECONDS_IN_DAY = 86400;

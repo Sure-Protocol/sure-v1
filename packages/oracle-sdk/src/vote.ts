@@ -3,11 +3,11 @@ import { SHA3 } from 'sha3';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from './idls/oracle';
 import randomBytes from 'randombytes';
-import { SURE_MINT } from './constants';
-import { SureOracleSDK } from './sdk';
-import { getOrCreateAssociatedTokenAccountIx, validateKeys } from './utils';
+import { SURE_MINT } from './constants.js';
+import { SureOracleSDK } from './sdk.js';
+import { getOrCreateAssociatedTokenAccountIx, validateKeys } from './utils.js';
 import { TransactionEnvelope } from '@saberhq/solana-contrib/dist/cjs';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+import * as spl from '@solana/spl-token';
 
 type SubmitVote = {
 	vote: anchor.BN;
@@ -188,7 +188,7 @@ export class Vote {
 		const proposal = voteAccountLoaded.proposal;
 
 		const [proposalVault] = await this.sdk.pda.findProposalVault({ proposal });
-		const voterAccount = await getAssociatedTokenAddress(
+		const voterAccount = await spl.getAssociatedTokenAddress(
 			voteAccountLoaded.tokenMint,
 			voter
 		);

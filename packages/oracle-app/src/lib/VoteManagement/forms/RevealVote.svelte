@@ -2,14 +2,13 @@
 	import { css } from '@emotion/css';
 	import { globalStore, newEvent } from '$stores/index';
 	import type { ProposalType } from '@surec/oracle';
-	import type { ProgramAccount } from '@project-serum/anchor';
-	import { BN } from '@project-serum/anchor';
+	import * as anchor from '@project-serum/anchor';
 
 	import { getSalt } from '$lib/utils';
 	import MainButton from '$lib/button/MainButton.svelte';
 	import type { SendTransactionError } from '@solana/web3.js';
 
-	export let proposal: ProgramAccount<ProposalType>;
+	export let proposal: anchor.ProgramAccount<ProposalType>;
 
 	let formValues = {
 		vote: 0.0
@@ -18,7 +17,7 @@
 	async function revealVote() {
 		const oracleSdk = $globalStore.oracleSDK;
 		if (oracleSdk && proposal) {
-			const userVoteQ32 = new BN(Math.floor(formValues.vote * Math.pow(2, 32)));
+			const userVoteQ32 = new anchor.BN(Math.floor(formValues.vote * Math.pow(2, 32)));
 			const salt = getSalt(proposal.account.name);
 			const [voteAccount] = oracleSdk.pda.findVoteAccount({
 				proposal: proposal.publicKey,

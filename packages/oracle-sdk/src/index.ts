@@ -1,12 +1,11 @@
-export * from './proposal';
-export * from './vote';
-export * from './sdk';
-export * from './config';
-
-export * from './constants';
-export * from './utils';
-export * from './program';
-export * from './config';
+export * from './proposal.js';
+export * from './vote.js';
+export * from './sdk.js';
+export * from './config.js';
+export * from './constants.js';
+export * from './utils.js';
+export * from './program.js';
+export * from './config.js';
 
 import {
 	TransactionReceipt,

@@ -1,12 +1,12 @@
 import type { PublicKey } from '@solana/web3';
-import { BN } from '@project-serum/anchor';
+import * as anchor from '@project-serum/anchor';
 
 export const prettyPublicKey = (pk: PublicKey): string => {
 	const pkString = pk.toString();
 	return pkString.slice(0, 4) + '...' + pkString.slice(-4);
 };
 
-export const unixToReadable = (unixTimestamp: BN): string => {
+export const unixToReadable = (unixTimestamp: anchor.BN): string => {
 	const dd = new Date(unixTimestamp.toNumber() * 1000);
 	return `${dd.toLocaleDateString()}, ${dd.toLocaleTimeString()}`;
 };
@@ -39,7 +39,7 @@ export const countdownFromUnix = (unixDeadline: number): string => {
 	return remainingTimeString;
 };
 
-export const prettyLargeNumber = (number: BN): string => {
+export const prettyLargeNumber = (number: anchor.BN): string => {
 	return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
 

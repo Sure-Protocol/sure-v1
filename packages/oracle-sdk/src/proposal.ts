@@ -1,18 +1,18 @@
 import * as anchor from '@project-serum/anchor';
 import { PublicKey, TransactionInstruction } from '@solana/web3.js';
 import * as oracleIDL from './idls/oracle';
-import { SURE_MINT } from './constants';
-import { SureOracleSDK } from './sdk';
+import { SURE_MINT } from './constants.js';
+import { SureOracleSDK } from './sdk.js';
 import { TransactionEnvelope } from '@saberhq/solana-contrib/dist/cjs';
 import {
 	createProposalHash,
 	getOrCreateAssociatedTokenAccountIx,
 	validateKeys,
-} from './utils';
-import { ProposalType } from './program';
+} from './utils.js';
+import { ProposalType } from './program.js';
 import { ProgramAccount } from '@project-serum/anchor';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+import * as spl from '@solana/spl-token';
 
 // ================== Types ==================
 type ProposeVote = {
@@ -141,7 +141,7 @@ export class Proposal {
 		proposal,
 		tokenMint,
 	}: CollectProposerReward): Promise<TransactionEnvelope> {
-		const proposerTokenAccount = await getAssociatedTokenAddress(
+		const proposerTokenAccount = await spl.getAssociatedTokenAddress(
 			tokenMint,
 			this.sdk.provider.wallet.publicKey
 		);

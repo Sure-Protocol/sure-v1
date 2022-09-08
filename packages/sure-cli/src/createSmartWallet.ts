@@ -5,11 +5,7 @@ import { SmartWallet } from './smart_wallet';
 import * as goki from '@gokiprotocol/client';
 import * as saber_contrib from '@saberhq/solana-contrib';
 import * as saber_anchor from '@saberhq/anchor-contrib';
-import {
-	GokiSDK,
-	GOKI_ADDRESSES,
-	SmartWalletWrapper,
-} from '@gokiprotocol/client';
+import { GokiSDK, SmartWalletWrapper } from '@gokiprotocol/client';
 async function run() {
 	const keypair = Keypair.fromSecretKey(
 		Buffer.from(

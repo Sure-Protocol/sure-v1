@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
-	import { BN } from '@project-serum/anchor';
+	import * as anchor from '@project-serum/anchor';
 	import { onDestroy } from 'svelte';
 	import {
 		type ProposalType,
 		type VoteStatus,
 		type ProposalStatus,
 		type VoteAccount,
-		SURE_MINT,
-		proposalFailReason
+		SURE_MINT
 	} from '@surec/oracle';
 	import { getProposalStatus, SureOracleSDK, getVoteStatus } from '@surec/oracle';
 	import { findEscrowAddress } from '@tribecahq/tribeca-sdk';
@@ -76,7 +75,7 @@
 		const oracleSdk = $globalStore.oracleSDK;
 		const lockerSdk = await getLockerSdk(oracleSdk);
 		if (oracleSdk && proposal && lockerSdk?.locker) {
-			const userVoteQ32 = new BN(Math.floor(voteValues.userVote * Math.pow(2, 32)));
+			const userVoteQ32 = new anchor.BN(Math.floor(voteValues.userVote * Math.pow(2, 32)));
 			try {
 				const [escrowKey] = await tribeca.findEscrowAddress(
 					lockerSdk.locker,

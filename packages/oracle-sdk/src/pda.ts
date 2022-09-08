@@ -6,8 +6,8 @@ import {
 	SURE_ORACLE_REVEAL_ARRAY_SEED,
 	SURE_ORACLE_SEED,
 	SURE_ORACLE_VOTE_SEED,
-} from './constants';
-import { createProposalHash } from './utils';
+} from './constants.js';
+import { createProposalHash } from './utils.js';
 
 export class PDA {
 	constructor() {}

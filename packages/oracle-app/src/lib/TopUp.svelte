@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { css, cx } from '@emotion/css';
 	import * as anchor from '@project-serum/anchor';
-	import { BN } from '@project-serum/anchor';
 	import { globalStore, newEvent, tokenState, loadingState } from '$stores/index';
 
 	import {
@@ -26,7 +25,7 @@
 		const lockerSdk = await getLockerSdk(oracleSdk);
 		if (lockerSdk && oracleSdk) {
 			try {
-				const lockAmount = await calculateFullAmount(oracleSdk, new BN(values.amount));
+				const lockAmount = await calculateFullAmount(oracleSdk, new anchor.BN(values.amount));
 				if (lockAmount) {
 					newEvent.set({ name: `lock ${lockAmount} for ${values.days} days `, status: 'info' });
 					const lockTokensTx = await lockerSdk.lockTokens({

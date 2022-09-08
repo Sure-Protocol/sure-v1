@@ -4,25 +4,14 @@
 	import * as web3 from '@solana/web3.js';
 	import * as spl from './../../../../../node_modules/@solana/spl-token';
 	import {
-		createAssociatedTokenAccountInstruction,
-		createInitializeMintInstruction,
-		createMintToInstruction,
-		getAccount,
-		getAssociatedTokenAddress,
-		getMinimumBalanceForRentExemptMint,
-		MINT_SIZE
-	} from './../../../../../node_modules/@solana/spl-token';
-	import {
 		TribecaSDK,
 		GovernWrapper,
 		getLockerAddress,
 		findGovernorAddress
 	} from '@tribecahq/tribeca-sdk';
 	import * as goki from '@gokiprotocol/client';
-	import { BN } from '@project-serum/anchor';
-
+	import * as anchor from '@project-serum/anchor';
 	import type NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
-	import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 	import { getTestKeypairFromSeed } from '$lib/utils';
 	import { SURE_MINT } from '@surec/oracle';
 
@@ -51,11 +40,11 @@
 					web3.SystemProgram.createAccount({
 						fromPubkey: oracleSdk.provider.wallet.publicKey,
 						newAccountPubkey: mintKeypair.publicKey,
-						space: MINT_SIZE,
-						lamports: await getMinimumBalanceForRentExemptMint(oracleSdk.provider.connection),
-						programId: TOKEN_PROGRAM_ID
+						space: spl.MINT_SIZE,
+						lamports: await spl.getMinimumBalanceForRentExemptMint(oracleSdk.provider.connection),
+						programId: spl.TOKEN_PROGRAM_ID
 					}),
-					createInitializeMintInstruction(
+					spl.createInitializeMintInstruction(
 						mintKeypair.publicKey,
 						6,
 						oracleSdk.provider.wallet.publicKey,
@@ -82,13 +71,16 @@
 		if (oracleSdk && $globalStore.wallet?.publicKey && $globalStore.provider) {
 			try {
 				const mintPk = SURE_MINT;
-				const ataPDA = await getAssociatedTokenAddress(mintPk, oracleSdk.provider.wallet.publicKey);
+				const ataPDA = await spl.getAssociatedTokenAddress(
+					mintPk,
+					oracleSdk.provider.wallet.publicKey
+				);
 				const tx = new web3.Transaction();
 				try {
-					const account = await getAccount(oracleSdk.provider.connection, ataPDA);
+					const account = await spl.getAccount(oracleSdk.provider.connection, ataPDA);
 				} catch {
 					tx.add(
-						createAssociatedTokenAccountInstruction(
+						spl.createAssociatedTokenAccountInstruction(
 							oracleSdk.provider.wallet.publicKey,
 							ataPDA,
 							oracleSdk.provider.wallet.publicKey,
@@ -98,7 +90,12 @@
 				}
 
 				tx.add(
-					createMintToInstruction(mintPk, ataPDA, oracleSdk.provider.wallet.publicKey, 100_000_000)
+					spl.createMintToInstruction(
+						mintPk,
+						ataPDA,
+						oracleSdk.provider.wallet.publicKey,
+						100_000_000
+					)
 				);
 
 				const txRes = await oracleSdk.provider.send(tx);
@@ -118,7 +115,7 @@
 				const [governor] = await findGovernorAddress(base.publicKey);
 				const smartWallet = await gokiSdk.newSmartWallet({
 					owners: [governor],
-					threshold: new BN(1),
+					threshold: new anchor.BN(1),
 					numOwners: 2,
 					base
 				});

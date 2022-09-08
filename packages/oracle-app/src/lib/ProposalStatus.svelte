@@ -1,23 +1,7 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
 	import { onDestroy } from 'svelte';
-	import {
-		type ProposalType,
-		type VoteStatus,
-		type ProposalStatus,
-		type VoteAccount,
-		SURE_MINT,
-		proposalFailReason
-	} from '@surec/oracle';
-	import { getProposalStatus, SureOracleSDK, getVoteStatus } from '@surec/oracle';
-	import {
-		getLockerSdk,
-		unixToReadable,
-		countdownFromUnix,
-		isInFuture,
-		getNextDeadline,
-		saveSalt
-	} from '$lib/utils';
+	import { proposalFailReason } from '@surec/oracle';
 	import {
 		selectedProposal,
 		globalStore,

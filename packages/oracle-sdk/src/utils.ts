@@ -5,20 +5,11 @@ import {
 	Signer,
 	TransactionInstruction,
 } from '@solana/web3.js';
-import { ProposalType } from './program';
+import { ProposalType } from './program.js';
 import * as anchor from '@project-serum/anchor';
 import { SHAKE } from 'sha3';
-import {
-	TOKEN_PROGRAM_ID,
-	getAssociatedTokenAddress,
-	getAccount,
-	createAssociatedTokenAccountInstruction,
-	TokenInvalidMintError,
-	TokenInvalidOwnerError,
-	TokenAccountNotFoundError,
-	Account,
-	ASSOCIATED_TOKEN_PROGRAM_ID,
-} from '@solana/spl-token';
+import * as spl from '@solana/spl-token';
+
 export const validateKeys = (keys: { v: PublicKey; n: string }[]) => {
 	const undefinedErrors = keys
 		.filter((k) => k.v === undefined)
@@ -145,13 +136,13 @@ export const getOrCreateAssociatedTokenAccountIx = async ({
 	owner,
 	allowOwnerOffCurve = false,
 	commitment,
-	programId = TOKEN_PROGRAM_ID,
-	associatedTokenProgramId = ASSOCIATED_TOKEN_PROGRAM_ID,
+	programId = spl.TOKEN_PROGRAM_ID,
+	associatedTokenProgramId = spl.ASSOCIATED_TOKEN_PROGRAM_ID,
 }: ATAInput): Promise<{
 	instruction: TransactionInstruction | null;
 	address: PublicKey;
 }> => {
-	const associatedToken = await getAssociatedTokenAddress(
+	const associatedToken = await spl.getAssociatedTokenAddress(
 		mint,
 		owner,
 		allowOwnerOffCurve,
@@ -161,9 +152,9 @@ export const getOrCreateAssociatedTokenAccountIx = async ({
 
 	// This is the optimal logic, considering TX fee, client-side computation, RPC roundtrips and guaranteed idempotent.
 	// Sadly we can't do this atomically.
-	let account: Account;
+	let account: spl.Account;
 	try {
-		account = await getAccount(
+		account = await spl.getAccount(
 			connection,
 			associatedToken,
 			commitment,
@@ -178,13 +169,13 @@ export const getOrCreateAssociatedTokenAccountIx = async ({
 		// becoming a system account. Assuming program derived addressing is safe, this is the only case for the
 		// TokenInvalidAccountOwnerError in this code path.
 		if (
-			error instanceof TokenAccountNotFoundError ||
-			error instanceof TokenInvalidOwnerError
+			error instanceof spl.TokenAccountNotFoundError ||
+			error instanceof spl.TokenInvalidOwnerError
 		) {
 			// As this isn't atomic, it's possible others can create associated accounts meanwhile.
 			try {
 				const transaction = new TransactionInstruction(
-					createAssociatedTokenAccountInstruction(
+					spl.createAssociatedTokenAccountInstruction(
 						payer.publicKey,
 						associatedToken,
 						owner,
@@ -203,7 +194,7 @@ export const getOrCreateAssociatedTokenAccountIx = async ({
 			}
 
 			// Now this should always succeed
-			account = await getAccount(
+			account = await spl.getAccount(
 				connection,
 				associatedToken,
 				commitment,
@@ -213,8 +204,8 @@ export const getOrCreateAssociatedTokenAccountIx = async ({
 			throw error;
 		}
 	}
-	if (!account.mint.equals(mint)) throw new TokenInvalidMintError();
-	if (!account.owner.equals(owner)) throw new TokenInvalidOwnerError();
+	if (!account.mint.equals(mint)) throw new spl.TokenInvalidMintError();
+	if (!account.owner.equals(owner)) throw new spl.TokenInvalidOwnerError();
 
 	return {
 		address: associatedToken,

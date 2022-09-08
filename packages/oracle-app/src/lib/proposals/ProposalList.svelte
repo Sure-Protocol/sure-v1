@@ -2,7 +2,7 @@
 	import { fly, blur, fade } from 'svelte/transition';
 	import { css } from '@emotion/css';
 	import type { ProgramAccount } from '@project-serum/anchor';
-	import type { ProposalType, Provider, SureOracleSDK } from '@surec/oracle';
+	import type { ProposalType } from '@surec/oracle';
 	import { getProposalStatus } from '@surec/oracle';
 	import person from '$assets/icons/person.svg';
 	import {

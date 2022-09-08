@@ -1,12 +1,12 @@
 import * as anchor from '@project-serum/anchor';
 import * as solanaContrib from '@saberhq/solana-contrib';
 import { Wallet } from '@project-serum/anchor/dist/esm/provider';
-import { Oracle, IDL } from './idls/oracle';
-import { Proposal } from './proposal';
-import { Vote } from './vote';
-import { PDA } from './pda';
-import { SURE_ADDRESSES } from './constants';
-import { Config } from './config';
+import { Oracle, IDL } from './idls/oracle.js';
+import { Proposal } from './proposal.js';
+import { Vote } from './vote.js';
+import { PDA } from './pda.js';
+import { SURE_ADDRESSES } from './constants.js';
+import { Config } from './config.js';
 import {
 	ConfirmOptions,
 	Connection,
