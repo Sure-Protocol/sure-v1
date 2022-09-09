@@ -7,8 +7,8 @@
 		"@solana/buffer-layout": "^4.0.0",
 		"@solana/wallet-adapter-phantom": "^0.9.3",
 		"@solana/web3.js": "^1.59.1",
-		"@surec/oracle": "0.0.17",
-		"@surec/sdk": "0.0.14",
+		"@surec/oracle": "workspace:^",
+		"@surec/sdk": "workspace:^",
 		"@types/chai": "^4.3.1",
 		"bn.js": "^5.2.1",
 		"buffer-layout": "^1.2.2",
@@ -26,7 +26,6 @@
 		"ts-mocha": "^10.0.0",
 		"typescript": "^4.3.5"
 	},
-	"packageManager": "yarn@3.2.0",
 	"scripts": {
 		"versionup": "lerna version --conventional-commits --no-git-tag-version",
 		"versionup:patch": "lerna version patch --conventional-commits --no-git-tag-version",
@@ -42,6 +41,7 @@
 		"idl:build": "./scripts/build_and_move.sh oracle",
 		"dev": "lerna run dev",
 		"build": "lerna run build",
+		"build:oracle": "lerna run build:oracle",
 		"init:sure": "lerna run sure:init",
 		"build:rollup": "lerna run build:rollup",
 		"build:craco": "lerna run build:craco",
@@ -53,9 +53,5 @@
 	},
 	"workspaces": [
 		"packages/*"
-	],
-	"resolutions": {
-		"@tribecahq/tribeca-sdk": "portal:/Users/kristofferhovlandberg/github/sure-protocol/integrations/tribeca",
-		"@gokiprotocol/client": "portal:/Users/kristofferhovlandberg/github/sure-protocol/integrations/goki"
-	}
+	]
 }

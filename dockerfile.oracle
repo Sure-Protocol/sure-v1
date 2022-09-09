@@ -1,16 +1,15 @@
 FROM node:alpine AS build
 
 WORKDIR /dapp/
-COPY .yarn .yarn
 COPY yarn.lock yarn.lock
-COPY .yarnrc.yml .yarnrc.yml
+COPY .yarn .yarn
 COPY lerna.json lerna.json
+COPY .yarnrc.yml .yarnrc.yml
 COPY package.json package.json
 COPY tsconfig.json tsconfig.json
 COPY packages/ packages/
 COPY nginx/nginx.conf nginx/nginx.conf
 COPY node_modules/ node_modules/
-
 
 RUN apk add git \
     && yarn set version stable \
@@ -22,12 +21,11 @@ RUN apk add git \
     && echo "get packages -.-.-.-." \
     #&& yarn > /dev/null  & ps axf | grep yarn | grep -v grep | awk '{print "tail -f /proc/$1/fd/2"}' | sh \
     && echo "build rollup-.-.-.-." \
-    && yarn build:rollup \
+    && yarn build:oracle \
     && echo "done-.-.-.-." 
 
 
 FROM nginx
-COPY --from=build /dapp/packages/app/dist_up/ /usr/share/nginx/html/app/
-COPY --from=build /dapp/packages/oracle-app-spa/public/  /usr/share/nginx/html/oracle/
-COPY --from=build /dapp/packages/app/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /dapp/packages/oracle-app-spa/public/  /usr/share/nginx/html/
+COPY --from=build /dapp/nginx/nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80

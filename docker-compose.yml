@@ -1,9 +1,15 @@
 version: '3.9'
 
 services:
-  dapp:
+  # dapp:
+  #   build:
+  #     context: ./
+  #     dockerfile: dockerfile.dapp
+  #   ports:
+  #     - '3000:80'
+  oracle:
     build:
       context: ./
-      dockerfile: dockerfile.dapp
+      dockerfile: dockerfile.oracle
     ports:
-      - '3000:80'
+      - '3001:80'
