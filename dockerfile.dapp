@@ -1,6 +1,6 @@
 FROM node:18-alpine AS build
 
-ENV SDK_VERSION=1.0.3
+ENV SDK_VERSION="1.0.3"
 
 WORKDIR /dapp/
 COPY .yarn .yarn
@@ -14,7 +14,7 @@ COPY nginx/nginx.conf nginx/nginx.conf
 
 
 RUN apk add git \
-    &&  && ls packages/**/package.json | xargs sed -i -e 's/workspace:^/^$SDK_VERSION/g' \
+    && ls packages/**/package.json | xargs sed -i -e "s/workspace:^/^$SDK_VERSION/g" \
     && yarn set version stable \
     && yarn rebuild \
     && echo "build marketplace" \

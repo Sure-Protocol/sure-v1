@@ -1,4 +1,4 @@
-name: Deploy to Amazon ECS
+name: Deploy Oracle to Amazon ECS
 
 on:
   push:
