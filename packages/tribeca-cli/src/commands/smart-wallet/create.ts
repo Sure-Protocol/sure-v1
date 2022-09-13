@@ -2,6 +2,7 @@ import { Command, Flags } from '@oclif/core';
 import * as anchor from '@project-serum/anchor';
 import { Connection, PublicKey } from '@solana/web3.js';
 import * as saber_contrib from '@saberhq/solana-contrib';
+import type { Provider } from '@saberhq/solana-contrib';
 import { GokiSDK } from '@gokiprotocol/client';
 import { loadKeypairFromEnv } from '../../utils/loadkey';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
@@ -62,7 +63,9 @@ export default class SmartWallet extends Command {
 			wallet: anchorProvider.wallet,
 			opts: anchorProvider.opts,
 		});
-		const gokiSDK = GokiSDK.load({ provider });
+		const gokiSDK = GokiSDK.load({
+			provider: provider as Provider,
+		});
 
 		const owners = flags.owners.split(',').map((owner) => new PublicKey(owner));
 

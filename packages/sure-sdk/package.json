@@ -1,6 +1,6 @@
 {
 	"name": "@surec/sdk",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"repository": "https://github.com/Sure-Protocol/sure-v1",
 	"description": "Sure Protocol SDK",
 	"packageManager": "yarn@3.2.0",
@@ -48,5 +48,5 @@
 		"copy:anchor": "rimraf ./src/anchor && mkdir -p ./src/anchor/idl ./src/anchor/types && cp -r ./../../target/idl/* ./src/anchor/idl && cp -r ./../../target/types/* ./src/anchor/types",
 		"clean": "rm -rf lib"
 	},
-	"gitHead": "c118df13ffa6ed51393d4877ea8f2f1f351e7873"
+	"gitHead": "628105ff8e1ab435ab513ecc72ff032d6fe5cbc3"
 }
