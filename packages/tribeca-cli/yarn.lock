@@ -378,25 +378,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@gokiprotocol/client@npm:^0.11.1":
-  version: 0.11.1
-  resolution: "@gokiprotocol/client@npm:0.11.1"
-  dependencies:
-    lodash.mapvalues: ^4.6.0
-    superstruct: ^0.16.0
-    tiny-invariant: ^1.2.0
-    tslib: ^2.4.0
-  peerDependencies:
-    "@project-serum/anchor": ">=0.24"
-    "@saberhq/anchor-contrib": ^1.13
-    "@saberhq/solana-contrib": ^1.13
-    "@saberhq/token-utils": ^1.13
-    "@solana/web3.js": ^1.44
-    bn.js: ^5
-  checksum: e3142096379e530ef243ba8419838af9a5c1738a8c2052ecf07f4b590f89cc45c36381d1d7ddb9f0ef967912bdc488e672767151cf3804087477c24aefcc9f10
-  languageName: node
-  linkType: hard
-
 "@humanwhocodes/config-array@npm:^0.5.0":
   version: 0.5.0
   resolution: "@humanwhocodes/config-array@npm:0.5.0"
@@ -996,7 +977,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@saberhq/anchor-contrib@npm:^1.14.1, @saberhq/anchor-contrib@npm:^1.14.2":
+"@saberhq/anchor-contrib@npm:^1.14.2":
   version: 1.14.2
   resolution: "@saberhq/anchor-contrib@npm:1.14.2"
   dependencies:
@@ -1010,6 +991,23 @@ __metadata:
     "@solana/web3.js": ^1.42
     bn.js: ^4 || ^5
   checksum: 622c1891dbf4fa2f7c5cf4127a3ecaf94a4d17f05d5950aa0688618a6c08c226b84815479964f85b2d3ae760a4b700ce1ea63b966ac104d02da706131d26d3dc
+  languageName: node
+  linkType: hard
+
+"@saberhq/anchor-contrib@npm:^1.14.5":
+  version: 1.14.5
+  resolution: "@saberhq/anchor-contrib@npm:1.14.5"
+  dependencies:
+    "@saberhq/solana-contrib": ^1.14.5
+    eventemitter3: ^4.0.7
+    lodash.camelcase: ^4.3.0
+    lodash.mapvalues: ^4.6.0
+    tslib: ^2.4.0
+  peerDependencies:
+    "@project-serum/anchor": ^0.22 || ^0.23 || ^0.24
+    "@solana/web3.js": ^1.42
+    bn.js: ^4 || ^5
+  checksum: 26b73a8be7274eeb9a34940a5149518d2794a3e0c07550464d105c0e6a5696ffce45798f8d108278e9b12b331b41a043ab6f10486be9400d5ebe2fba719a3975
   languageName: node
   linkType: hard
 
@@ -1046,6 +1044,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@saberhq/option-utils@npm:^1.14.5":
+  version: 1.14.5
+  resolution: "@saberhq/option-utils@npm:1.14.5"
+  dependencies:
+    tslib: ^2.4.0
+  checksum: 5f7036be821f50a87cd8f0ca9ecd13c8495be811d4f2d657e41b8870814a6e231a08f863a7c544cb6f98caabee5e1012f49eb1d711050ae7c2ced42b5f5f879d
+  languageName: node
+  linkType: hard
+
 "@saberhq/solana-contrib@npm:^1.14.2":
   version: 1.14.2
   resolution: "@saberhq/solana-contrib@npm:1.14.2"
@@ -1062,6 +1069,25 @@ __metadata:
     "@solana/web3.js": ^1.42
     bn.js: ^4 || ^5
   checksum: 1e5c50af5bfadfe5f66c7ad29d02f65ce6909b277ec60b61e1b63823abdc4e50f1fe0b9d132ff5c80443b9aa216efbf1c1f098658bada5117c45cb72039df1df
+  languageName: node
+  linkType: hard
+
+"@saberhq/solana-contrib@npm:^1.14.5":
+  version: 1.14.5
+  resolution: "@saberhq/solana-contrib@npm:1.14.5"
+  dependencies:
+    "@saberhq/option-utils": ^1.14.5
+    "@solana/buffer-layout": ^4.0.0
+    "@types/promise-retry": ^1.1.3
+    "@types/retry": ^0.12.2
+    promise-retry: ^2.0.1
+    retry: ^0.13.1
+    tiny-invariant: ^1.2.0
+    tslib: ^2.4.0
+  peerDependencies:
+    "@solana/web3.js": ^1.42
+    bn.js: ^4 || ^5
+  checksum: 632a8d92f364642205be9ffde4626d3519310c05ded93294f9e4c58114deb7b4b15a1ed7222e871b705086fca280a8069b600835e58ab78bfacdc3cd284f015a
   languageName: node
   linkType: hard
 
@@ -1202,13 +1228,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@surec/tribeca-cli@workspace:."
   dependencies:
-    "@gokiprotocol/client": ^0.11.1
     "@oclif/core": ^1.13.10
     "@oclif/plugin-help": ^5
     "@oclif/plugin-plugins": ^2.0.1
     "@oclif/test": ^2
     "@project-serum/anchor": ^0.25.0-beta.1
-    "@saberhq/anchor-contrib": ^1.14.1
+    "@saberhq/anchor-contrib": ^1.14.5
     "@saberhq/chai-solana": ^1.14.2
     "@solana/buffer-layout": ^4.0.0
     "@solana/spl-token": ^0.3.4

@@ -1,6 +1,6 @@
 {
 	"name": "@surec/oracle",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"type": "module",
 	"description": "Typescript SDK for the Sure Oracle to be used to bring off-chain data on-chain",
 	"keywords": [
@@ -45,7 +45,7 @@
 		"randombytes": "^2.1.0",
 		"typescript": "^4.7.4"
 	},
-	"gitHead": "6f7ccb488260e96b69afb4780e2a5e2f092bce05",
+	"gitHead": "c118df13ffa6ed51393d4877ea8f2f1f351e7873",
 	"dependencies": {
 		"@saberhq/anchor-contrib": "^1.14.5"
 	}
