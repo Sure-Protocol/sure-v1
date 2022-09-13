@@ -7,8 +7,6 @@
 		"@solana/buffer-layout": "^4.0.0",
 		"@solana/wallet-adapter-phantom": "^0.9.3",
 		"@solana/web3.js": "^1.59.1",
-		"@surec/oracle": "workspace:^",
-		"@surec/sdk": "workspace:^",
 		"@types/chai": "^4.3.1",
 		"bn.js": "^5.2.1",
 		"buffer-layout": "^1.2.2",
