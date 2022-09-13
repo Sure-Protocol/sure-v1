@@ -1,4 +1,6 @@
-FROM node:alpine AS build
+FROM node:18-alpine AS build
+
+ENV SDK_VERSION=1.0.3
 
 WORKDIR /dapp/
 COPY .yarn .yarn
@@ -9,21 +11,15 @@ COPY package.json package.json
 COPY tsconfig.json tsconfig.json
 COPY packages/ packages/
 COPY nginx/nginx.conf nginx/nginx.conf
-COPY node_modules/ node_modules/
 
 
 RUN apk add git \
+    &&  && ls packages/**/package.json | xargs sed -i -e 's/workspace:^/^$SDK_VERSION/g' \
     && yarn set version stable \
-    && ls -la \
-    && ls packages/ -la \
-    && yarn --version \
-    && echo "clear cache -.-.-.-." \
-    && yarn cache clear \
-    && echo "get packages -.-.-.-." \
-    #&& yarn > /dev/null  & ps axf | grep yarn | grep -v grep | awk '{print "tail -f /proc/$1/fd/2"}' | sh \
-    && echo "build rollup-.-.-.-." \
+    && yarn rebuild \
+    && echo "build marketplace" \
     && yarn build:rollup \
-    && echo "done-.-.-.-." 
+    && echo "done." 
 
 
 FROM nginx

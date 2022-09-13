@@ -1,7 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 
 import { SURE_MINT, type SureOracleSDK } from '@surec/oracle';
-import * as spl from './../../../../../node_modules/@solana/spl-token';
+import * as spl from '@solana/spl-token';
 
 const decimals10 = (decimals: number): anchor.BN => {
 	return new anchor.BN(10).pow(new anchor.BN(decimals));

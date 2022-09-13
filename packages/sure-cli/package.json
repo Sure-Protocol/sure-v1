@@ -22,7 +22,7 @@
 		"@saberhq/anchor-contrib": "^1.14.5",
 		"@saberhq/chai-solana": "^1.14.2",
 		"@solana/web3.js": "^1.53.0",
-		"@surec/sdk": "^1.0.3",
+		"@surec/sdk": "workspace:^",
 		"@tribecahq/tribeca-sdk": "^0.5.8",
 		"jsbi": "^4.3.0"
 	},
