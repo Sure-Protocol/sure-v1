@@ -1,6 +1,6 @@
 {
 	"name": "@surec/app",
-	"version": "0.0.29",
+	"version": "1.0.1",
 	"private": true,
 	"scripts": {
 		"dev": "PORT=3001 vite --host",

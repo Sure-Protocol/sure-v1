@@ -1,6 +1,6 @@
 {
 	"name": "@surec/cli",
-	"version": "0.0.29",
+	"version": "1.0.1",
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
@@ -22,7 +22,7 @@
 		"@saberhq/anchor-contrib": "^1.14.5",
 		"@saberhq/chai-solana": "^1.14.2",
 		"@solana/web3.js": "^1.53.0",
-		"@surec/sdk": "^0.0.29",
+		"@surec/sdk": "^1.0.1",
 		"@tribecahq/tribeca-sdk": "^0.5.8",
 		"jsbi": "^4.3.0"
 	},

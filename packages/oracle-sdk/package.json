@@ -1,6 +1,6 @@
 {
 	"name": "@surec/oracle",
-	"version": "0.0.29",
+	"version": "1.0.1",
 	"type": "module",
 	"description": "Typescript SDK for the Sure Oracle to be used to bring off-chain data on-chain",
 	"keywords": [
