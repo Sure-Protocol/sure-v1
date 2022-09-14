@@ -17,6 +17,8 @@ RUN apk add git \
     && ls packages/**/package.json | xargs sed -i -e "s/workspace:^/^$SDK_VERSION/g" \
     && yarn set version stable \
     && yarn rebuild \
+    && echo "install packages dependencies " \
+    && yarn postinstall \
     && echo "build oracle" \
     && yarn build:oracle \
     && echo "done" 
