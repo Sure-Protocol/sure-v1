@@ -91,7 +91,7 @@
 
 <style lang="scss">
 	@import './../../sure-static/styles/index.scss';
-	:global {
+	:global(root) {
 		body {
 			background-color: $sure-black;
 			width: auto;

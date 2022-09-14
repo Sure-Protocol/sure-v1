@@ -1,7 +1,7 @@
 import * as anchor from '@project-serum/anchor';
 
 import { SURE_MINT, type SureOracleSDK } from '@surec/oracle';
-import * as spl from './../../../../../node_modules/@solana/spl-token';
+import * as spl from '@solana/spl-token';
 
 const decimals10 = (decimals: number): anchor.BN => {
 	return new anchor.BN(10).pow(new anchor.BN(decimals));
@@ -15,9 +15,15 @@ export const calculateAccountBalanceInDecimals = async (
 			SURE_MINT,
 			oracleSdk.provider.wallet.publicKey
 		);
-		const sureAtaAccount = await await spl.getAccount(oracleSdk.provider.connection, userSureAta);
+		const sureAtaAccount = await await spl.getAccount(
+			oracleSdk.provider.connection,
+			userSureAta
+		);
 
-		return calculateAmountInDecimals(oracleSdk, new anchor.BN(sureAtaAccount.amount));
+		return calculateAmountInDecimals(
+			oracleSdk,
+			new anchor.BN(sureAtaAccount.amount)
+		);
 	}
 	return new anchor.BN(0);
 };
@@ -27,13 +33,19 @@ export const calculateAmountInDecimals = async (
 	amount: anchor.BN
 ): Promise<anchor.BN> => {
 	if (oracleSdk) {
-		const sureMint = await spl.getMint(oracleSdk.provider.connection, SURE_MINT);
+		const sureMint = await spl.getMint(
+			oracleSdk.provider.connection,
+			SURE_MINT
+		);
 		return amount.div(decimals10(sureMint.decimals));
 	}
 	return new anchor.BN(0);
 };
 
-export const calculateAmountInGivenDecimals = (amount: anchor.BN, decimals: number): anchor.BN => {
+export const calculateAmountInGivenDecimals = (
+	amount: anchor.BN,
+	decimals: number
+): anchor.BN => {
 	return amount.div(decimals10(decimals));
 };
 
@@ -45,7 +57,10 @@ export const calculateAccountBalanceFullAmount = async (
 			SURE_MINT,
 			oracleSdk.provider.wallet.publicKey
 		);
-		const sureAtaAccount = await await spl.getAccount(oracleSdk.provider.connection, userSureAta);
+		const sureAtaAccount = await await spl.getAccount(
+			oracleSdk.provider.connection,
+			userSureAta
+		);
 
 		return calculateFullAmount(oracleSdk, new anchor.BN(sureAtaAccount.amount));
 	}
@@ -57,7 +72,10 @@ export const calculateFullAmount = async (
 	amount: anchor.BN
 ): Promise<anchor.BN> => {
 	if (oracleSdk) {
-		const sureMint = await spl.getMint(oracleSdk.provider.connection, SURE_MINT);
+		const sureMint = await spl.getMint(
+			oracleSdk.provider.connection,
+			SURE_MINT
+		);
 		return amount.mul(decimals10(sureMint.decimals));
 	}
 	return new anchor.BN(0);

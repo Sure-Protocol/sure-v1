@@ -1,5 +1,5 @@
 {
-	"name": "svelte-app",
+	"name": "oracle-app",
 	"version": "1.0.3",
 	"private": true,
 	"scripts": {
@@ -58,7 +58,6 @@
 		"@project-serum/anchor": "^0.25.0",
 		"@solana/spl-token": "^0.3.5",
 		"@solana/wallet-adapter-base": "^0.9.16",
-		"@solana/wallet-adapter-wallets": "^0.18.5",
 		"@solana/web3.js": "^1.59.1",
 		"@surec/oracle": "workspace:^",
 		"@svelte-on-solana/wallet-adapter-anchor": "^1.0.16-alpha.0",

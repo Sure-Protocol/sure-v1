@@ -13,7 +13,6 @@
 		prettySolanaExplorerLink,
 	} from '$lib/utils/formatting';
 	import CloseButton from './button/CloseButton.svelte';
-	import { EventEmitter } from '@solana/wallet-adapter-base';
 
 	let eventStack: Event[] = [];
 

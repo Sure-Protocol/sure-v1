@@ -4,24 +4,27 @@ ENV SDK_VERSION=1.0.3
 
 WORKDIR /dapp/
 COPY yarn.lock yarn.lock
-COPY .yarn .yarn
+#COPY .yarn .yarn
 COPY lerna.json lerna.json
-COPY .yarnrc.yml .yarnrc.yml
+#COPY .yarnrc.yml .yarnrc.yml
 COPY package.json package.json
 COPY tsconfig.json tsconfig.json
-COPY packages/ packages/
 COPY nginx/nginx.conf nginx/nginx.conf
 
 RUN apk add git \
+    && mkdir packages \
     && sed -i -e "s/workspace:^/^$SDK_VERSION/g" package.json \ 
-    && ls packages/**/package.json | xargs sed -i -e "s/workspace:^/^$SDK_VERSION/g" \
     && yarn set version stable \
-    && yarn rebuild \
-    && echo "install packages dependencies " \
-    && yarn postinstall \
-    && echo "build oracle" \
+    && yarn 
+COPY packages/ packages/
+
+RUN echo "build oracle" \
+    && ls packages/**/package.json | xargs sed -i -e "s/workspace:^/^$SDK_VERSION/g" \
+    && yarn \
+    && cd packages/oracle-app-spa && yarn \
     && yarn build:oracle \
-    && echo "done" 
+    && echo "done"
+   
 
 FROM nginx
 COPY --from=build /dapp/packages/oracle-app-spa/public/  /usr/share/nginx/html/
