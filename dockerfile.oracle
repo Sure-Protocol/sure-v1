@@ -13,6 +13,7 @@ COPY packages/ packages/
 COPY nginx/nginx.conf nginx/nginx.conf
 
 RUN apk add git \
+    && sed -i -e "s/workspace:^/^$SDK_VERSION/g" package.json \ 
     && ls packages/**/package.json | xargs sed -i -e "s/workspace:^/^$SDK_VERSION/g" \
     && yarn set version stable \
     && yarn rebuild \
