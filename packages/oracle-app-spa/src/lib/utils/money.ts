@@ -22,7 +22,7 @@ export const calculateAccountBalanceInDecimals = async (
 
 		return calculateAmountInDecimals(
 			oracleSdk,
-			new anchor.BN(sureAtaAccount.amount)
+			new anchor.BN(sureAtaAccount.amount.toString())
 		);
 	}
 	return new anchor.BN(0);
@@ -62,7 +62,10 @@ export const calculateAccountBalanceFullAmount = async (
 			userSureAta
 		);
 
-		return calculateFullAmount(oracleSdk, new anchor.BN(sureAtaAccount.amount));
+		return calculateFullAmount(
+			oracleSdk,
+			new anchor.BN(sureAtaAccount.amount.toString())
+		);
 	}
 	return new anchor.BN(0);
 };

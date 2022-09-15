@@ -129,3 +129,7 @@ export const proposeConfigChange = async ({
 		await trx.confirm();
 	}
 };
+
+export const oneDivXToFloat = (x: number): number => {
+	return 1 / x;
+};

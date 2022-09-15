@@ -6,19 +6,19 @@
 	import TestPanel from '$lib/test/TestPanel.svelte';
 	import { onMount } from 'svelte';
 	import EventStack from '$lib/EventStack.svelte';
-	import * as wallet_adapter from '@svelte-on-solana/wallet-adapter-core';
-	import * as oracle from '@surec/oracle';
-	import * as web3 from '@solana/web3.js';
 	import {
+		walletStore,
 		getLocalStorage,
 		setLocalStorage,
 	} from '@svelte-on-solana/wallet-adapter-core';
+	import * as oracle from '@surec/oracle';
+	import * as web3 from '@solana/web3.js';
 	import Page from './Page.svelte';
 
 	let showProposal = false;
 	let testModeActivated = false;
 	let keyCombo = '';
-	wallet_adapter.walletStore.subscribe((value) => {
+	walletStore.subscribe((value) => {
 		let connection = new web3.Connection(web3.clusterApiUrl('devnet'));
 		if (value.wallet?.publicKey != null) {
 			const oracleSdk = oracle.SureOracleSDK.init({

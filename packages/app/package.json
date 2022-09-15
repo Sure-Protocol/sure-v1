@@ -4,6 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "PORT=3001 vite --host",
+		"setup": "yarn",
 		"build:rollup": "rimraf dist_up/ && tsc && NODE_ENV=production rollup -c rollup.config.js",
 		"start:rollup": "NODE_ENV=development rollup -c rollup.config.js -w",
 		"preview": "vite preview"

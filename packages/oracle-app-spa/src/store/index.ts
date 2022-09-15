@@ -5,7 +5,3 @@ export * from './global';
 export * from './proposal';
 export * from './config';
 export * from './token';
-
-export const oneDivXToFloat = (x: number): number => {
-	return 1 / x;
-};

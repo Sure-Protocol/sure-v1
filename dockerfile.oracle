@@ -19,10 +19,8 @@ RUN apk add git \
 COPY packages/ packages/
 
 RUN echo "build oracle" \
-    && ls packages/**/package.json | xargs sed -i -e "s/workspace:^/^$SDK_VERSION/g" \
-    && yarn \
-    && cd packages/oracle-app-spa && yarn \
-    && yarn build:oracle \
+    #&& yarn setup \
+    #&& yarn build:oracle \
     && echo "done"
    
 

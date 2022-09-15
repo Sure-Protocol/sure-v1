@@ -35,7 +35,6 @@
 			SlopeWalletAdapter,
 			SolflareWalletAdapter,
 			SolletExtensionWalletAdapter,
-			TorusWalletAdapter,
 		} = await import('@solana/wallet-adapter-wallets');
 
 		const walletsMap = [
@@ -43,7 +42,6 @@
 			new SlopeWalletAdapter(),
 			new SolflareWalletAdapter(),
 			new SolletExtensionWalletAdapter(),
-			new TorusWalletAdapter(),
 		];
 
 		wallets = walletsMap;

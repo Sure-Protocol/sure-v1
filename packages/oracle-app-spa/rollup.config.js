@@ -14,6 +14,7 @@ import json from '@rollup/plugin-json';
 import typescript from '@rollup/plugin-typescript';
 import builtins from 'rollup-plugin-node-builtins';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
+import { babel } from '@rollup/plugin-babel';
 
 import globals from 'rollup-plugin-node-globals';
 
@@ -47,10 +48,11 @@ function serve() {
 export default {
 	input: 'src/main.ts',
 	output: {
-		sourcemap: 'inline',
-		format: 'es',
-		name: 'app',
-		dir: 'public/build',
+		sourcemap: true,
+		format: 'iife',
+		file: 'public/build/main.js',
+		inlineDynamicImports: true,
+		name: 'oracle',
 	},
 	plugins: [
 		svelte({
@@ -60,6 +62,7 @@ export default {
 				dev: !production,
 			},
 		}),
+		babel({ babelHelpers: 'bundled' }),
 		// we'll extract any component CSS out into
 		// a separate file - better for performance
 		copy({
@@ -85,27 +88,18 @@ export default {
 		resolve({
 			browser: true,
 			extensions: ['.js', '.ts'],
-			dedupe: [
-				'svelte',
-				'buffer',
-				'@saberhq/anchor-contrib',
-				'@solana/web3.js',
-				'bn.js',
-				'@saberhq/solana-contrib',
-				'@gokiprotocol/client',
-				'@project-serum/anchor',
-				'@saberhq/token-utils',
-				'lodash.mapvalues',
-				'tiny-invariant',
-			],
+			dedupe: ['svelte'],
+			preferBuiltins: false,
 		}),
-		commonjs(),
+		commonjs({
+			transformMixedEsModules: true,
+		}),
 		typescript({
 			sourceMap: !production,
 			inlineSources: !production,
 		}),
 		nodePolyfills({
-			include: ['buffer'],
+			include: ['buffer', 'Stream'],
 		}),
 		replace({
 			'process.env.NODE_ENV': JSON.stringify('production'),

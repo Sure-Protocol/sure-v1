@@ -39,6 +39,7 @@
 		"idl:build": "./scripts/build_and_move.sh oracle",
 		"dev": "lerna run dev",
 		"build": "lerna run build",
+		"setup": "lerna run setup",
 		"build:oracleSdk": "lerna run build:oracleSdk",
 		"build:oracle": "lerna run build:oracle",
 		"init:sure": "lerna run sure:init",

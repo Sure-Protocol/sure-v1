@@ -30,6 +30,7 @@
 	"scripts": {
 		"build": "tsc --p tsconfig.json && tsc --p tsconfig.cjs.json",
 		"build:oracleSdk": "yarn build",
+		"setup": "yarn",
 		"build:esm": "tsc --p tsconfig.json",
 		"build:cjs": "tsc --p tsconfig.cjs.json",
 		"build:up": "rollup --config",
