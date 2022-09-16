@@ -51,5 +51,5 @@ export const prettySolanaExplorerLink = (
 };
 
 export const maxXCharacters = (str: string, maxChar: number): string => {
-	return str.slice(0, maxChar) + '...';
+	return str.toString().slice(0, maxChar) + '...';
 };

@@ -73,7 +73,7 @@
 					`}
 				>
 					<p class="p p--small p--white text--margin-vertical__0">
-						{`Transaction: ${prettyPublicKey(event.tx)}`}
+						{`Transaction: ${event.tx}`}
 					</p>
 					<img
 						alt="Link to explorer"
