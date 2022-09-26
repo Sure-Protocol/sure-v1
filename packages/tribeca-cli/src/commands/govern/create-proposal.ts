@@ -2,7 +2,6 @@ import { Command, Flags } from '@oclif/core';
 import * as anchor from '@project-serum/anchor';
 import { Connection, PublicKey } from '@solana/web3.js';
 import * as saber_contrib from '@saberhq/solana-contrib';
-import { GokiSDK } from '@gokiprotocol/client';
 import { loadKeypairFromEnv } from '../../utils/loadkey';
 import * as tribeca from '@tribecahq/tribeca-sdk';
 import { GovernorWrapper, GovernWrapper } from '@tribecahq/tribeca-sdk';
