@@ -12,7 +12,7 @@
 	import * as goki from '@gokiprotocol/client';
 	import * as anchor from '@project-serum/anchor';
 	import type NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
-	import { getTestKeypairFromSeed } from '$lib/utils';
+	import { getTestKeypairFromSeed } from '$lib/utils/index.ts';
 	import { SURE_MINT } from '@surec/oracle';
 
 	$: tribecaSdk = $globalStore?.oracleSDK?.provider

@@ -1,14 +1,13 @@
 <script lang="ts">
 	import { css, cx } from '@emotion/css';
-	import close from './../../../sure-static/assets/icons/close.svg';
 	import {
 		createProposalState,
 		globalStore,
 		hydrateProposalCallback,
 		newEvent,
-	} from '../store/index';
+	} from '$stores/index';
 	import * as anchor from '@project-serum/anchor';
-	import { calculateFullAmount } from '$lib/utils';
+	import { calculateFullAmount } from '$lib/utils/index';
 	import type { SendTransactionError, TransactionError } from '@solana/web3.js';
 	import CloseButton from './button/CloseButton.svelte';
 	import MainButton from './button/MainButton.svelte';

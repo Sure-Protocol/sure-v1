@@ -2,7 +2,7 @@
 	import Header from '$lib/header/Header.svelte';
 	import CreateProposal from '$lib/CreateProposal.svelte';
 	import { css } from '@emotion/css';
-	import { globalStore, createProposalState } from '$stores/index';
+	import { globalStore, createProposalState } from '$stores/index.ts';
 	import TestPanel from '$lib/test/TestPanel.svelte';
 	import { onMount } from 'svelte';
 	import EventStack from '$lib/EventStack.svelte';

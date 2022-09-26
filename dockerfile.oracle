@@ -25,6 +25,6 @@ RUN echo "build oracle" \
    
 
 FROM nginx
-COPY --from=build /dapp/packages/oracle-app-spa/public/  /usr/share/nginx/html/
+COPY --from=build /dapp/packages/oracle-app-spa/dist/  /usr/share/nginx/html/
 COPY --from=build /dapp/nginx/nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80

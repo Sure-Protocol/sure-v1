@@ -1,0 +1,948 @@
+{
+    "version": 3,
+    "deployment": {
+        "manifest": {
+            "time": "2022-09-22T21:30:48.398694+02:00",
+            "magic": "e9ef98ed273059f87178a118d6cf44d6e4bb0218818d6839ec1a96fc4cbd96ca",
+            "version": "v3.39.3"
+        },
+        "secrets_providers": {
+            "type": "service",
+            "state": {
+                "url": "https://api.pulumi.com",
+                "owner": "kristohberg",
+                "project": "sure",
+                "stack": "dev"
+            }
+        },
+        "resources": [
+            {
+                "urn": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "custom": false,
+                "type": "pulumi:pulumi:Stack",
+                "outputs": {
+                    "baseImageName": "362993508148.dkr.ecr.us-east-1.amazonaws.com/sure-oracle-9d45ddd",
+                    "cluster": "",
+                    "fullImageName": "362993508148.dkr.ecr.us-east-1.amazonaws.com/sure-oracle-9d45ddd:d73f822e018b2be867149886624342ba09fa8a7bb150a4cab5c95b53cf726872",
+                    "sure-cert": "arn:aws:acm:us-east-1:362993508148:certificate/1010857d-a5f9-41c6-8c7e-61535479432b",
+                    "sure-ecs": "arn:aws:ecs:us-east-1:362993508148:cluster/sure-cluster-44cfd28",
+                    "url": "sure-lb-4c79eea-808542633.us-east-1.elb.amazonaws.com"
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::pulumi:providers:aws::default",
+                "custom": true,
+                "id": "ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "type": "pulumi:providers:aws",
+                "inputs": {
+                    "region": "us-east-1",
+                    "version": "5.13.0"
+                },
+                "outputs": {
+                    "region": "us-east-1",
+                    "version": "5.13.0"
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:ec2/securityGroup:SecurityGroup::web-sg",
+                "custom": true,
+                "id": "sg-0f9b22ac03ab169e5",
+                "type": "aws:ec2/securityGroup:SecurityGroup",
+                "inputs": {
+                    "__defaults": [
+                        "name",
+                        "revokeRulesOnDelete"
+                    ],
+                    "description": "Managed by Pulumi",
+                    "egress": [
+                        {
+                            "__defaults": [
+                                "self"
+                            ],
+                            "cidrBlocks": [
+                                "0.0.0.0/0"
+                            ],
+                            "fromPort": 0,
+                            "protocol": "-1",
+                            "self": false,
+                            "toPort": 0
+                        }
+                    ],
+                    "ingress": [
+                        {
+                            "__defaults": [
+                                "self"
+                            ],
+                            "cidrBlocks": [
+                                "0.0.0.0/0"
+                            ],
+                            "fromPort": 80,
+                            "protocol": "tcp",
+                            "self": false,
+                            "toPort": 80
+                        },
+                        {
+                            "__defaults": [
+                                "self"
+                            ],
+                            "cidrBlocks": [
+                                "0.0.0.0/0"
+                            ],
+                            "fromPort": 443,
+                            "protocol": "tcp",
+                            "self": false,
+                            "toPort": 443
+                        }
+                    ],
+                    "name": "web-sg-299293c",
+                    "revokeRulesOnDelete": false,
+                    "vpcId": "vpc-0edb4ea7b29b93a7f"
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":600000000000,\"delete\":900000000000},\"schema_version\":\"1\"}",
+                    "arn": "arn:aws:ec2:us-east-1:362993508148:security-group/sg-0f9b22ac03ab169e5",
+                    "description": "Managed by Pulumi",
+                    "egress": [
+                        {
+                            "cidrBlocks": [
+                                "0.0.0.0/0"
+                            ],
+                            "description": "",
+                            "fromPort": 0,
+                            "ipv6CidrBlocks": [],
+                            "prefixListIds": [],
+                            "protocol": "-1",
+                            "securityGroups": [],
+                            "self": false,
+                            "toPort": 0
+                        }
+                    ],
+                    "id": "sg-0f9b22ac03ab169e5",
+                    "ingress": [
+                        {
+                            "cidrBlocks": [
+                                "0.0.0.0/0"
+                            ],
+                            "description": "",
+                            "fromPort": 80,
+                            "ipv6CidrBlocks": [],
+                            "prefixListIds": [],
+                            "protocol": "tcp",
+                            "securityGroups": [],
+                            "self": false,
+                            "toPort": 80
+                        },
+                        {
+                            "cidrBlocks": [
+                                "0.0.0.0/0"
+                            ],
+                            "description": "",
+                            "fromPort": 443,
+                            "ipv6CidrBlocks": [],
+                            "prefixListIds": [],
+                            "protocol": "tcp",
+                            "securityGroups": [],
+                            "self": false,
+                            "toPort": 443
+                        }
+                    ],
+                    "name": "web-sg-299293c",
+                    "namePrefix": "",
+                    "ownerId": "362993508148",
+                    "revokeRulesOnDelete": false,
+                    "tags": {},
+                    "tagsAll": {},
+                    "vpcId": "vpc-0edb4ea7b29b93a7f"
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "description": [],
+                    "egress": [],
+                    "ingress": [],
+                    "vpcId": []
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:lb/targetGroup:TargetGroup::web-tg",
+                "custom": true,
+                "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-0760665/870ea694099e1383",
+                "type": "aws:lb/targetGroup:TargetGroup",
+                "inputs": {
+                    "__defaults": [
+                        "connectionTermination",
+                        "deregistrationDelay",
+                        "lambdaMultiValueHeadersEnabled",
+                        "name",
+                        "proxyProtocolV2",
+                        "slowStart"
+                    ],
+                    "connectionTermination": false,
+                    "deregistrationDelay": 300,
+                    "lambdaMultiValueHeadersEnabled": false,
+                    "name": "web-tg-0760665",
+                    "port": 80,
+                    "protocol": "HTTP",
+                    "proxyProtocolV2": false,
+                    "slowStart": 0,
+                    "targetType": "ip",
+                    "vpcId": "vpc-0edb4ea7b29b93a7f"
+                },
+                "outputs": {
+                    "arn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-0760665/870ea694099e1383",
+                    "arnSuffix": "targetgroup/web-tg-0760665/870ea694099e1383",
+                    "connectionTermination": false,
+                    "deregistrationDelay": 300,
+                    "healthCheck": {
+                        "enabled": true,
+                        "healthyThreshold": 5,
+                        "interval": 30,
+                        "matcher": "200",
+                        "path": "/",
+                        "port": "traffic-port",
+                        "protocol": "HTTP",
+                        "timeout": 5,
+                        "unhealthyThreshold": 2
+                    },
+                    "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-0760665/870ea694099e1383",
+                    "lambdaMultiValueHeadersEnabled": false,
+                    "loadBalancingAlgorithmType": "round_robin",
+                    "name": "web-tg-0760665",
+                    "port": 80,
+                    "protocol": "HTTP",
+                    "protocolVersion": "HTTP1",
+                    "proxyProtocolV2": false,
+                    "slowStart": 0,
+                    "stickiness": {
+                        "cookieDuration": 86400,
+                        "cookieName": "",
+                        "enabled": false,
+                        "type": "lb_cookie"
+                    },
+                    "tags": {},
+                    "tagsAll": {},
+                    "targetType": "ip",
+                    "vpcId": "vpc-0edb4ea7b29b93a7f"
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "port": [],
+                    "protocol": [],
+                    "targetType": [],
+                    "vpcId": []
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:lb/targetGroup:TargetGroup::web-tg-https",
+                "custom": true,
+                "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-https-17beff2/d692a4b47881ab7c",
+                "type": "aws:lb/targetGroup:TargetGroup",
+                "inputs": {
+                    "__defaults": [
+                        "connectionTermination",
+                        "deregistrationDelay",
+                        "lambdaMultiValueHeadersEnabled",
+                        "name",
+                        "proxyProtocolV2",
+                        "slowStart"
+                    ],
+                    "connectionTermination": false,
+                    "deregistrationDelay": 300,
+                    "lambdaMultiValueHeadersEnabled": false,
+                    "name": "web-tg-https-17beff2",
+                    "port": 443,
+                    "protocol": "HTTP",
+                    "proxyProtocolV2": false,
+                    "slowStart": 0,
+                    "targetType": "ip",
+                    "vpcId": "vpc-0edb4ea7b29b93a7f"
+                },
+                "outputs": {
+                    "arn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-https-17beff2/d692a4b47881ab7c",
+                    "arnSuffix": "targetgroup/web-tg-https-17beff2/d692a4b47881ab7c",
+                    "connectionTermination": false,
+                    "deregistrationDelay": 300,
+                    "healthCheck": {
+                        "enabled": true,
+                        "healthyThreshold": 5,
+                        "interval": 30,
+                        "matcher": "200",
+                        "path": "/",
+                        "port": "traffic-port",
+                        "protocol": "HTTP",
+                        "timeout": 5,
+                        "unhealthyThreshold": 2
+                    },
+                    "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-https-17beff2/d692a4b47881ab7c",
+                    "lambdaMultiValueHeadersEnabled": false,
+                    "loadBalancingAlgorithmType": "round_robin",
+                    "name": "web-tg-https-17beff2",
+                    "port": 443,
+                    "protocol": "HTTP",
+                    "protocolVersion": "HTTP1",
+                    "proxyProtocolV2": false,
+                    "slowStart": 0,
+                    "stickiness": {
+                        "cookieDuration": 86400,
+                        "cookieName": "",
+                        "enabled": false,
+                        "type": "lb_cookie"
+                    },
+                    "tags": {},
+                    "tagsAll": {},
+                    "targetType": "ip",
+                    "vpcId": "vpc-0edb4ea7b29b93a7f"
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "port": [],
+                    "protocol": [],
+                    "targetType": [],
+                    "vpcId": []
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:acm/certificate:Certificate::oracle-cert",
+                "custom": true,
+                "id": "arn:aws:acm:us-east-1:362993508148:certificate/1010857d-a5f9-41c6-8c7e-61535479432b",
+                "type": "aws:acm/certificate:Certificate",
+                "inputs": {
+                    "__defaults": [],
+                    "domainName": "oracle.sure.claims",
+                    "validationMethod": "DNS"
+                },
+                "outputs": {
+                    "arn": "arn:aws:acm:us-east-1:362993508148:certificate/1010857d-a5f9-41c6-8c7e-61535479432b",
+                    "certificateAuthorityArn": "",
+                    "domainName": "oracle.sure.claims",
+                    "domainValidationOptions": [
+                        {
+                            "domainName": "oracle.sure.claims",
+                            "resourceRecordName": "_c5321b4d2e13b9a7927c09834f545d82.oracle.sure.claims.",
+                            "resourceRecordType": "CNAME",
+                            "resourceRecordValue": "_fdaf6383ce86046a6a764d906dcadcad.tdzrjlznxp.acm-validations.aws."
+                        }
+                    ],
+                    "id": "arn:aws:acm:us-east-1:362993508148:certificate/1010857d-a5f9-41c6-8c7e-61535479432b",
+                    "notAfter": "",
+                    "notBefore": "",
+                    "options": {
+                        "certificateTransparencyLoggingPreference": "ENABLED"
+                    },
+                    "status": "PENDING_VALIDATION",
+                    "subjectAlternativeNames": [
+                        "oracle.sure.claims"
+                    ],
+                    "tags": {},
+                    "tagsAll": {},
+                    "validationEmails": [],
+                    "validationMethod": "DNS"
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "domainName": [],
+                    "validationMethod": []
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:ecs/cluster:Cluster::sure-cluster",
+                "custom": true,
+                "id": "arn:aws:ecs:us-east-1:362993508148:cluster/sure-cluster-44cfd28",
+                "type": "aws:ecs/cluster:Cluster",
+                "inputs": {
+                    "__defaults": [
+                        "name"
+                    ],
+                    "name": "sure-cluster-44cfd28"
+                },
+                "outputs": {
+                    "capacityProviders": [],
+                    "configuration": null,
+                    "defaultCapacityProviderStrategies": [],
+                    "id": "arn:aws:ecs:us-east-1:362993508148:cluster/sure-cluster-44cfd28",
+                    "name": "sure-cluster-44cfd28",
+                    "settings": []
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3"
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:iam/role:Role::task-exec-role",
+                "custom": true,
+                "id": "task-exec-role-4718dc1",
+                "type": "aws:iam/role:Role",
+                "inputs": {
+                    "__defaults": [
+                        "forceDetachPolicies",
+                        "maxSessionDuration",
+                        "name",
+                        "path"
+                    ],
+                    "assumeRolePolicy": "{\n\t\t\t\t\"Version\": \"2008-10-17\",\n\t\t\t\t\"Statement\": [{\n\t\t\t\t\t\"Sid\": \"\",\n\t\t\t\t\t\"Effect\": \"Allow\",\n\t\t\t\t\t\"Principal\": {\n\t\t\t\t\t\t\"Service\": \"ecs-tasks.amazonaws.com\"\n\t\t\t\t\t},\n\t\t\t\t\t\"Action\": \"sts:AssumeRole\"\n\t\t\t\t}]\n\t\t\t\t}",
+                    "forceDetachPolicies": false,
+                    "maxSessionDuration": 3600,
+                    "name": "task-exec-role-4718dc1",
+                    "path": "/"
+                },
+                "outputs": {
+                    "arn": "arn:aws:iam::362993508148:role/task-exec-role-4718dc1",
+                    "assumeRolePolicy": "{\"Statement\":[{\"Action\":\"sts:AssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ecs-tasks.amazonaws.com\"},\"Sid\":\"\"}],\"Version\":\"2008-10-17\"}",
+                    "createDate": "2022-09-16T11:48:30Z",
+                    "description": "",
+                    "forceDetachPolicies": false,
+                    "id": "task-exec-role-4718dc1",
+                    "inlinePolicies": [],
+                    "managedPolicyArns": [],
+                    "maxSessionDuration": 3600,
+                    "name": "task-exec-role-4718dc1",
+                    "namePrefix": "",
+                    "path": "/",
+                    "tags": {},
+                    "tagsAll": {},
+                    "uniqueId": "AROAVJBAZL42I6CLOH4BS"
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "assumeRolePolicy": []
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::docker:image:Image::sure-oracle",
+                "custom": false,
+                "type": "docker:image:Image",
+                "outputs": {
+                    "baseImageName": "362993508148.dkr.ecr.us-east-1.amazonaws.com/sure-oracle-9d45ddd",
+                    "imageName": "362993508148.dkr.ecr.us-east-1.amazonaws.com/sure-oracle-9d45ddd:d73f822e018b2be867149886624342ba09fa8a7bb150a4cab5c95b53cf726872",
+                    "registryServer": "https://362993508148.dkr.ecr.us-east-1.amazonaws.com"
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev"
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:ecr/repository:Repository::sure-oracle",
+                "custom": true,
+                "id": "sure-oracle-9d45ddd",
+                "type": "aws:ecr/repository:Repository",
+                "inputs": {
+                    "__defaults": [
+                        "imageTagMutability",
+                        "name"
+                    ],
+                    "imageTagMutability": "MUTABLE",
+                    "name": "sure-oracle-9d45ddd"
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"delete\":1200000000000}}",
+                    "arn": "arn:aws:ecr:us-east-1:362993508148:repository/sure-oracle-9d45ddd",
+                    "encryptionConfigurations": [
+                        {
+                            "encryptionType": "AES256",
+                            "kmsKey": ""
+                        }
+                    ],
+                    "id": "sure-oracle-9d45ddd",
+                    "imageScanningConfiguration": {
+                        "scanOnPush": false
+                    },
+                    "imageTagMutability": "MUTABLE",
+                    "name": "sure-oracle-9d45ddd",
+                    "registryId": "362993508148",
+                    "repositoryUrl": "362993508148.dkr.ecr.us-east-1.amazonaws.com/sure-oracle-9d45ddd",
+                    "tags": {},
+                    "tagsAll": {}
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3"
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:lb/loadBalancer:LoadBalancer::sure-lb",
+                "custom": true,
+                "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:loadbalancer/app/sure-lb-4c79eea/aeafd235ce9c29a0",
+                "type": "aws:lb/loadBalancer:LoadBalancer",
+                "inputs": {
+                    "__defaults": [
+                        "desyncMitigationMode",
+                        "dropInvalidHeaderFields",
+                        "enableCrossZoneLoadBalancing",
+                        "enableDeletionProtection",
+                        "enableHttp2",
+                        "enableWafFailOpen",
+                        "idleTimeout",
+                        "loadBalancerType",
+                        "name",
+                        "preserveHostHeader"
+                    ],
+                    "desyncMitigationMode": "defensive",
+                    "dropInvalidHeaderFields": false,
+                    "enableCrossZoneLoadBalancing": false,
+                    "enableDeletionProtection": false,
+                    "enableHttp2": true,
+                    "enableWafFailOpen": false,
+                    "idleTimeout": 60,
+                    "loadBalancerType": "application",
+                    "name": "sure-lb-4c79eea",
+                    "preserveHostHeader": false,
+                    "securityGroups": [
+                        "sg-0f9b22ac03ab169e5"
+                    ],
+                    "subnets": [
+                        "subnet-064214f897ddfb11e",
+                        "subnet-0f538e36896fff6bd",
+                        "subnet-06d662aff32a533e1",
+                        "subnet-0059f6cdfcffb2609",
+                        "subnet-0cf2a3b2d967187ec",
+                        "subnet-0e172166f724db8df"
+                    ]
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":600000000000,\"delete\":600000000000,\"update\":600000000000}}",
+                    "accessLogs": {
+                        "bucket": "",
+                        "enabled": false,
+                        "prefix": ""
+                    },
+                    "arn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:loadbalancer/app/sure-lb-4c79eea/aeafd235ce9c29a0",
+                    "arnSuffix": "app/sure-lb-4c79eea/aeafd235ce9c29a0",
+                    "customerOwnedIpv4Pool": "",
+                    "desyncMitigationMode": "defensive",
+                    "dnsName": "sure-lb-4c79eea-808542633.us-east-1.elb.amazonaws.com",
+                    "dropInvalidHeaderFields": false,
+                    "enableDeletionProtection": false,
+                    "enableHttp2": true,
+                    "enableWafFailOpen": false,
+                    "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:loadbalancer/app/sure-lb-4c79eea/aeafd235ce9c29a0",
+                    "idleTimeout": 60,
+                    "internal": false,
+                    "ipAddressType": "ipv4",
+                    "loadBalancerType": "application",
+                    "name": "sure-lb-4c79eea",
+                    "preserveHostHeader": false,
+                    "securityGroups": [
+                        "sg-0f9b22ac03ab169e5"
+                    ],
+                    "subnetMappings": [
+                        {
+                            "allocationId": "",
+                            "ipv6Address": "",
+                            "outpostId": "",
+                            "privateIpv4Address": "",
+                            "subnetId": "subnet-0f538e36896fff6bd"
+                        },
+                        {
+                            "allocationId": "",
+                            "ipv6Address": "",
+                            "outpostId": "",
+                            "privateIpv4Address": "",
+                            "subnetId": "subnet-0cf2a3b2d967187ec"
+                        },
+                        {
+                            "allocationId": "",
+                            "ipv6Address": "",
+                            "outpostId": "",
+                            "privateIpv4Address": "",
+                            "subnetId": "subnet-0059f6cdfcffb2609"
+                        },
+                        {
+                            "allocationId": "",
+                            "ipv6Address": "",
+                            "outpostId": "",
+                            "privateIpv4Address": "",
+                            "subnetId": "subnet-06d662aff32a533e1"
+                        },
+                        {
+                            "allocationId": "",
+                            "ipv6Address": "",
+                            "outpostId": "",
+                            "privateIpv4Address": "",
+                            "subnetId": "subnet-0e172166f724db8df"
+                        },
+                        {
+                            "allocationId": "",
+                            "ipv6Address": "",
+                            "outpostId": "",
+                            "privateIpv4Address": "",
+                            "subnetId": "subnet-064214f897ddfb11e"
+                        }
+                    ],
+                    "subnets": [
+                        "subnet-064214f897ddfb11e",
+                        "subnet-0f538e36896fff6bd",
+                        "subnet-06d662aff32a533e1",
+                        "subnet-0059f6cdfcffb2609",
+                        "subnet-0e172166f724db8df",
+                        "subnet-0cf2a3b2d967187ec"
+                    ],
+                    "tags": {},
+                    "tagsAll": {},
+                    "vpcId": "vpc-0edb4ea7b29b93a7f",
+                    "zoneId": "Z35SXDOTRQ7X7K"
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "dependencies": [
+                    "urn:pulumi:dev::sure::aws:ec2/securityGroup:SecurityGroup::web-sg"
+                ],
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "securityGroups": [
+                        "urn:pulumi:dev::sure::aws:ec2/securityGroup:SecurityGroup::web-sg"
+                    ]
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:iam/rolePolicyAttachment:RolePolicyAttachment::task-exec-policy",
+                "custom": true,
+                "id": "task-exec-role-4718dc1-20220916115008452100000001",
+                "type": "aws:iam/rolePolicyAttachment:RolePolicyAttachment",
+                "inputs": {
+                    "__defaults": [],
+                    "policyArn": "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
+                    "role": "task-exec-role-4718dc1"
+                },
+                "outputs": {
+                    "id": "task-exec-role-4718dc1-20220916115008452100000001",
+                    "policyArn": "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
+                    "role": "task-exec-role-4718dc1"
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "dependencies": [
+                    "urn:pulumi:dev::sure::aws:iam/role:Role::task-exec-role"
+                ],
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "role": [
+                        "urn:pulumi:dev::sure::aws:iam/role:Role::task-exec-role"
+                    ]
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:lb/listener:Listener::http-listener",
+                "custom": true,
+                "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:listener/app/sure-lb-4c79eea/aeafd235ce9c29a0/274c14386af6e6c8",
+                "type": "aws:lb/listener:Listener",
+                "inputs": {
+                    "__defaults": [],
+                    "defaultActions": [
+                        {
+                            "__defaults": [],
+                            "redirect": {
+                                "__defaults": [
+                                    "host",
+                                    "path",
+                                    "query"
+                                ],
+                                "host": "#{host}",
+                                "path": "/#{path}",
+                                "port": "443",
+                                "protocol": "HTTPS",
+                                "query": "#{query}",
+                                "statusCode": "HTTP_301"
+                            },
+                            "type": "redirect"
+                        }
+                    ],
+                    "loadBalancerArn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:loadbalancer/app/sure-lb-4c79eea/aeafd235ce9c29a0",
+                    "port": 80
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"read\":600000000000}}",
+                    "arn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:listener/app/sure-lb-4c79eea/aeafd235ce9c29a0/274c14386af6e6c8",
+                    "defaultActions": [
+                        {
+                            "authenticateCognito": null,
+                            "authenticateOidc": null,
+                            "fixedResponse": null,
+                            "forward": null,
+                            "order": 1,
+                            "redirect": {
+                                "host": "#{host}",
+                                "path": "/#{path}",
+                                "port": "443",
+                                "protocol": "HTTPS",
+                                "query": "#{query}",
+                                "statusCode": "HTTP_301"
+                            },
+                            "targetGroupArn": "",
+                            "type": "redirect"
+                        }
+                    ],
+                    "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:listener/app/sure-lb-4c79eea/aeafd235ce9c29a0/274c14386af6e6c8",
+                    "loadBalancerArn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:loadbalancer/app/sure-lb-4c79eea/aeafd235ce9c29a0",
+                    "port": 80,
+                    "protocol": "HTTP",
+                    "sslPolicy": "",
+                    "tags": {},
+                    "tagsAll": {}
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "dependencies": [
+                    "urn:pulumi:dev::sure::aws:lb/loadBalancer:LoadBalancer::sure-lb"
+                ],
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "loadBalancerArn": [
+                        "urn:pulumi:dev::sure::aws:lb/loadBalancer:LoadBalancer::sure-lb"
+                    ]
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:ecs/taskDefinition:TaskDefinition::sure-task",
+                "custom": true,
+                "id": "fargate-task-definition",
+                "type": "aws:ecs/taskDefinition:TaskDefinition",
+                "inputs": {
+                    "__defaults": [
+                        "skipDestroy"
+                    ],
+                    "containerDefinitions": "[{\n\t\t\t\t\"name\":\"sure-oracle\",\n\t\t\t\t\"image\": \"362993508148.dkr.ecr.us-east-1.amazonaws.com/sure-oracle-9d45ddd:d73f822e018b2be867149886624342ba09fa8a7bb150a4cab5c95b53cf726872\",\n\t\t\t\t\"portMappings\": [{\n\t\t\t\t\t\"containerPort\": 80,\n\t\t\t\t\t\"hostPort\": 80,\n\t\t\t\t\t\"protocol\": \"tcp\"\n\t\t\t\t}]\n\t\t\t}]\n\t\t\t",
+                    "cpu": "256",
+                    "executionRoleArn": "arn:aws:iam::362993508148:role/task-exec-role-4718dc1",
+                    "family": "fargate-task-definition",
+                    "memory": "512",
+                    "networkMode": "awsvpc",
+                    "requiresCompatibilities": [
+                        "FARGATE"
+                    ],
+                    "skipDestroy": false
+                },
+                "outputs": {
+                    "__meta": "{\"schema_version\":\"1\"}",
+                    "arn": "arn:aws:ecs:us-east-1:362993508148:task-definition/fargate-task-definition:2",
+                    "containerDefinitions": "[{\"cpu\":0,\"environment\":[],\"essential\":true,\"image\":\"362993508148.dkr.ecr.us-east-1.amazonaws.com/sure-oracle-9d45ddd:d73f822e018b2be867149886624342ba09fa8a7bb150a4cab5c95b53cf726872\",\"mountPoints\":[],\"name\":\"sure-oracle\",\"portMappings\":[{\"containerPort\":80,\"hostPort\":80,\"protocol\":\"tcp\"}],\"volumesFrom\":[]}]",
+                    "cpu": "256",
+                    "ephemeralStorage": null,
+                    "executionRoleArn": "arn:aws:iam::362993508148:role/task-exec-role-4718dc1",
+                    "family": "fargate-task-definition",
+                    "id": "fargate-task-definition",
+                    "inferenceAccelerators": [],
+                    "ipcMode": "",
+                    "memory": "512",
+                    "networkMode": "awsvpc",
+                    "pidMode": "",
+                    "placementConstraints": [],
+                    "proxyConfiguration": null,
+                    "requiresCompatibilities": [
+                        "FARGATE"
+                    ],
+                    "revision": 2,
+                    "runtimePlatform": null,
+                    "skipDestroy": false,
+                    "tags": {},
+                    "tagsAll": {},
+                    "taskRoleArn": "",
+                    "volumes": []
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "dependencies": [
+                    "urn:pulumi:dev::sure::aws:ecr/repository:Repository::sure-oracle",
+                    "urn:pulumi:dev::sure::aws:iam/role:Role::task-exec-role"
+                ],
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "containerDefinitions": [
+                        "urn:pulumi:dev::sure::aws:ecr/repository:Repository::sure-oracle"
+                    ],
+                    "executionRoleArn": [
+                        "urn:pulumi:dev::sure::aws:iam/role:Role::task-exec-role"
+                    ]
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:lb/listener:Listener::https-listener",
+                "custom": true,
+                "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:listener/app/sure-lb-4c79eea/aeafd235ce9c29a0/56a823d7ecf798e7",
+                "type": "aws:lb/listener:Listener",
+                "inputs": {
+                    "__defaults": [],
+                    "certificateArn": "arn:aws:acm:us-east-1:362993508148:certificate/1010857d-a5f9-41c6-8c7e-61535479432b",
+                    "defaultActions": [
+                        {
+                            "__defaults": [],
+                            "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-0760665/870ea694099e1383",
+                            "type": "forward"
+                        }
+                    ],
+                    "loadBalancerArn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:loadbalancer/app/sure-lb-4c79eea/aeafd235ce9c29a0",
+                    "port": 443,
+                    "protocol": "HTTPS",
+                    "sslPolicy": "ELBSecurityPolicy-2016-08"
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"read\":600000000000}}",
+                    "arn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:listener/app/sure-lb-4c79eea/aeafd235ce9c29a0/56a823d7ecf798e7",
+                    "certificateArn": "arn:aws:acm:us-east-1:362993508148:certificate/1010857d-a5f9-41c6-8c7e-61535479432b",
+                    "defaultActions": [
+                        {
+                            "authenticateCognito": null,
+                            "authenticateOidc": null,
+                            "fixedResponse": null,
+                            "forward": null,
+                            "order": 1,
+                            "redirect": null,
+                            "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-0760665/870ea694099e1383",
+                            "type": "forward"
+                        }
+                    ],
+                    "id": "arn:aws:elasticloadbalancing:us-east-1:362993508148:listener/app/sure-lb-4c79eea/aeafd235ce9c29a0/56a823d7ecf798e7",
+                    "loadBalancerArn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:loadbalancer/app/sure-lb-4c79eea/aeafd235ce9c29a0",
+                    "port": 443,
+                    "protocol": "HTTPS",
+                    "sslPolicy": "ELBSecurityPolicy-2016-08",
+                    "tags": {},
+                    "tagsAll": {}
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "dependencies": [
+                    "urn:pulumi:dev::sure::aws:acm/certificate:Certificate::oracle-cert",
+                    "urn:pulumi:dev::sure::aws:lb/loadBalancer:LoadBalancer::sure-lb",
+                    "urn:pulumi:dev::sure::aws:lb/targetGroup:TargetGroup::web-tg"
+                ],
+                "initErrors": [
+                    "updating urn:pulumi:dev::sure::aws:lb/listener:Listener::https-listener: 1 error occurred:\n\t* modifying ELBv2 Listener (arn:aws:elasticloadbalancing:us-east-1:362993508148:listener/app/sure-lb-4c79eea/aeafd235ce9c29a0/56a823d7ecf798e7): CertificateNotFound: Certificate 'arn:aws:acm:us-east-1:362993508148:certificate/1010857d-a5f9-41c6-8c7e-61535479432b' not found\n\tstatus code: 400, request id: 56be8695-a6e6-4e11-8737-ba3d60034f1e\n\n"
+                ],
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "certificateArn": [
+                        "urn:pulumi:dev::sure::aws:acm/certificate:Certificate::oracle-cert"
+                    ],
+                    "defaultActions": [
+                        "urn:pulumi:dev::sure::aws:lb/targetGroup:TargetGroup::web-tg"
+                    ],
+                    "loadBalancerArn": [
+                        "urn:pulumi:dev::sure::aws:lb/loadBalancer:LoadBalancer::sure-lb"
+                    ]
+                }
+            },
+            {
+                "urn": "urn:pulumi:dev::sure::aws:ecs/service:Service::sure-svc",
+                "custom": true,
+                "id": "arn:aws:ecs:us-east-1:362993508148:service/sure-cluster-44cfd28/sure-svc-afdeaab",
+                "type": "aws:ecs/service:Service",
+                "inputs": {
+                    "__defaults": [
+                        "deploymentMaximumPercent",
+                        "deploymentMinimumHealthyPercent",
+                        "enableEcsManagedTags",
+                        "enableExecuteCommand",
+                        "name",
+                        "schedulingStrategy",
+                        "waitForSteadyState"
+                    ],
+                    "cluster": "arn:aws:ecs:us-east-1:362993508148:cluster/sure-cluster-44cfd28",
+                    "deploymentMaximumPercent": 200,
+                    "deploymentMinimumHealthyPercent": 100,
+                    "desiredCount": 5,
+                    "enableEcsManagedTags": false,
+                    "enableExecuteCommand": false,
+                    "launchType": "FARGATE",
+                    "loadBalancers": [
+                        {
+                            "__defaults": [],
+                            "containerName": "sure-oracle",
+                            "containerPort": 80,
+                            "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-0760665/870ea694099e1383"
+                        }
+                    ],
+                    "name": "sure-svc-afdeaab",
+                    "networkConfiguration": {
+                        "__defaults": [],
+                        "assignPublicIp": true,
+                        "securityGroups": [
+                            "sg-0f9b22ac03ab169e5"
+                        ],
+                        "subnets": [
+                            "subnet-064214f897ddfb11e",
+                            "subnet-0f538e36896fff6bd",
+                            "subnet-06d662aff32a533e1",
+                            "subnet-0059f6cdfcffb2609",
+                            "subnet-0cf2a3b2d967187ec",
+                            "subnet-0e172166f724db8df"
+                        ]
+                    },
+                    "schedulingStrategy": "REPLICA",
+                    "taskDefinition": "arn:aws:ecs:us-east-1:362993508148:task-definition/fargate-task-definition:2",
+                    "waitForSteadyState": false
+                },
+                "outputs": {
+                    "__meta": "{\"e2bfb730-ecaa-11e6-8f88-34363bc7c4c0\":{\"create\":1200000000000,\"delete\":1200000000000,\"update\":1200000000000}}",
+                    "capacityProviderStrategies": [],
+                    "cluster": "arn:aws:ecs:us-east-1:362993508148:cluster/sure-cluster-44cfd28",
+                    "deploymentCircuitBreaker": {
+                        "enable": false,
+                        "rollback": false
+                    },
+                    "deploymentController": {
+                        "type": "ECS"
+                    },
+                    "deploymentMaximumPercent": 200,
+                    "deploymentMinimumHealthyPercent": 100,
+                    "desiredCount": 5,
+                    "enableEcsManagedTags": false,
+                    "enableExecuteCommand": false,
+                    "healthCheckGracePeriodSeconds": 0,
+                    "iamRole": "aws-service-role",
+                    "id": "arn:aws:ecs:us-east-1:362993508148:service/sure-cluster-44cfd28/sure-svc-afdeaab",
+                    "launchType": "FARGATE",
+                    "loadBalancers": [
+                        {
+                            "containerName": "sure-oracle",
+                            "containerPort": 80,
+                            "elbName": "",
+                            "targetGroupArn": "arn:aws:elasticloadbalancing:us-east-1:362993508148:targetgroup/web-tg-0760665/870ea694099e1383"
+                        }
+                    ],
+                    "name": "sure-svc-afdeaab",
+                    "networkConfiguration": {
+                        "assignPublicIp": true,
+                        "securityGroups": [
+                            "sg-0f9b22ac03ab169e5"
+                        ],
+                        "subnets": [
+                            "subnet-064214f897ddfb11e",
+                            "subnet-0f538e36896fff6bd",
+                            "subnet-06d662aff32a533e1",
+                            "subnet-0059f6cdfcffb2609",
+                            "subnet-0e172166f724db8df",
+                            "subnet-0cf2a3b2d967187ec"
+                        ]
+                    },
+                    "orderedPlacementStrategies": [],
+                    "placementConstraints": [],
+                    "platformVersion": "LATEST",
+                    "propagateTags": "NONE",
+                    "schedulingStrategy": "REPLICA",
+                    "serviceRegistries": null,
+                    "tags": {},
+                    "tagsAll": {},
+                    "taskDefinition": "arn:aws:ecs:us-east-1:362993508148:task-definition/fargate-task-definition:2",
+                    "waitForSteadyState": false
+                },
+                "parent": "urn:pulumi:dev::sure::pulumi:pulumi:Stack::sure-dev",
+                "dependencies": [
+                    "urn:pulumi:dev::sure::aws:ec2/securityGroup:SecurityGroup::web-sg",
+                    "urn:pulumi:dev::sure::aws:ecs/cluster:Cluster::sure-cluster",
+                    "urn:pulumi:dev::sure::aws:ecs/taskDefinition:TaskDefinition::sure-task",
+                    "urn:pulumi:dev::sure::aws:lb/listener:Listener::https-listener",
+                    "urn:pulumi:dev::sure::aws:lb/targetGroup:TargetGroup::web-tg"
+                ],
+                "provider": "urn:pulumi:dev::sure::pulumi:providers:aws::default::ecdda4d6-dcf1-42af-abbc-3a3484f9dad3",
+                "propertyDependencies": {
+                    "cluster": [
+                        "urn:pulumi:dev::sure::aws:ecs/cluster:Cluster::sure-cluster"
+                    ],
+                    "loadBalancers": [
+                        "urn:pulumi:dev::sure::aws:lb/targetGroup:TargetGroup::web-tg"
+                    ],
+                    "networkConfiguration": [
+                        "urn:pulumi:dev::sure::aws:ec2/securityGroup:SecurityGroup::web-sg"
+                    ],
+                    "taskDefinition": [
+                        "urn:pulumi:dev::sure::aws:ecs/taskDefinition:TaskDefinition::sure-task"
+                    ]
+                }
+            }
+        ]
+    }
+}

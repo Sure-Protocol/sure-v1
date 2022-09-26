@@ -11,7 +11,7 @@
 		prettyLargeNumber,
 		calculateAmountInDecimals,
 		calculateAmountInGivenDecimals,
-	} from '$lib/utils';
+	} from '$lib/utils/index.ts';
 	import MainButton from '$lib/button/MainButton.svelte';
 	import {
 		createProposalState,

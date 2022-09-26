@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
-	import logo from '$assets/icons/sureLogo.svg';
 	import { onMount } from 'svelte';
 	import { clusterApiUrl } from '@solana/web3.js';
 	import {
@@ -9,7 +8,6 @@
 		WalletMultiButton,
 		ConnectionProvider,
 	} from '@svelte-on-solana/wallet-adapter-ui';
-	import type { Adapter } from '@sveltejs/kit';
 	import {
 		startLoading,
 		loadingState,
@@ -19,12 +17,12 @@
 		loadingFailed,
 		loadingSuccessful,
 		hydrateTokenState,
-	} from '$stores/index';
+	} from '$stores/index.ts';
 
 	const localStorageKey = 'walletAdapter';
 	const network = clusterApiUrl('devnet'); // localhost or mainnet
 
-	let wallets: Adapter[];
+	let wallets: [];
 
 	let time: number = 0;
 	let timeUnix: number = 0;

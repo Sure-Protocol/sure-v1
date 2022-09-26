@@ -3155,22 +3155,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rollup/plugin-node-resolve@npm:^11.0.0":
-  version: 11.2.1
-  resolution: "@rollup/plugin-node-resolve@npm:11.2.1"
-  dependencies:
-    "@rollup/pluginutils": ^3.1.0
-    "@types/resolve": 1.17.1
-    builtin-modules: ^3.1.0
-    deepmerge: ^4.2.2
-    is-module: ^1.0.0
-    resolve: ^1.19.0
-  peerDependencies:
-    rollup: ^1.20.0||^2.0.0
-  checksum: 6f3b3ecf9a0596a5db4212984bdeb13bb7612693602407e9457ada075dea5a5f2e4e124c592352cf27066a88b194de9b9a95390149b52cf335d5b5e17b4e265b
-  languageName: node
-  linkType: hard
-
 "@rollup/plugin-node-resolve@npm:^13.3.0":
   version: 13.3.0
   resolution: "@rollup/plugin-node-resolve@npm:13.3.0"
@@ -3184,6 +3168,22 @@ __metadata:
   peerDependencies:
     rollup: ^2.42.0
   checksum: ec5418e6b3c23a9e30683056b3010e9d325316dcfae93fbc673ae64dad8e56a2ce761c15c48f5e2dcfe0c822fdc4a4905ee6346e3dcf90603ba2260afef5a5e6
+  languageName: node
+  linkType: hard
+
+"@rollup/plugin-node-resolve@npm:^14.1.0":
+  version: 14.1.0
+  resolution: "@rollup/plugin-node-resolve@npm:14.1.0"
+  dependencies:
+    "@rollup/pluginutils": ^3.1.0
+    "@types/resolve": 1.17.1
+    deepmerge: ^4.2.2
+    is-builtin-module: ^3.1.0
+    is-module: ^1.0.0
+    resolve: ^1.19.0
+  peerDependencies:
+    rollup: ^2.78.0
+  checksum: 7c5bed3e5a511ee47172acd91da1a828383f7ef72d54d27d8050598ef9038df0f86a8559db455611e138e07b99d787fd7445b11f81129970d07104644576d80a
   languageName: node
   linkType: hard
 
@@ -4103,6 +4103,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@solana/web3.js@npm:^1.63.1":
+  version: 1.63.1
+  resolution: "@solana/web3.js@npm:1.63.1"
+  dependencies:
+    "@babel/runtime": ^7.12.5
+    "@noble/ed25519": ^1.7.0
+    "@noble/hashes": ^1.1.2
+    "@noble/secp256k1": ^1.6.3
+    "@solana/buffer-layout": ^4.0.0
+    bigint-buffer: ^1.1.5
+    bn.js: ^5.0.0
+    borsh: ^0.7.0
+    bs58: ^4.0.1
+    buffer: 6.0.1
+    fast-stable-stringify: ^1.0.0
+    jayson: ^3.4.4
+    node-fetch: 2
+    rpc-websockets: ^7.5.0
+    superstruct: ^0.14.2
+  checksum: 77a79cc4b7f9b081aa8df1d01450015f594d11557b515b19f06c875bd1f489e421065c51eb0c756207dca5f61494c67bbcf81209b2bd3e292d239e7701e5a90e
+  languageName: node
+  linkType: hard
+
 "@solflare-wallet/sdk@npm:^1.0.11":
   version: 1.0.12
   resolution: "@solflare-wallet/sdk@npm:1.0.12"
@@ -4368,6 +4391,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@surec/cli@workspace:packages/sure-cli"
   dependencies:
+    "@gokiprotocol/client": ^0.11.1
     "@project-serum/anchor": ^0.25.0-beta.1
     "@saberhq/anchor-contrib": ^1.14.5
     "@saberhq/chai-solana": ^1.14.2
@@ -4537,16 +4561,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sveltejs/vite-plugin-svelte@npm:^1.0.5":
-  version: 1.0.5
-  resolution: "@sveltejs/vite-plugin-svelte@npm:1.0.5"
+"@sveltejs/vite-plugin-svelte@npm:^1.0.8":
+  version: 1.0.8
+  resolution: "@sveltejs/vite-plugin-svelte@npm:1.0.8"
   dependencies:
     "@rollup/pluginutils": ^4.2.1
     debug: ^4.3.4
     deepmerge: ^4.2.2
     kleur: ^4.1.5
     magic-string: ^0.26.3
-    svelte-hmr: ^0.14.12
+    svelte-hmr: ^0.15.0
   peerDependencies:
     diff-match-patch: ^1.0.5
     svelte: ^3.44.0
@@ -4554,7 +4578,7 @@ __metadata:
   peerDependenciesMeta:
     diff-match-patch:
       optional: true
-  checksum: 4610371c0d20f1fc276c41cbbba6c888f68d3efd0daddd480773c163afc67eb253dbdc47681c02bc58e5f03a74e64dd27a6b1dd544e931c7218d63102258f1e7
+  checksum: b250f3c5f22c70ed3ae0de7d71847886f4bf61a5dd64e2a23aeed529372805e09bc240b270eec7dd04a55a5f94bb4e9807607c542aa30371b88e65371d11bc8f
   languageName: node
   linkType: hard
 
@@ -6619,7 +6643,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"builtin-modules@npm:^3.1.0, builtin-modules@npm:^3.3.0":
+"builtin-modules@npm:^3.3.0":
   version: 3.3.0
   resolution: "builtin-modules@npm:3.3.0"
   checksum: db021755d7ed8be048f25668fe2117620861ef6703ea2c65ed2779c9e3636d5c3b82325bd912244293959ff3ae303afa3471f6a15bf5060c103e4cc3a839749d
@@ -13282,7 +13306,7 @@ __metadata:
     "@rollup/plugin-commonjs": ^17.0.0
     "@rollup/plugin-inject": ^4.0.4
     "@rollup/plugin-json": ^4.1.0
-    "@rollup/plugin-node-resolve": ^11.0.0
+    "@rollup/plugin-node-resolve": ^14.1.0
     "@rollup/plugin-replace": ^4.0.0
     "@rollup/plugin-typescript": ^8.5.0
     "@rollup/plugin-url": ^7.0.0
@@ -13296,7 +13320,7 @@ __metadata:
     "@svelte-on-solana/wallet-adapter-core": ^1.0.8-alpha.0
     "@svelte-on-solana/wallet-adapter-ui": ^1.0.20-alpha.0
     "@sveltejs/adapter-auto": next
-    "@sveltejs/vite-plugin-svelte": ^1.0.5
+    "@sveltejs/vite-plugin-svelte": ^1.0.8
     "@tribecahq/tribeca-sdk": ^0.5.8
     "@tsconfig/svelte": ^3.0.0
     "@types/cookie": ^0.5.1
@@ -13332,7 +13356,8 @@ __metadata:
     svelte-steps: ^2.3.5
     tslib: ^2.4.0
     typescript: ^4.7.4
-    vite: ^3.0.8
+    vite: ^3.1.3
+    vite-plugin-replace: ^0.1.1
   languageName: unknown
   linkType: soft
 
@@ -16107,11 +16132,12 @@ __metadata:
     "@saberhq/anchor-contrib": ^1.14.5
     "@saberhq/solana-contrib": ^1.14.5
     "@solana/buffer-layout": ^4.0.0
-    "@solana/web3.js": ^1.59.1
+    "@solana/web3.js": ^1.63.1
     "@types/chai": ^4.3.1
     "@types/mocha": ^9.0.0
     "@types/node": ^18.7.18
     bn.js: ^5.2.1
+    buffer: ^6.0.3
     buffer-layout: ^1.2.2
     chai: ^4.3.4
     decimal.js: 3.0.0
@@ -16146,12 +16172,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"svelte-hmr@npm:^0.14.12":
-  version: 0.14.12
-  resolution: "svelte-hmr@npm:0.14.12"
+"svelte-hmr@npm:^0.15.0":
+  version: 0.15.0
+  resolution: "svelte-hmr@npm:0.15.0"
   peerDependencies:
     svelte: ">=3.19.0"
-  checksum: ac5f91030007c709e92992e9a06cda59304fe99c428d163aeff11c005b4bb293c504f1d1aa4a173cf27bbe38eaf7544956299074402efa1abb5ef61573b3f408
+  checksum: e15581769aa5a6f8e1eeaf3f47a34b579c76f5a72d2ae1ba32cca6ab71b73d721defde472f1d4b924f8ade0d5bb6a7a04aa1817c3b4705c45dffa2732df07a83
   languageName: node
   linkType: hard
 
@@ -16981,9 +17007,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^3.0.8":
-  version: 3.1.0
-  resolution: "vite@npm:3.1.0"
+"vite-plugin-replace@npm:^0.1.1":
+  version: 0.1.1
+  resolution: "vite-plugin-replace@npm:0.1.1"
+  peerDependencies:
+    vite: ^2
+  checksum: 247ccdc61605f0a2e097e25fd31cc3528ecb8682dc691fdb5944cc67e427f2ca66864f3bdb21cfb80f835f62366fec8d86f38a2e427f11e016acdbc51219a117
+  languageName: node
+  linkType: hard
+
+"vite@npm:^3.1.3":
+  version: 3.1.3
+  resolution: "vite@npm:3.1.3"
   dependencies:
     esbuild: ^0.15.6
     fsevents: ~2.3.2
@@ -17009,7 +17044,7 @@ __metadata:
       optional: true
   bin:
     vite: bin/vite.js
-  checksum: 1a343e3d46450181f79f34ff49cca5ff59bb7472de51ea2c4a042aa076f597d27d25c49f48405e82f607af7d8c1c13a9e789402ccb1b23570132382132ec3903
+  checksum: af13c9820c292792f02d0a25fd46d8557e627b93f95bc05b5f7f1261e9565e9e69fda2df0c0898f248edb811ebcac5400a85a81625ef29749f50b18273439d91
   languageName: node
   linkType: hard
 

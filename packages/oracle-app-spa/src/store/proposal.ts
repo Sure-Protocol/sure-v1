@@ -6,7 +6,11 @@ import {
 	getVoteStatus,
 } from '@surec/oracle';
 import { newEvent } from './event';
-import { countdownFromUnix, getNextDeadline, isInFuture } from '$lib/utils';
+import {
+	countdownFromUnix,
+	getNextDeadline,
+	isInFuture,
+} from '$lib/utils/index.ts';
 import type { PublicKey } from '@solana/web3.js';
 import type { ProgramAccount } from '@project-serum/anchor';
 
@@ -63,6 +67,7 @@ export const hydrateProposals = async (oracleSdk: SureOracleSDK) => {
 			loadingFailed: true,
 			proposals: null,
 		});
+		console.log('err: ', err);
 		newEvent.set({
 			name: 'failed to get proposals',
 			message: err as string,

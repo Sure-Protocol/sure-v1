@@ -6,7 +6,7 @@
 		calculateAmountInGivenDecimals,
 		countdownFromUnix,
 		unixSecondsToReadableString,
-	} from '$lib/utils';
+	} from '$lib/utils/index.ts';
 	import {
 		configState,
 		globalStore,

@@ -1,9 +1,13 @@
 import type { PublicKey } from '@solana/web3.js';
 import type * as anchor from '@project-serum/anchor';
 
+export const prettyPublicKeyString = (pkString: string) => {
+	return pkString.slice(0, 4) + '...' + pkString.slice(-4);
+};
+
 export const prettyPublicKey = (pk: PublicKey): string => {
 	const pkString = pk.toString();
-	return pkString.slice(0, 4) + '...' + pkString.slice(-4);
+	return prettyPublicKeyString(pkString);
 };
 
 export const unixToReadable = (unixTimestamp: anchor.BN): string => {
@@ -51,5 +55,8 @@ export const prettySolanaExplorerLink = (
 };
 
 export const maxXCharacters = (str: string, maxChar: number): string => {
-	return str.toString().slice(0, maxChar) + '...';
+	if (str) {
+		return str.toString().slice(0, maxChar) + '...';
+	}
+	return str;
 };

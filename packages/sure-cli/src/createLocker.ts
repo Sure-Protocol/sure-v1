@@ -1,13 +1,7 @@
 import * as anchor from '@project-serum/anchor';
-import { program } from '@project-serum/anchor/dist/cjs/spl/token';
 import { Connection, Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
-import { SmartWallet } from './smart_wallet';
-import * as goki from '@gokiprotocol/client';
 import * as saber_contrib from '@saberhq/solana-contrib';
-import * as saber_anchor from '@saberhq/anchor-contrib';
-import * as chai_solana from '@saberhq/chai-solana';
 import * as tribeca from '@tribecahq/tribeca-sdk';
-import { expect } from 'chai';
 import * as spl_token from '@solana/spl-token';
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 async function run() {

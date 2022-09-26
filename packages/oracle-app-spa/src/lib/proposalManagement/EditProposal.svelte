@@ -7,21 +7,10 @@
 		TransactionResult,
 	} from '@surec/oracle';
 	import { getVoteStatus, SURE_MINT } from '@surec/oracle';
-	import {
-		countdownFromUnix,
-		isInFuture,
-		getNextDeadline,
-		saveSalt,
-	} from '$lib/utils';
 	import { selectedProposal, globalStore, newEvent } from '../../store/index';
-	import { Steps } from 'svelte-steps';
-	import CreateProposal from '../CreateProposal.svelte';
 	import { SendTransactionError } from '@solana/web3.js';
-	import StatBox from '$lib/box/StatBox.svelte';
-	import { to_number } from 'svelte/internal';
-	import { calculateAmountInDecimals } from '$lib/utils/money';
+	import { calculateAmountInDecimals } from '$lib/utils/money.ts';
 	import CollectRewards from '$lib/VoteManagement/forms/CollectRewards.svelte';
-	import errorCircle from '$assets/icons/errorCircle.svg';
 
 	let steps: { status: VoteStatus; text: string }[] = [
 		{ status: 'Voting', text: 'Voting' },
@@ -92,12 +81,10 @@
 	async function collectProposerReward(): Promise<TransactionResult> {
 		const oracleSdk = $globalStore.oracleSDK;
 		if (oracleSdk && proposal) {
-			const collectTx = await oracleSdk
-				.proposal()
-				.collectProposerRewards({
-					proposal: proposal.publicKey,
-					tokenMint: SURE_MINT,
-				});
+			const collectTx = await oracleSdk.proposal().collectProposerRewards({
+				proposal: proposal.publicKey,
+				tokenMint: SURE_MINT,
+			});
 			return await collectTx.confirm();
 		} else {
 			throw new SendTransactionError('could not find valid proposal');

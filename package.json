@@ -5,9 +5,10 @@
 		"@saberhq/anchor-contrib": "^1.14.5",
 		"@saberhq/solana-contrib": "^1.14.5",
 		"@solana/buffer-layout": "^4.0.0",
-		"@solana/web3.js": "^1.59.1",
+		"@solana/web3.js": "^1.63.1",
 		"@types/chai": "^4.3.1",
 		"bn.js": "^5.2.1",
+		"buffer": "^6.0.3",
 		"buffer-layout": "^1.2.2",
 		"decimal.js": "3.0.0",
 		"fs-extra": "^10.1.0",
@@ -49,7 +50,8 @@
 		"build:vite": "lerna run build:vite",
 		"start:rollup": "lerna run start:rollup",
 		"watch": "lerna run --parallel watch",
-		"release": "lerna publish from-package --no-verify-access"
+		"release": "lerna publish from-package --no-verify-access",
+		"pulumi:up": "cd pulumi && pulumi up"
 	},
 	"workspaces": [
 		"packages/*"

@@ -11,19 +11,23 @@ export const calculateAccountBalanceInDecimals = async (
 	oracleSdk: SureOracleSDK
 ): Promise<anchor.BN> => {
 	if (oracleSdk) {
-		const userSureAta = await spl.getAssociatedTokenAddress(
-			SURE_MINT,
-			oracleSdk.provider.wallet.publicKey
-		);
-		const sureAtaAccount = await await spl.getAccount(
-			oracleSdk.provider.connection,
-			userSureAta
-		);
+		try {
+			const userSureAta = await spl.getAssociatedTokenAddress(
+				SURE_MINT,
+				oracleSdk.provider.wallet.publicKey
+			);
+			const sureAtaAccount = await await spl.getAccount(
+				oracleSdk.provider.connection,
+				userSureAta
+			);
 
-		return calculateAmountInDecimals(
-			oracleSdk,
-			new anchor.BN(sureAtaAccount.amount.toString())
-		);
+			return calculateAmountInDecimals(
+				oracleSdk,
+				new anchor.BN(sureAtaAccount.amount.toString())
+			);
+		} catch {
+			return new anchor.BN(0);
+		}
 	}
 	return new anchor.BN(0);
 };

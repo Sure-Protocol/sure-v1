@@ -8,7 +8,7 @@
 		globalStore,
 		selectedProposal,
 		isOwnerOfProposal,
-	} from '$stores/index';
+	} from '$stores/index.ts';
 	import ProposalStatus from '$lib/ProposalStatus.svelte';
 </script>
 

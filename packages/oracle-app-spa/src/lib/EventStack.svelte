@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { css, cx } from '@emotion/css';
-	import { fade } from 'svelte/transition';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 
-	import { prettyPublicKey } from '$lib/utils';
 	import { newEvent, type Event } from '../store/index';
 	import logo from '$assets/icons/openInNew.svg';
-	import close from '$assets/icons/close.svg';
 	import {
 		maxXCharacters,
+		prettyPublicKey,
+		prettyPublicKeyString,
 		prettySolanaExplorerLink,
 	} from '$lib/utils/formatting';
 	import CloseButton from './button/CloseButton.svelte';
@@ -61,7 +60,7 @@
 			<CloseButton onClick={() => pop(idx)} />
 			<h4 class="h4 h4--white text--margin-vertical__0">{`${event.name}`}</h4>
 			{#if event.message}
-				<p class={'p p--small'}>{maxXCharacters(event.message, 20)}</p>
+				<p class={'p p--small'}>{maxXCharacters(event.message, 500)}</p>
 			{/if}
 			{#if event.tx}
 				<a
@@ -73,7 +72,7 @@
 					`}
 				>
 					<p class="p p--small p--white text--margin-vertical__0">
-						{`Transaction: ${event.tx}`}
+						{`Transaction: ${prettyPublicKeyString(event.tx)}`}
 					</p>
 					<img
 						alt="Link to explorer"

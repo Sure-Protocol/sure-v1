@@ -22,7 +22,7 @@
 		isInFuture,
 		getNextDeadline,
 		saveSalt,
-	} from '$lib/utils';
+	} from '$lib/utils/index';
 	import {
 		selectedProposal,
 		globalStore,
@@ -38,7 +38,6 @@
 	import type { SendTransactionError } from '@solana/web3.js';
 	import StatBox from '$lib/box/StatBox.svelte';
 	import { to_number } from 'svelte/internal';
-	import errorCircle from '$assets/icons/errorCircle.svg';
 
 	let steps: { status: VoteStatus; text: string }[] = [
 		{ status: 'Voting', text: 'Voting' },

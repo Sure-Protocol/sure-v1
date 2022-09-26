@@ -2,11 +2,12 @@ import {
 	calculateAccountBalanceInDecimals,
 	calculateAmountInDecimals,
 	getEscrowSdk,
-} from '$lib/utils';
+} from './../lib/utils/index';
 import { SURE_MINT, type SureOracleSDK } from '@surec/oracle';
 import { writable } from 'svelte/store';
 import * as spl from '@solana/spl-token';
 import { newEvent } from './event';
+import { BN } from 'bn.js';
 
 export type TokenState = {
 	mintDecimals: number;
@@ -35,11 +36,16 @@ export const hydrateTokenState = async (oracleSdk: SureOracleSDK) => {
 		const decimals = (
 			await spl.getMint(oracleSdk.provider.connection, SURE_MINT)
 		).decimals;
+
 		const escrowSdk = await getEscrowSdk(oracleSdk);
-		const votingPower = await escrowSdk?.calculateVotingPower(new Date());
-		if (!votingPower) {
-			throw new Error('not able to get voting power');
+		oracleSdk.provider.connection.rpcEndpoint;
+		let votingPower;
+		try {
+			votingPower = await escrowSdk?.calculateVotingPower(new Date());
+		} catch {
+			votingPower = new BN(0);
 		}
+
 		const veSureAmount = await calculateAmountInDecimals(
 			oracleSdk,
 			votingPower

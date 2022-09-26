@@ -4,7 +4,7 @@
 	import type { ProposalType } from '@surec/oracle';
 	import * as anchor from '@project-serum/anchor';
 
-	import { getSalt } from '$lib/utils';
+	import { getSalt } from '$lib/utils/index.ts';
 	import MainButton from '$lib/button/MainButton.svelte';
 	import type { SendTransactionError } from '@solana/web3.js';
 

@@ -12,9 +12,7 @@
 		getLockerSdk,
 		daysToSecond,
 		calculateFullAmount,
-		calculateAccountBalanceInDecimals,
-		calculateAmountInDecimals,
-	} from '$lib/utils';
+	} from '$lib/utils/index';
 	import MainButton from './button/MainButton.svelte';
 	import type { SendTransactionError } from '@solana/web3.js';
 	import TypeInputAmount from './input/TypeInputAmount.svelte';

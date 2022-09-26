@@ -18,6 +18,7 @@
 		"sure:create_locker": "yarn build && node bin/createLocker.js"
 	},
 	"dependencies": {
+		"@gokiprotocol/client": "^0.11.1",
 		"@project-serum/anchor": "^0.25.0-beta.1",
 		"@saberhq/anchor-contrib": "^1.14.5",
 		"@saberhq/chai-solana": "^1.14.2",

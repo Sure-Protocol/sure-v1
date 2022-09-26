@@ -105,12 +105,13 @@ func main() {
 		}
 
 		cert, err := acm.NewCertificate(ctx, "oracle-cert", &acm.CertificateArgs{
-			DomainName:       pulumi.String("sure.claims"),
+			DomainName:       pulumi.String("oracle.sure.claims"),
 			ValidationMethod: pulumi.String("DNS"),
 		})
 		if err != nil {
 			return err
 		}
+		ctx.Export("sure-cert", cert.Arn)
 
 		//create listener on port 80 and forward requests to target group
 		_, err = lb.NewListener(ctx, "http-listener", &lb.ListenerArgs{
@@ -136,7 +137,7 @@ func main() {
 			Port:            pulumi.Int(443),
 			Protocol:        pulumi.String("HTTPS"),
 			SslPolicy:       pulumi.String("ELBSecurityPolicy-2016-08"),
-			CertificateArn:  cert.Arn,
+			CertificateArn:  pulumi.String("arn:aws:acm:us-east-1:362993508148:certificate/1ea2a02f-1162-464e-b454-e1641f6f2a7a"),
 			DefaultActions: lb.ListenerDefaultActionArray{
 				lb.ListenerDefaultActionArgs{
 					Type:           pulumi.String("forward"),

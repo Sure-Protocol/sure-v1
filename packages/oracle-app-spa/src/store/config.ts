@@ -10,8 +10,6 @@ import {
 	getGovernorAddress,
 	GovernorWrapper,
 } from '@tribecahq/tribeca-sdk';
-import { getTestKeypairFromSeed } from '$lib/utils';
-import type { Update } from 'vite';
 
 export type ConfigState = {
 	isLoading: boolean;
