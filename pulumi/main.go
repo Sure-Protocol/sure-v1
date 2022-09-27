@@ -137,7 +137,7 @@ func main() {
 			Port:            pulumi.Int(443),
 			Protocol:        pulumi.String("HTTPS"),
 			SslPolicy:       pulumi.String("ELBSecurityPolicy-2016-08"),
-			CertificateArn:  pulumi.String("arn:aws:acm:us-east-1:362993508148:certificate/1ea2a02f-1162-464e-b454-e1641f6f2a7a"),
+			CertificateArn:  pulumi.String("arn:aws:acm:us-east-1:362993508148:certificate/4edd964c-0447-450f-a2f3-57a0e52fad2a"),
 			DefaultActions: lb.ListenerDefaultActionArray{
 				lb.ListenerDefaultActionArgs{
 					Type:           pulumi.String("forward"),
