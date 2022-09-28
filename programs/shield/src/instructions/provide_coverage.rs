@@ -3,7 +3,8 @@ use agnostic_orderbook::{
     *,
 };
 use anchor_lang::prelude::*;
-use anchor_spl::token::Mint;
+use anchor_spl::token::{Mint, Token, TokenAccount};
+use sure_common::token::Seeds;
 
 use crate::utils::{CallbackInfo, ShieldError, SURE_SHIELD};
 
@@ -37,17 +38,45 @@ pub struct OrderParams {
 pub struct CoveragePosition {
     /// pda bump
     pub bump: u8, // 1 byte
+    pub bump_array: [u8; 1],
 
     /// mint of position
     pub mint: Pubkey, // 32 bytes
+
+    /// pending coverage
+    pub pending_coverage: u64,
+
+    /// provided coverage
+    pub provided_coverage: u64,
+
+    pub premium: u64,
 }
 
 impl CoveragePosition {
     pub const SPACE: usize = 0;
 
-    pub fn initialize(&mut self, bump: u8, mint: &Pubkey) {
+    pub fn initialize(&mut self, bump: u8, mint: &Pubkey, pending_coverage: u64) {
         self.bump = bump;
+        self.bump_array = [bump; 1];
         self.mint = *mint;
+        self.pending_coverage = 0;
+    }
+
+    pub fn provide_coverage(&mut self, coverage: u64, premium: u64) {
+        if coverage > 0 {
+            self.provided_coverage = coverage;
+            self.premium = premium;
+        }
+    }
+}
+
+impl Seeds for CoveragePosition {
+    fn seeds(&self) -> Box<[&[u8]]> {
+        Box::new([
+            &SURE_SHIELD.as_bytes() as &[u8],
+            self.mint.as_ref(),
+            self.bump_array.as_ref(),
+        ])
     }
 }
 
@@ -57,6 +86,8 @@ pub struct ProvideCoverage<'info> {
     pub provider: Signer<'info>,
 
     pub coverage_mint: Account<'info, Mint>,
+
+    pub coverage_mint_account: Account<'info, TokenAccount>,
 
     #[account(
         init,
@@ -84,7 +115,19 @@ pub struct ProvideCoverage<'info> {
     #[account(mut)]
     pub bids: AccountInfo<'info>,
 
+    /// === metaplex accounts ====
+    #[account(mut)]
+    pub metadata_account: UncheckedAccount<'info>,
+
+    /// Program id for metadata program
+    /// CHECK: checks that the address matches the mpl token metadata id
+    //#[account(address =mpl_token_metadata::ID )]
+    #[account(address = mpl_token_metadata::ID)]
+    pub metadata_program: UncheckedAccount<'info>,
+
     pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 pub fn handler(ctx: Context<ProvideCoverage>, order: OrderParams) -> Result<()> {
@@ -125,6 +168,30 @@ pub fn handler(ctx: Context<ProvideCoverage>, order: OrderParams) -> Result<()> 
     );
 
     // mint coverage position
+    sure_common::token::create_nft_with_metadata(
+        &ctx.accounts.coverage_position,
+        &ctx.accounts.provider,
+        "SURE SHIELD NFT",
+        "SURE",
+        "https://arweave.com/dklsd",
+        &ctx.accounts.metadata_account,
+        &ctx.accounts.metadata_program,
+        ctx.accounts.coverage_position.to_account_info(),
+        &ctx.accounts.coverage_mint,
+        &ctx.accounts.coverage_mint_account,
+        &ctx.accounts.token_program,
+        &ctx.accounts.system_program,
+        &ctx.accounts.rent,
+    )?;
+
+    // set coverage position
+    let coverage_position = ctx.accounts.coverage_position.as_mut();
+    coverage_position.initialize(
+        *ctx.bumps.get("coverage_position").unwrap(),
+        &ctx.accounts.coverage_mint.key(),
+        order_summary.total_base_qty_posted,
+    );
+    coverage_position.provide_coverage(order_summary.total_base_qty, order_summary.total_quote_qty);
 
     // emit event
     emit!(ProvidedCoverage { order_summary });
