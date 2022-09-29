@@ -53,6 +53,14 @@ pub struct ProvideCoverage<'info> {
     )]
     pub coverage_position: Box<Account<'info, CoveragePosition>>,
 
+    /// pool vault to hold deposits
+    #[account(mut)]
+    pub vault: Account<'info, TokenAccount>,
+
+    /// provider token account
+    #[account(mut)]
+    pub provider_vault: Account<'info, TokenAccount>,
+
     // == serum acounts ==
     /// orderbook
     #[account(mut)]
@@ -83,9 +91,7 @@ pub struct ProvideCoverage<'info> {
 }
 
 pub fn handler(ctx: Context<ProvideCoverage>, order: OrderParams) -> Result<()> {
-    // create coverage position
-
-    // create serum order
+    // push to orderbook
     // TODO: move create new order to utils
     let callback_info = CallbackInfo::new(ctx.accounts.provider.key());
 
@@ -119,24 +125,6 @@ pub fn handler(ctx: Context<ProvideCoverage>, order: OrderParams) -> Result<()> 
         ShieldError::CoveragePositionRejected
     );
 
-    // mint coverage position
-    // TODO: create functionality for auto name, symbol and uri
-    sure_common::token::create_nft_with_metadata(
-        &ctx.accounts.coverage_position,
-        &ctx.accounts.provider,
-        "SURE SHIELD NFT",
-        "SURE",
-        "https://arweave.com/dklsd",
-        &ctx.accounts.metadata_account,
-        &ctx.accounts.metadata_program,
-        ctx.accounts.coverage_position.to_account_info(),
-        &ctx.accounts.coverage_mint,
-        &ctx.accounts.coverage_mint_account,
-        &ctx.accounts.token_program,
-        &ctx.accounts.system_program,
-        &ctx.accounts.rent,
-    )?;
-
     // set coverage position
     let coverage_position = ctx.accounts.coverage_position.as_mut();
     coverage_position.initialize(
@@ -144,7 +132,22 @@ pub fn handler(ctx: Context<ProvideCoverage>, order: OrderParams) -> Result<()> 
         &ctx.accounts.coverage_mint.key(),
         order_summary.total_base_qty_posted,
     );
-    coverage_position.provide_coverage(order_summary.total_base_qty, order_summary.total_quote_qty);
+    let total_provided = order_summary.total_base_qty + order_summary.total_base_qty_posted;
+    coverage_position.provide_coverage(
+        order_summary.total_quote_qty,
+        order_summary.total_base_qty - order_summary.total_quote_qty,
+    );
+
+    // TODO: mint tokens to represent position
+
+    // transfer amount provided
+    sure_common::token::deposit_into_vault(
+        &ctx.accounts.provider,
+        &ctx.accounts.vault,
+        &ctx.accounts.provider_vault,
+        &ctx.accounts.token_program,
+        total_provided,
+    )?;
 
     // emit event
     emit!(ProvidedCoverage { order_summary });

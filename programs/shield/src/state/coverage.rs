@@ -1,7 +1,8 @@
+use agnostic_orderbook::instruction::cancel_order::Params;
 use anchor_lang::prelude::*;
 use sure_common::token::Seeds;
 
-use crate::utils::SURE_SHIELD;
+use crate::{instructions::provide_coverage::OrderParams, utils::SURE_SHIELD};
 
 /// coverage position
 /// holds information about the
@@ -23,6 +24,11 @@ pub struct CoveragePosition {
     pub premium: u64,
 }
 
+pub struct CoverageChange {
+    pub provided_coverage_reduction: u64,
+    pub burn_amount: u64,
+}
+
 impl CoveragePosition {
     pub const SPACE: usize = 0;
 
@@ -38,6 +44,28 @@ impl CoveragePosition {
             self.provided_coverage = coverage;
             self.premium = premium;
         }
+    }
+
+    // decrease the coverage
+    pub fn decrease_coverage(&mut self, amount: u64) -> Result<CoverageChange> {
+        if amount < self.pending_coverage {
+            self.pending_coverage = self.pending_coverage - amount;
+            return Ok(CoverageChange {
+                provided_coverage_reduction: 0,
+                burn_amount: amount,
+            });
+        }
+
+        let provided_coverage_reduction = amount - self.pending_coverage;
+
+        // update state
+        self.pending_coverage = 0;
+        self.provided_coverage = self.provided_coverage - provided_coverage_reduction;
+
+        Ok(CoverageChange {
+            provided_coverage_reduction: provided_coverage_reduction,
+            burn_amount: amount,
+        })
     }
 }
 

@@ -19,7 +19,20 @@ if the premium has increased the lp will have to pay a higher premium since the 
 
 ## TODO
 
-[ ] create initialize pool instruction
-[ ] create provide_coverage instruction - allows LPs to post liquidity  
+[ x ] create initialize pool instruction
+
+[ x ] create provide_coverage instruction - allows LPs to post liquidity
+
 [ ] create update_coverage instruction - allows LP to adjust their position
-[ ] coverage perps
+
+[ ] create buy_policy instruction - allow users to buy insurance from OB
+
+[ ] create update_policy instruction - allows users to change their position
+
+[ ] coverage market dimensions (smart contract,duration)
+
+[ ] write unit test for coverage
+
+[ ] write unit test for pool
+
+[ ] (coverage perps)
