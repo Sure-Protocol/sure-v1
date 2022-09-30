@@ -21,11 +21,15 @@ pub struct CoveragePosition {
     /// provided coverage
     pub provided_coverage: u64,
 
+    /// order id
+    pub order_id: u128,
+
     pub premium: u64,
 }
 
 pub struct CoverageChange {
     pub provided_coverage_reduction: u64,
+    pub cancel_amount: u64,
     pub burn_amount: u64,
 }
 
@@ -39,10 +43,14 @@ impl CoveragePosition {
         self.pending_coverage = 0;
     }
 
-    pub fn provide_coverage(&mut self, coverage: u64, premium: u64) {
+    pub fn provide_coverage(&mut self, coverage: u64, premium: u64, order_id: Option<u128>) {
         if coverage > 0 {
             self.provided_coverage = coverage;
             self.premium = premium;
+            self.order_id = match order_id {
+                Some(order_id) => order_id,
+                None => 0,
+            }
         }
     }
 
@@ -52,6 +60,7 @@ impl CoveragePosition {
             self.pending_coverage = self.pending_coverage - amount;
             return Ok(CoverageChange {
                 provided_coverage_reduction: 0,
+                cancel_amount: amount,
                 burn_amount: amount,
             });
         }
@@ -64,6 +73,7 @@ impl CoveragePosition {
 
         Ok(CoverageChange {
             provided_coverage_reduction: provided_coverage_reduction,
+            cancel_amount: self.pending_coverage,
             burn_amount: amount,
         })
     }

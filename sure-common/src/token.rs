@@ -1,9 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program;
 use anchor_lang::solana_program::instruction::Instruction;
+use anchor_spl::token;
+use anchor_spl::token::burn;
 use anchor_spl::token::spl_token::instruction::AuthorityType;
 use anchor_spl::token::{
-    burn, close_account, mint_to, set_authority, transfer, Burn, CloseAccount, Mint, MintTo,
+    close_account, mint_to, set_authority, transfer, Burn, CloseAccount, Mint, MintTo,
     SetAuthority, Token, TokenAccount, Transfer,
 };
 use mpl_token_metadata::{
@@ -79,17 +81,12 @@ pub fn burn_nft<'info, T: AccountSerialize + AccountDeserialize + Seeds + Clone 
     token_program: &Program<'info, Token>,
 ) -> Result<()> {
     // Burn liquidity Position NFT
-    burn(
-        CpiContext::new_with_signer(
-            token_program.to_account_info(),
-            Burn {
-                mint: position_mint.to_account_info(),
-                from: position_mint_account.to_account_info(),
-                authority: token_authority.to_account_info(),
-            },
-            &[&authority.seeds()],
-        ),
+    burn_tokens(
         1,
+        authority,
+        position_mint_account,
+        position_mint,
+        token_program,
     )?;
 
     // Close token account
@@ -112,17 +109,60 @@ pub fn mint_nft<'info, T: AccountSerialize + AccountDeserialize + Seeds + Clone 
     position_mint: &Account<'info, Mint>,
     token_program: &Program<'info, Token>,
 ) -> Result<()> {
+    mint_tokens(
+        1,
+        authority,
+        position_mint_account,
+        position_mint,
+        token_program,
+    )
+}
+
+/// thin mint new tokens wrapper
+///
+/// asssume that the mint is initialized and that the
+/// token account is of the same mint
+pub fn mint_tokens<'info, T: AccountSerialize + AccountDeserialize + Seeds + Clone + Owner>(
+    amount: u64,
+    authority: &Account<'info, T>,
+    token_account: &Account<'info, TokenAccount>,
+    mint: &Account<'info, Mint>,
+    token_program: &Program<'info, Token>,
+) -> Result<()> {
     mint_to(
         CpiContext::new_with_signer(
             token_program.to_account_info(),
             MintTo {
-                mint: position_mint.to_account_info(),
-                to: position_mint_account.to_account_info(),
+                mint: mint.to_account_info(),
+                to: token_account.to_account_info(),
+                authority: token_account.to_account_info(),
+            },
+            &[&authority.seeds()],
+        ),
+        amount,
+    )
+}
+
+/// thin burn token wrapper
+///
+pub fn burn_tokens<'info, T: AccountSerialize + AccountDeserialize + Seeds + Clone + Owner>(
+    amount: u64,
+    authority: &Account<'info, T>,
+    token_account: &Account<'info, TokenAccount>,
+    mint: &Account<'info, Mint>,
+    token_program: &Program<'info, Token>,
+) -> Result<()> {
+    burn(
+        CpiContext::new_with_signer(
+            token_program.to_account_info(),
+            Burn {
+                mint: mint.to_account_info(),
+                from: token_account.to_account_info(),
                 authority: authority.to_account_info(),
             },
             &[&authority.seeds()],
         ),
-        1,
+        amount,
     )
 }
 

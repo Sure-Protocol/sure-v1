@@ -1,5 +1,6 @@
 use crate::utils::SURE_SHIELD;
 use anchor_lang::prelude::*;
+use sure_common::token::Seeds;
 
 #[account]
 pub struct Pool {
@@ -35,16 +36,18 @@ pub struct Pool {
     pub bids: Pubkey,
 }
 
-impl Pool {
-    pub const SPACE: usize = 0;
-
-    pub fn seeds(&self) -> [&[u8]; 3] {
-        [
+impl Seeds for Pool {
+    fn seeds(&self) -> Box<[&[u8]]> {
+        Box::new([
             &SURE_SHIELD.as_bytes() as &[u8],
             self.smart_contract.as_ref(),
             self.bump_array.as_ref(),
-        ]
+        ])
     }
+}
+
+impl Pool {
+    pub const SPACE: usize = 0;
 
     /// Initilize pool state
     ///
