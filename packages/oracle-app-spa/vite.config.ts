@@ -3,6 +3,7 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
 import sveltePreprocess from 'svelte-preprocess';
 import inject from '@rollup/plugin-inject';
 import resolve from '@rollup/plugin-node-resolve';
+import NodeGlobalsPolyfillPlugin from '@esbuild-plugins/node-globals-polyfill';
 import * as path from 'path';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -30,6 +31,11 @@ export default defineConfig({
 	optimizeDeps: {
 		esbuildOptions: {
 			target: 'esnext',
+			plugins: [
+				NodeGlobalsPolyfillPlugin({
+					buffer: true,
+				}),
+			],
 		},
 	},
 	resolve: {

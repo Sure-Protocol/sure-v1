@@ -13311,6 +13311,7 @@ __metadata:
     "@rollup/plugin-typescript": ^8.5.0
     "@rollup/plugin-url": ^7.0.0
     "@saberhq/token-utils": ^1.14.6
+    "@solana/buffer-layout": ^4.0.0
     "@solana/spl-token": ^0.3.5
     "@solana/wallet-adapter-base": ^0.9.16
     "@solana/wallet-adapter-wallets": ^0.18.9
@@ -13327,6 +13328,8 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^5.27.0
     "@typescript-eslint/parser": ^5.27.0
     bn.js: ^5.2.1
+    buffer: ^6.0.3
+    buffer-layout: ^1.2.2
     cookie: ^0.4.1
     esbuild: ^0.15.7
     eslint: ^8.16.0
