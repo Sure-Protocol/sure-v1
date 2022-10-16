@@ -3,6 +3,8 @@ import type { SureOracleSDK } from '@surec/oracle';
 import type { PublicKey } from '@solana/web3.js';
 import type { Adapter } from '@solana/wallet-adapter-base';
 import type { SureAugmentedProvider } from '@surec/oracle';
+import * as web3 from '@solana/web3.js';
+import * as oracle from '@surec/oracle';
 
 export type GlobalStoreT = {
 	oracleSDK: SureOracleSDK | undefined;
@@ -15,7 +17,17 @@ export const globalStore = writable<GlobalStoreT>({
 	oracleSDK: undefined,
 	walletPk: undefined,
 	wallet: undefined,
-	provider: undefined
+	provider: undefined,
+});
+
+export type RPCConfig = {
+	value?: string;
+	label?: string;
+};
+
+export const rpcConfig = writable<RPCConfig>({
+	value: 'https://api.devnet.solana.com',
+	label: `Solana devnet`,
 });
 
 export type LoadingStateT = {
@@ -28,13 +40,13 @@ export const loadingState = writable<LoadingStateT>(
 	{
 		isLoading: false,
 		loadingFailed: false,
-		refresh: true
+		refresh: true,
 	},
 	(set) => {
 		set({ isLoading: false, loadingFailed: false, refresh: true });
 		const interval = setInterval(() => {
 			set({ isLoading: false, loadingFailed: false, refresh: true });
-		}, 20000);
+		}, 30000);
 		() => clearInterval(interval);
 	}
 );
@@ -49,4 +61,33 @@ export const loadingFailed = () => {
 
 export const loadingSuccessful = () => {
 	loadingState.set({ isLoading: false, loadingFailed: false, refresh: false });
+};
+
+export const getUpdateOracleSdkConnection = (
+	rpc: RPCConfig,
+	store: GlobalStoreT
+): GlobalStoreT | undefined => {
+	console.log('getUpdateOracleSdkConnection');
+	console.log('rpc');
+
+	let connection = new web3.Connection(
+		rpc ? rpc.value : web3.clusterApiUrl('devnet')
+	);
+
+	if (store?.wallet?.publicKey) {
+		console.log('rpc: ', rpc);
+		const oracleSdk = oracle.SureOracleSDK.init({
+			connection,
+			wallet: store.wallet,
+			opts: { skipPreflight: true },
+		});
+		return {
+			...store,
+			oracleSDK: oracleSdk,
+			walletPk: store.wallet.publicKey,
+			wallet: store.wallet,
+			provider: oracleSdk.provider,
+		};
+	}
+	return undefined;
 };

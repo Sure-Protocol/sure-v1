@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { css } from '@emotion/css';
 	import { onMount } from 'svelte';
+	import Select from 'svelte-select';
+
 	import { clusterApiUrl } from '@solana/web3.js';
 	import {
 		workSpace,
@@ -17,14 +19,27 @@
 		loadingFailed,
 		loadingSuccessful,
 		hydrateTokenState,
-	} from '$stores/index.ts';
+		rpcConfig,
+	} from '$stores/index';
 
 	const localStorageKey = 'walletAdapter';
-	const network = clusterApiUrl('devnet'); // localhost or mainnet
 
 	let wallets: [];
 
-	let time: number = 0;
+	let rpcs = [
+		{
+			value: 'https://solana-devnet-rpc.allthatnode.com',
+			label: `All that node - devnet `,
+		},
+		{ value: 'https://api.devnet.solana.com', label: `Solana devnet` },
+	];
+	let selectedRpc = $rpcConfig.value ? $rpcConfig : rpcs[0];
+
+	function handleSelect(event) {
+		selectedRpc = event.detail;
+		rpcConfig.set(selectedRpc);
+	}
+	let time: string = '';
 	let timeUnix: number = 0;
 
 	onMount(async () => {
@@ -51,6 +66,8 @@
 	});
 
 	globalStore.subscribe((store) => {
+		console.log('globalStore header. refresh: ', $loadingState.refresh);
+		console.log('store: ', store);
 		if (store.oracleSDK && $loadingState.refresh) {
 			startLoading();
 			try {
@@ -71,6 +88,7 @@
 
 	/// fetch necessary data
 	loadingState.subscribe(async (val) => {
+		console.log('loadingState header');
 		if (val.refresh && !val.isLoading) {
 			const oracleSdk = $globalStore.oracleSDK;
 			if (oracleSdk) {
@@ -103,13 +121,35 @@
 			{`${time} | ${timeUnix}`}
 		</div>
 	</div>
-
-	<WalletProvider {localStorageKey} {wallets} autoConnect />
-	<ConnectionProvider {network} />
-	<WalletMultiButton />
+	<div
+		class={css`
+			display: flex;
+			flex-direction: row;
+			gap: 10rem;
+		`}
+	>
+		<div class="themed">
+			<Select items={rpcs} value={$rpcConfig.label} on:select={handleSelect} />
+		</div>
+		{#if $rpcConfig.value}
+			<WalletProvider {localStorageKey} {wallets} autoConnect />
+			<ConnectionProvider network={$rpcConfig.value} />
+			<WalletMultiButton />
+		{/if}
+	</div>
 </header>
 
 <style>
+	.themed {
+		/* --background: transparent;
+		--border: 1px solid #f50093;
+		--inputColor: ##ffeef2;
+		--clearSelectColor: #f50093;
+		--itemColor: #f50093; */
+		/* --placeholderColor: #f50093;
+		--multiItemActiveColor: #f50093;
+		--itemIsActiveColor: #0c1e7f; */
+	}
 	header {
 		display: flex;
 		justify-content: space-between;

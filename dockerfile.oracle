@@ -16,6 +16,7 @@ RUN apk add git \
     && sed -i -e "s/workspace:^/^$SDK_VERSION/g" package.json \ 
     && yarn set version stable \
     && yarn install \
+    && yarn setup \
     && yarn rebuild 
     #&& (cd packages/oracle-app-spa && yarn && yarn build:oracle)
 

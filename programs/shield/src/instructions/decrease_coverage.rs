@@ -37,7 +37,14 @@ pub struct DecreaseCoverage<'info> {
 
 /// decrease coverage position
 ///
+/// cancel pending coverage positions and hedge the existing coverage positions
+/// burn the coverage tokens and return the coverage amount
 ///
+/// fx:
+/// - has bough base=1020 for quote=1000, hedge by ask quote = inf, base=1020, limit= 1000
+/// - pay 20, receive protection of 1000
+///
+//
 pub fn handler<'info>(
     ctx: Context<'_, '_, '_, 'info, DecreaseCoverage>,
     amount: u64,
@@ -47,9 +54,12 @@ pub fn handler<'info>(
     let coverage_change = coverage_position.decrease_coverage(amount)?;
     let ob = &ctx.accounts.orderbook;
 
+    // cancel pending coverage
     if coverage_change.cancel_amount > 0 {
         let order_summary = ob.cancel_order(coverage_position.order_id)?;
     }
+
+    // hedge coverage
     if coverage_change.provided_coverage_reduction > 0 {
         // push order to orderbook
         let order_summary = ob.push_order(

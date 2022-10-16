@@ -13328,8 +13328,6 @@ __metadata:
     "@typescript-eslint/eslint-plugin": ^5.27.0
     "@typescript-eslint/parser": ^5.27.0
     bn.js: ^5.2.1
-    buffer: ^6.0.3
-    buffer-layout: ^1.2.2
     cookie: ^0.4.1
     esbuild: ^0.15.7
     eslint: ^8.16.0
@@ -13356,6 +13354,7 @@ __metadata:
     svelte: ^3.46.0
     svelte-check: ^2.7.1
     svelte-preprocess: ^4.10.7
+    svelte-select: ^4.4.7
     svelte-steps: ^2.3.5
     tslib: ^2.4.0
     typescript: ^4.7.4
@@ -16230,6 +16229,13 @@ __metadata:
     typescript:
       optional: true
   checksum: 51a0820c14bcc411ddf3b1cf4c772e73873626ed0b6c54dfca9e06bd6a6b22c9502436df3f1a4dab9eb3a404bba95002fd70cadea29a84fc36da3071309a8b91
+  languageName: node
+  linkType: hard
+
+"svelte-select@npm:^4.4.7":
+  version: 4.4.7
+  resolution: "svelte-select@npm:4.4.7"
+  checksum: d5014571152b57951f66d296d5ebdc685110bde136a974e97713f53db74e9fea98d80dceaf77f44d05e0dfb9160ec416a04f1c6bac4075695bcc4e2f855d8b7d
   languageName: node
   linkType: hard
 
