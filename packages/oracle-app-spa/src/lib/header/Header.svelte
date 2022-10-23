@@ -20,6 +20,7 @@
 		loadingSuccessful,
 		hydrateTokenState,
 		rpcConfig,
+		getUpdateOracleSdkConnection,
 	} from '$stores/index';
 
 	const localStorageKey = 'walletAdapter';
@@ -32,12 +33,14 @@
 			label: `All that node - devnet `,
 		},
 		{ value: 'https://api.devnet.solana.com', label: `Solana devnet` },
+		{ value: 'https://devnet.genesysgo.net', label: 'Genesys go devnet' },
 	];
-	let selectedRpc = $rpcConfig.value ? $rpcConfig : rpcs[0];
 
 	function handleSelect(event) {
-		selectedRpc = event.detail;
-		rpcConfig.set(selectedRpc);
+		console.log('handleselect: ', event.detail);
+		if (event.detail.value.includes('https')) {
+			rpcConfig.set(event.detail);
+		}
 	}
 	let time: string = '';
 	let timeUnix: number = 0;
@@ -66,9 +69,7 @@
 	});
 
 	globalStore.subscribe((store) => {
-		console.log('globalStore header. refresh: ', $loadingState.refresh);
-		console.log('store: ', store);
-		if (store.oracleSDK && $loadingState.refresh) {
+		if (store?.oracleSDK && $loadingState.refresh) {
 			startLoading();
 			try {
 				Promise.all([
@@ -84,6 +85,12 @@
 				loadingFailed();
 			}
 		}
+	});
+
+	rpcConfig.subscribe((rpc) => {
+		console.log('rpcConfig App: ', rpc);
+		const updatedGlobalStore = getUpdateOracleSdkConnection(rpc, $globalStore);
+		$globalStore = updatedGlobalStore;
 	});
 
 	/// fetch necessary data
@@ -129,8 +136,14 @@
 		`}
 	>
 		<div class="themed">
-			<Select items={rpcs} value={$rpcConfig.label} on:select={handleSelect} />
+			<Select
+				inputStyles="box-sizing: border-box; color: #9CA3AF; width: 20rem"
+				items={rpcs}
+				value={$rpcConfig.label}
+				on:select={handleSelect}
+			/>
 		</div>
+
 		{#if $rpcConfig.value}
 			<WalletProvider {localStorageKey} {wallets} autoConnect />
 			<ConnectionProvider network={$rpcConfig.value} />
@@ -141,14 +154,14 @@
 
 <style>
 	.themed {
-		/* --background: transparent;
-		--border: 1px solid #f50093;
-		--inputColor: ##ffeef2;
-		--clearSelectColor: #f50093;
-		--itemColor: #f50093; */
-		/* --placeholderColor: #f50093;
-		--multiItemActiveColor: #f50093;
-		--itemIsActiveColor: #0c1e7f; */
+		--border: 3px solid #9ca3af;
+		--borderRadius: 10px;
+		--placeholderColor: #f50093;
+		--multiClearWidth: 20rem;
+		--inputColor: #f50093;
+		--placeholderColor: #f50093;
+		--groupTitleColor: #f50093;
+		--itemColor: #9ca3af;
 	}
 	header {
 		display: flex;

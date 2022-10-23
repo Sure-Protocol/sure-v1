@@ -2,15 +2,11 @@
 	import Header from '$lib/header/Header.svelte';
 	import CreateProposal from '$lib/CreateProposal.svelte';
 	import { css } from '@emotion/css';
-	import {
-		globalStore,
-		createProposalState,
-		getUpdateOracleSdkConnection,
-		rpcConfig,
-	} from '$stores/index';
+	import { globalStore, createProposalState, rpcConfig } from '$stores/index';
 	import TestPanel from '$lib/test/TestPanel.svelte';
 	import { onMount } from 'svelte';
 	import EventStack from '$lib/EventStack.svelte';
+
 	import {
 		walletStore,
 		getLocalStorage,
@@ -27,6 +23,7 @@
 	walletStore.subscribe((value) => {
 		console.log('walletStore: ');
 		/// todo update connection on rpc change
+		console.log('$rpcConfig.value: ', $rpcConfig.value);
 		let connection = new web3.Connection($rpcConfig.value);
 		if (value?.wallet?.publicKey != null) {
 			const oracleSdk = oracle.SureOracleSDK.init({
@@ -40,14 +37,6 @@
 				wallet: value.wallet,
 				provider: oracleSdk.provider,
 			};
-		}
-	});
-
-	rpcConfig.subscribe((rpc) => {
-		console.log('rpcConfig App');
-		const updatedGlobalStore = getUpdateOracleSdkConnection(rpc, $globalStore);
-		if (updatedGlobalStore) {
-			$globalStore = updatedGlobalStore;
 		}
 	});
 

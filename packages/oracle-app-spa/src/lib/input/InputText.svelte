@@ -1,14 +1,29 @@
 <script lang="ts">
+	import { cx } from '@emotion/css';
+
 	export let value: string | undefined;
 	export let valueType: string | undefined = undefined;
 	export let textArea: boolean = false;
 </script>
 
-<div class="input-sure-text-box">
+<div class={cx('input-sure-text-box', 'hover-illuminated-box')}>
 	{#if textArea}
-		<textarea class="text-field" bind:value id="story" name="story" rows="3" cols="33" />
+		<textarea
+			class="text-field"
+			bind:value
+			id="story"
+			name="story"
+			rows="3"
+			cols="33"
+		/>
 	{:else}
-		<input bind:value name="proposalStake" id="proposalStake" type="textarea" class="text-field" />
+		<input
+			bind:value
+			name="proposalStake"
+			id="proposalStake"
+			type="textarea"
+			class="text-field"
+		/>
 	{/if}
 	{#if valueType}
 		<p class="p text--margin-vertical__0">{valueType}</p>
@@ -19,7 +34,7 @@
 	@import './../../../../sure-static/styles/index.scss';
 
 	.input-sure-text-box {
-		background-color: #324f7e;
+		background-color: #1c3a6c;
 		display: flex;
 		flex-direction: row;
 		justify-content: center;
@@ -31,8 +46,9 @@
 		width: 16rem;
 	}
 
-	.text-field {
+	:global(.text-field) {
 		@extend .input-text-field;
+		background-color: #1c3a6c;
 		width: 100%;
 	}
 </style>

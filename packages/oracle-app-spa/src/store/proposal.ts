@@ -52,6 +52,10 @@ export const hydrateProposals = async (oracleSdk: SureOracleSDK) => {
 		loadingFailed: false,
 		proposals: null,
 	});
+	console.log(
+		'hydrate proposals - oracleSdk: ',
+		oracleSdk.provider.connection.rpcEndpoint
+	);
 	try {
 		const proposals = await oracleSdk.proposal().fetchAllProposals();
 		proposalsState.set({

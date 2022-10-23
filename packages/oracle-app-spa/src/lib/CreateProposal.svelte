@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { css, cx } from '@emotion/css';
+	import { blur, slide, fly, fade } from 'svelte/transition';
+	import { cubicInOut } from 'svelte/easing';
 	import {
 		createProposalState,
 		globalStore,
@@ -63,6 +65,7 @@
 </svelte:head>
 
 <form
+	transition:fade={{ delay: 100, duration: 250, easing: cubicInOut }}
 	on:submit|preventDefault={async () =>
 		hydrateProposalCallback(submitProposal, $globalStore.oracleSDK)}
 	class={css`
@@ -88,7 +91,7 @@
 			z-index: 2;
 		`}
 	>
-		<h3 class="h3 p--white">Create proposal</h3>
+		<h3 class="h3 p--white">_create</h3>
 	</div>
 	<div
 		class={cx(
@@ -107,16 +110,10 @@
 					margin-bottom: 1rem;
 				`}
 			>
-				<SingleInput
-					title="Name of proposal"
-					description="the name makes it easy for the community to find your proposal "
-				>
+				<SingleInput title="_title" description=".an easy to find title">
 					<InputText slot="input" bind:value={proposalValues.name} />
 				</SingleInput>
-				<SingleInput
-					title="Description"
-					description="let your community understand what you want their input on "
-				>
+				<SingleInput title="_about" description="what will be decided">
 					<InputText
 						slot="input"
 						bind:value={proposalValues.desription}
@@ -124,10 +121,11 @@
 					/>
 				</SingleInput>
 				<SingleInput
-					title="Stake"
-					description="the amount of $sure you are willing to bet on being correct. the more you bet the more you can potentially earn in rewards"
+					title="_stake"
+					description="the amount of $sure you are willing to stake on being correct"
 				>
 					<TypeInputAmount
+						inputClass={'create-proposal-input'}
 						slot="input"
 						bind:value={proposalValues.stake}
 						valueType="$sure"
@@ -135,9 +133,19 @@
 				</SingleInput>
 			</div>
 
-			<MainButton title="Submit" type="submit" />
+			<MainButton
+				inputClass={css`
+					border: #324f7e 2px solid;
+				`}
+				title="Submit"
+				type="submit"
+			/>
 		</div>
 	</div>
 </form>
 
-<style lang="scss"></style>
+<style lang="scss">
+	:global(.create-proposal-input) {
+		border: #9ca3af 2px solid;
+	}
+</style>

@@ -15,14 +15,31 @@
 			display: flex;
 			flex-direction: column;
 			justify-content: flex-start;
-			gap: 2rem;
+			gap: 5rem;
 			padding: 0;
 			height: 100vh;
 		`
 	)}
 >
-	<h2 class="h3--white text--margin-vertical__0">Proposals</h2>
-	<p class="p text--margin-vertical__0">Query or create a new proposal</p>
+	<div
+		class={css`
+			width: 70%;
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+		`}
+	>
+		<h2 class="h3--white text--margin-vertical__0">
+			Decentralized prediction market
+		</h2>
+		<p class="p text--margin-vertical__0">
+			.get rewarded for predicting the future or agreeing on off-chain data.
+		</p>
+		<p class="p text--margin-vertical__0">
+			.propose questions you want to have answered.
+		</p>
+	</div>
+
 	<div
 		class={css`
 			display: flex;
@@ -58,29 +75,22 @@
 				type="text"
 				class={cx(
 					'input-text-field',
+					'hover-illuminated-box',
 					css`
 						margin-bottom: 0px;
 						height: 100%;
 						width: 10vw;
 						padding-left: 30px;
 						position: relative;
-						border: transparent 1px solid;
-						box-shadow: 0px 0px 10px 1px #f50093;
-
-						:focus {
-							width: 30vw;
-							border: #f50093 1px solid;
-							box-shadow: 0px 0px 6px 3px #f50093;
-						}
 					`
 				)}
 				placeholder="search proposals"
 			/>
 		</div>
-		<AddButton
-			title="create proposal"
-			click={() => createProposalState.set(true)}
-		/>
+		<AddButton title="new" click={() => createProposalState.set(true)} />
 	</div>
 	<ProposalList {search} />
 </div>
+
+<style lang="scss">
+</style>

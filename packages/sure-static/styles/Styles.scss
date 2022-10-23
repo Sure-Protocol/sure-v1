@@ -15,6 +15,7 @@ $sure-blue-2_2: #082756;
 $sure-blue-2_3: #102b54;
 $sure-blue-3: #0C1E7F;
 $sure-blue-4: #324F7E;
+$sure-blue-5: #1c3a6c;
 
 // Purple
 $sure-dark-purple:rgb(89, 36, 139);
@@ -130,6 +131,8 @@ h1,h2,h3,h4,h5{
         color: $sure-white;
     }
 
+
+
     &--bold{
         font-family: 'arvo-bold';
     }
@@ -225,6 +228,9 @@ h1,h2,h3,h4,h5{
         &__pink{
             color: $sure-pink
         }
+        &__gray{
+            color: $sure-text-grey
+        }
     }
 
     &--font{
@@ -261,7 +267,4 @@ h1,h2,h3,h4,h5{
             text-align: right;
         }
     }
-
-    
-  
 }

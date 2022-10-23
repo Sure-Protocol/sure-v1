@@ -2,6 +2,8 @@
 	import { css } from '@emotion/css';
 	import * as anchor from '@project-serum/anchor';
 	import { onDestroy } from 'svelte';
+	import { blur, slide, fly, fade } from 'svelte/transition';
+	import { backInOut } from 'svelte/easing';
 	import {
 		type ProposalType,
 		type VoteStatus,

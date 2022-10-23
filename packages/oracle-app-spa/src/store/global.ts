@@ -67,11 +67,9 @@ export const getUpdateOracleSdkConnection = (
 	rpc: RPCConfig,
 	store: GlobalStoreT
 ): GlobalStoreT | undefined => {
-	console.log('getUpdateOracleSdkConnection');
-	console.log('rpc');
-
+	console.log('getUpdateOracleSdkConnection ', rpc);
 	let connection = new web3.Connection(
-		rpc ? rpc.value : web3.clusterApiUrl('devnet')
+		rpc.value ?? web3.clusterApiUrl('devnet')
 	);
 
 	if (store?.wallet?.publicKey) {
