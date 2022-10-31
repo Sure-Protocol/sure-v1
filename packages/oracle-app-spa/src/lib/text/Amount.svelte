@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { prettyLargeNumber, prettyLargeNumberString } from '$lib/utils';
 	import { onMount } from 'svelte';
 	export let title: string;
-	export let amount: string | number;
+	export let amount: string;
 	export let loading: boolean;
 
 	const loaderIcons = ['\\', '|', '/', '-'];

@@ -17,10 +17,17 @@
 	import type { SendTransactionError } from '@solana/web3.js';
 	import TypeInputAmount from './input/TypeInputAmount.svelte';
 	import Amount from './text/Amount.svelte';
+	import ErrorMessage from './input/ErrorMessage.svelte';
 
 	let values = {
 		amount: undefined,
 		days: undefined,
+	};
+
+	let errorValues = {
+		amount: '',
+		days: '',
+		default: '',
 	};
 
 	async function lockSureTokens() {
@@ -55,6 +62,8 @@
 					message: error.message,
 					status: 'error',
 				});
+				console.log('error. ', error.logs);
+				errorValues.default = error.cause as string;
 			}
 		}
 	}
@@ -127,6 +136,7 @@
 			`}
 		>
 			<MainButton title={'Lock'} type={'submit'} />
+			<ErrorMessage message={errorValues.default} />
 		</div>
 	</form>
 </div>

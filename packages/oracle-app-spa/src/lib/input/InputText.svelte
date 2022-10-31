@@ -2,6 +2,7 @@
 	import { cx } from '@emotion/css';
 
 	export let value: string | undefined;
+	export let validation: () => void = () => {};
 	export let valueType: string | undefined = undefined;
 	export let textArea: boolean = false;
 </script>
@@ -9,6 +10,7 @@
 <div class={cx('input-sure-text-box', 'hover-illuminated-box')}>
 	{#if textArea}
 		<textarea
+			on:blur={validation}
 			class="text-field"
 			bind:value
 			id="story"
@@ -18,6 +20,7 @@
 		/>
 	{:else}
 		<input
+			on:blur={validation}
 			bind:value
 			name="proposalStake"
 			id="proposalStake"

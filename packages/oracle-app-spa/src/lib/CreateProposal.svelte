@@ -7,54 +7,107 @@
 		globalStore,
 		hydrateProposalCallback,
 		newEvent,
+		tokenState,
 	} from '$stores/index';
 	import * as anchor from '@project-serum/anchor';
 	import { calculateFullAmount } from '$lib/utils/index';
-	import type { SendTransactionError, TransactionError } from '@solana/web3.js';
+	import type { SendTransactionError } from '@solana/web3.js';
 	import CloseButton from './button/CloseButton.svelte';
 	import MainButton from './button/MainButton.svelte';
 	import TypeInputAmount from './input/TypeInputAmount.svelte';
 	import SingleInput from './input/SingleInput.svelte';
 	import InputText from './input/InputText.svelte';
 	import { SURE_MINT } from '@surec/oracle';
+	import ErrorMessage from './input/ErrorMessage.svelte';
 
 	let proposalValues = {
 		name: '',
-		desription: '',
+		description: '',
 		stake: undefined,
 	};
 
-	function validateProposal() {}
+	let errorValues = {
+		name: '',
+		description: '',
+		stake: '',
+		default: '',
+	};
+
+	function validateProposal(valueName: string) {
+		return () => {
+			switch (valueName) {
+				case 'name':
+					errorValues.name = '';
+					if (proposalValues.name.length < 3)
+						errorValues.name = 'Your grand idea needs a name';
+					break;
+				case 'description':
+					errorValues.description = '';
+					if (proposalValues.description.length < 10)
+						errorValues.description = 'Why not describe your idea';
+					break;
+				case 'stake':
+					errorValues.stake = '';
+					if (!proposalValues.stake || proposalValues.stake < 10)
+						errorValues.stake = 'Please put your money where your mouth is';
+					break;
+			}
+		};
+	}
+
+	function anyErrors(errorValues): boolean {
+		return Object.keys(errorValues).some((v) => errorValues[v].length > 0);
+	}
+
+	async function submitForm() {
+		try {
+			await hydrateProposalCallback(submitProposal, $globalStore.oracleSDK);
+		} catch (err) {
+			const cleanError = `${err}`.replaceAll('Error:', '');
+			errorValues.default = `Could not create proposal. Cause: ${
+				cleanError.charAt(0).toUpperCase() + cleanError.slice(1)
+			}`;
+		}
+	}
 
 	async function submitProposal() {
-		const oracleSdk = $globalStore.oracleSDK;
-		if (oracleSdk && proposalValues.stake) {
-			try {
-				const proposeVoteTx = await oracleSdk.proposal().proposeVote({
-					name: proposalValues.name,
-					description: proposalValues.desription,
-					stake: await calculateFullAmount(
-						oracleSdk,
-						new anchor.BN(proposalValues.stake)
-					),
-					mint: SURE_MINT,
-				});
-				const txrRes = await proposeVoteTx.confirm();
-				newEvent.set({
-					name: 'successfully create a new proposal',
-					status: 'success',
-					tx: txrRes.signature,
-				});
-				createProposalState.set(false);
-			} catch (err) {
-				const error = err as SendTransactionError;
-				newEvent.set({
-					name: 'could not create a new proposal',
-					status: 'error',
-					message: error.message,
-				});
-				throw new Error(err);
+		validateProposal('name')();
+		validateProposal('description')();
+		validateProposal('stake')();
+		// only try submit if validation is cleared
+		if (!anyErrors(errorValues)) {
+			const oracleSdk = $globalStore.oracleSDK;
+			if (oracleSdk && proposalValues.stake) {
+				try {
+					const proposeVoteTx = await oracleSdk.proposal().proposeVote({
+						name: proposalValues.name,
+						description: proposalValues.description,
+						stake: await calculateFullAmount(
+							oracleSdk,
+							new anchor.BN(proposalValues.stake)
+						),
+						mint: SURE_MINT,
+					});
+					const txrRes = await proposeVoteTx.confirm();
+					newEvent.set({
+						name: 'successfully create a new proposal',
+						status: 'success',
+						tx: txrRes.signature,
+					});
+					createProposalState.set(false);
+				} catch (err) {
+					const error = err as SendTransactionError;
+					newEvent.set({
+						name: 'could not create a new proposal',
+						status: 'error',
+						message: error.message,
+					});
+					throw new Error(err);
+				}
 			}
+		} else {
+			errorValues.default =
+				'Could not submit the proposal since some fields are missing.';
 		}
 	}
 </script>
@@ -66,8 +119,7 @@
 
 <form
 	transition:fade={{ delay: 100, duration: 250, easing: cubicInOut }}
-	on:submit|preventDefault={async () =>
-		hydrateProposalCallback(submitProposal, $globalStore.oracleSDK)}
+	on:submit|preventDefault={submitForm}
 	class={css`
 		display: flex;
 		justify-content: center;
@@ -111,25 +163,38 @@
 				`}
 			>
 				<SingleInput title="_title" description=".an easy to find title">
-					<InputText slot="input" bind:value={proposalValues.name} />
+					<div slot="input">
+						<InputText
+							bind:value={proposalValues.name}
+							validation={validateProposal('name')}
+						/>
+						<ErrorMessage message={errorValues.name} />
+					</div>
 				</SingleInput>
 				<SingleInput title="_about" description="what will be decided">
-					<InputText
-						slot="input"
-						bind:value={proposalValues.desription}
-						textArea
-					/>
+					<div slot="input">
+						<InputText
+							bind:value={proposalValues.description}
+							validation={validateProposal('description')}
+							textArea
+						/>
+						<ErrorMessage message={errorValues.description} />
+					</div>
 				</SingleInput>
 				<SingleInput
 					title="_stake"
 					description="the amount of $sure you are willing to stake on being correct"
 				>
-					<TypeInputAmount
-						inputClass={'create-proposal-input'}
-						slot="input"
-						bind:value={proposalValues.stake}
-						valueType="$sure"
-					/>
+					<div slot="input">
+						<TypeInputAmount
+							inputClass={'create-proposal-input'}
+							maxValue={$tokenState.sureAmount}
+							bind:value={proposalValues.stake}
+							validation={validateProposal('stake')}
+							valueType="$sure"
+						/>
+						<ErrorMessage message={errorValues.stake} />
+					</div>
 				</SingleInput>
 			</div>
 
@@ -140,6 +205,7 @@
 				title="Submit"
 				type="submit"
 			/>
+			<ErrorMessage message={errorValues.default} />
 		</div>
 	</div>
 </form>

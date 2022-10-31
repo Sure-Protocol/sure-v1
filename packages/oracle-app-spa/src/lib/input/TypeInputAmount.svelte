@@ -1,22 +1,46 @@
 <script lang="ts">
-	import { cx } from '@emotion/css';
+	import { prettyLargeNumber, prettyLargeNumberString } from '$lib/utils';
+	import { css, cx } from '@emotion/css';
 
 	export let value: number | undefined;
+	export let validation: () => void = () => {};
+	export let maxValue: string | undefined = undefined;
 	export let inputClass: string | undefined = undefined;
 	export let valueType: string | undefined = undefined;
 </script>
 
-<div class={cx(inputClass, 'input-sure-amount-box', 'hover-illuminated-box')}>
-	<input
-		bind:value
-		name="proposalStake"
-		id="proposalStake"
-		type="input"
-		class="number-field"
-	/>
-	{#if valueType}
-		<p class="p text--margin-vertical__0">{valueType}</p>
-	{/if}
+<div
+	class={css`
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+	`}
+>
+	<div class={cx(inputClass, 'input-sure-amount-box', 'hover-illuminated-box')}>
+		<input
+			bind:value
+			on:blur={validation}
+			name="proposalStake"
+			id="proposalStake"
+			type="input"
+			class="number-field"
+		/>
+		{#if valueType}
+			<p class="p text--margin-vertical__0">{valueType}</p>
+		{/if}
+	</div>
+	<div
+		class={css`
+			display: flex;
+			justify-content: flex-end;
+		`}
+	>
+		{#if maxValue}
+			<p class="p p--small text--margin-vertical__0">
+				{`max: ${prettyLargeNumberString(maxValue)} ${valueType}`}
+			</p>
+		{/if}
+	</div>
 </div>
 
 <style lang="scss">

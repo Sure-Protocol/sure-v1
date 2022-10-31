@@ -87,7 +87,7 @@
 				placeholder="search proposals"
 			/>
 		</div>
-		<AddButton title="new" click={() => createProposalState.set(true)} />
+		<AddButton title="" click={() => createProposalState.set(true)} />
 	</div>
 	<ProposalList {search} />
 </div>

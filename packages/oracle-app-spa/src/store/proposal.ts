@@ -34,12 +34,8 @@ export const hydrateProposalCallback = async (
 	oracleSdk: SureOracleSDK | undefined
 ) => {
 	if (oracleSdk) {
-		try {
-			await fn();
-			await hydrateProposals(oracleSdk);
-		} catch (err) {
-			throw new Error(err as string);
-		}
+		await fn();
+		await hydrateProposals(oracleSdk);
 	} else {
 		throw new Error('Not connected to program');
 	}
@@ -52,10 +48,7 @@ export const hydrateProposals = async (oracleSdk: SureOracleSDK) => {
 		loadingFailed: false,
 		proposals: null,
 	});
-	console.log(
-		'hydrate proposals - oracleSdk: ',
-		oracleSdk.provider.connection.rpcEndpoint
-	);
+
 	try {
 		const proposals = await oracleSdk.proposal().fetchAllProposals();
 		proposalsState.set({
@@ -71,7 +64,6 @@ export const hydrateProposals = async (oracleSdk: SureOracleSDK) => {
 			loadingFailed: true,
 			proposals: null,
 		});
-		console.log('err: ', err);
 		newEvent.set({
 			name: 'failed to get proposals',
 			message: err as string,

@@ -97,7 +97,7 @@
 	loadingState.subscribe(async (val) => {
 		console.log('loadingState header');
 		if (val.refresh && !val.isLoading) {
-			const oracleSdk = $globalStore.oracleSDK;
+			const oracleSdk = $globalStore?.oracleSDK;
 			if (oracleSdk) {
 				startLoading();
 				try {

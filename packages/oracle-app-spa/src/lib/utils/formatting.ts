@@ -1,5 +1,5 @@
 import type { PublicKey } from '@solana/web3.js';
-import type * as anchor from '@project-serum/anchor';
+import * as anchor from '@project-serum/anchor';
 
 export const prettyPublicKeyString = (pkString: string) => {
 	return pkString.slice(0, 4) + '...' + pkString.slice(-4);
@@ -41,6 +41,11 @@ export const countdownFromUnix = (unixDeadline: number): string => {
 		remainingTimeString = `${remainingTimeString} ${seconds}s`;
 	}
 	return remainingTimeString;
+};
+
+export const prettyLargeNumberString = (number: string): string => {
+	const bn = new anchor.BN(number);
+	return prettyLargeNumber(bn);
 };
 
 export const prettyLargeNumber = (number: anchor.BN): string => {

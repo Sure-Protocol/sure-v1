@@ -6,7 +6,7 @@
 		"build:oracle": "rimraf dist/assets dist/build && vite build",
 		"preview": "rimraf dist/assets dist/build && vite build && vite preview",
 		"setup": "yarn",
-		"dev:vite": "vite",
+		"dev": "vite",
 		"start": "sirv public --no-clear",
 		"check": "svelte-check --tsconfig ./tsconfig.json"
 	},
