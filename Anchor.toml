@@ -41,5 +41,9 @@ program = "./deps/govern.so"
 address = "LocktDzaV1W2Bm9DeZeiyz4J9zs4fRqNiYqQyracRXw"
 program = "./deps/locked_voter.so"
 
+[[test.genesis]]
+address = "aaobKniTtDGvCZces7GH5UReLYP671bBkB96ahr9x3e"
+program = "./deps/agnostic_orderbook.so"
+
 
 

@@ -14,7 +14,7 @@ pub mod shield {
 
     /// creates new insurance pool
     ///
-    pub fn initialize_pool(ctx: Context<InitializePool>) -> Result<()> {
-        instructions::initialize_pool::handler(ctx)
+    pub fn initialize_pool(ctx: Context<InitializePool>, name: String) -> Result<()> {
+        instructions::initialize_pool::handler(ctx, name)
     }
 }

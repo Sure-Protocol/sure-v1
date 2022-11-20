@@ -10,7 +10,7 @@ use anchor_spl::{
 use crate::utils::SURE_SHIELD;
 use crate::{state::pool::*, utils::CallbackInfo};
 use oracle::cpi::accounts::ProposeVote;
-use oracle::{accounts::Config, instructions::propose_vote};
+use oracle::instructions::propose_vote;
 
 #[derive(Accounts)]
 pub struct InitializePool<'info> {
@@ -26,20 +26,14 @@ pub struct InitializePool<'info> {
         payer = creator,
         seeds =[
             SURE_SHIELD.as_bytes(),
-            smart_contract.key().to_bytes().as_ref()
+            orderbook_market.key().to_bytes().as_ref()
         ],
         bump
     )]
     pub pool: Box<Account<'info, Pool>>,
 
-    pub propose_vote: ProposeVote,
-
-    // smart contract to be insured
-    #[account(
-        constraint = smart_contract.executable == true
-    )]
-    pub smart_contract: UncheckedAccount<'info>,
-
+    // /// ProposeVote for
+    // pub propose_vote: ProposeVote<'info>,
     #[account()]
     pub vault_mint: Box<Account<'info, Mint>>,
 
@@ -56,23 +50,24 @@ pub struct InitializePool<'info> {
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
 
-    // sure oracle program
+    /// CHECK: should check that the program key equals
+    /// the public key
     pub sure_oracle_program: AccountInfo<'info>,
 
     // === accounts for the AOB ===
-    // market
+    /// CHECK: Is used to create new AOB market
     #[account(mut)]
     pub orderbook_market: AccountInfo<'info>,
 
-    // event queue
+    /// CHECK: Is used to create new AOB market
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
 
-    // bids
+    /// CHECK: Is used to create new AOB market
     #[account(mut)]
     pub bids: AccountInfo<'info>,
 
-    // ask
+    /// CHECK: Is used to create new AOB market
     #[account(mut)]
     pub asks: AccountInfo<'info>,
 
@@ -81,23 +76,28 @@ pub struct InitializePool<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-/// initialize pool
+/// initialize pool handler
 ///
-/// initializes pool acount and creates a new serum market
+/// Initializes pool acount and creates a new serum market
 ///
-pub fn handler(ctx: Context<InitializePool>) -> Result<()> {
+pub fn handler(ctx: Context<InitializePool>, name: String) -> Result<()> {
     let pool = ctx.accounts.pool.as_mut();
+    let pool_bump = pool.bump;
 
     // propose vote on Sure prediction market
-    let oracle_program = ctx.accounts.sure_oracle_program.to_account_info();
-    let propose_vote_ctx = CpiContext::new(oracle_program, ctx.accounts.propose_vote);
-    // todo: generate values
-    let id = vec![10];
-    let name = String::from("new markets");
-    let description = String::from("new market");
-    let stake = 10.mul(100000000);
+    // let oracle_program = ctx.accounts.sure_oracle_program.to_account_info();
+    // let propose_vote_accounts = ProposeVote{
+    //     proposer
+    // }
+    // let propose_vote_ctx = CpiContext::new(oracle_program, ctx.accounts.propose_vote);
 
-    oracle::cpi::propose_vote(propose_vote_ctx, id, name, description, stake)?;
+    // // todo: generate values
+    // let id = vec![10];
+    // let name = String::from("new markets");
+    // let description = String::from("new market");
+    // let stake = 10.mul(100000000);
+
+    // oracle::cpi::propose_vote(propose_vote_ctx, id, name, description, stake)?;
 
     // create new market on serum
     let create_market_accounts = create_market::Accounts {
@@ -117,5 +117,20 @@ pub fn handler(ctx: Context<InitializePool>) -> Result<()> {
         create_market_accounts,
         create_market_params,
     )?;
+
+    // Initilize Shield pool
+    let sure_prediction_market_id = 10 as u64;
+    pool.initialize(
+        &pool_bump,
+        &name,
+        &ctx.accounts.creator.key(),
+        &ctx.accounts.vault.key(),
+        &ctx.accounts.orderbook_market.key(),
+        &ctx.accounts.event_queue.key(),
+        &ctx.accounts.asks.key(),
+        &ctx.accounts.bids.key(),
+        &sure_prediction_market_id,
+    );
+
     Ok(())
 }
