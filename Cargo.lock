@@ -1319,6 +1319,7 @@ dependencies = [
  "anchor-spl",
  "bytemuck",
  "mpl-token-metadata",
+ "oracle",
  "sure-common",
 ]
 

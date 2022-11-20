@@ -25,7 +25,6 @@ test-ledger
 # build folders
 */**/public
 !packages/app/public
-*/**/dist*
 */**/build*
 *.txt
 

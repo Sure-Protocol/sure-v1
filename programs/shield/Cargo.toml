@@ -22,5 +22,5 @@ sure-common = { path = "../../sure-common",features=["no-entrypoint"]}
 agnostic-orderbook = { git = "https://github.com/Bonfida/agnostic-orderbook.git", branch = "main", features = ["lib", "utils"] }
 bytemuck = {version = "1.7.2", features = ["derive"]}
 mpl-token-metadata = {version ="1.2.7", features = ["no-entrypoint"] }
-
+oracle={path="../oracle",features=["cpi"]}
 

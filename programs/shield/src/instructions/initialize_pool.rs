@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use agnostic_orderbook::instruction::*;
 use anchor_lang::prelude::*;
 use anchor_spl::{
@@ -7,11 +9,16 @@ use anchor_spl::{
 
 use crate::utils::SURE_SHIELD;
 use crate::{state::pool::*, utils::CallbackInfo};
+use oracle::cpi::accounts::ProposeVote;
+use oracle::{accounts::Config, instructions::propose_vote};
 
 #[derive(Accounts)]
 pub struct InitializePool<'info> {
     #[account(mut)]
     pub creator: Signer<'info>,
+
+    #[account(mut)]
+    pub creator_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
         init,
@@ -24,6 +31,8 @@ pub struct InitializePool<'info> {
         bump
     )]
     pub pool: Box<Account<'info, Pool>>,
+
+    pub propose_vote: ProposeVote,
 
     // smart contract to be insured
     #[account(
@@ -46,6 +55,9 @@ pub struct InitializePool<'info> {
         token::authority = pool,
     )]
     pub vault: Box<Account<'info, TokenAccount>>,
+
+    // sure oracle program
+    pub sure_oracle_program: AccountInfo<'info>,
 
     // === accounts for the AOB ===
     // market
@@ -76,19 +88,16 @@ pub struct InitializePool<'info> {
 pub fn handler(ctx: Context<InitializePool>) -> Result<()> {
     let pool = ctx.accounts.pool.as_mut();
 
-    // initialize pool
-    pool.initialize(
-        ctx.bumps["pool"],
-        "test",
-        ctx.accounts.creator.key,
-        ctx.accounts.smart_contract.key,
-        &ctx.accounts.vault_mint.key(),
-        &ctx.accounts.vault.key(),
-        ctx.accounts.orderbook_market.key,
-        ctx.accounts.event_queue.key,
-        ctx.accounts.asks.key,
-        ctx.accounts.asks.key,
-    );
+    // propose vote on Sure prediction market
+    let oracle_program = ctx.accounts.sure_oracle_program.to_account_info();
+    let propose_vote_ctx = CpiContext::new(oracle_program, ctx.accounts.propose_vote);
+    // todo: generate values
+    let id = vec![10];
+    let name = String::from("new markets");
+    let description = String::from("new market");
+    let stake = 10.mul(100000000);
+
+    oracle::cpi::propose_vote(propose_vote_ctx, id, name, description, stake)?;
 
     // create new market on serum
     let create_market_accounts = create_market::Accounts {

@@ -34,6 +34,9 @@ pub struct Pool {
     pub event_queue: Pubkey,
     pub asks: Pubkey,
     pub bids: Pubkey,
+
+    /// Sure underlying prediction market
+    pub sure_market: u64,
 }
 
 impl Seeds for Pool {
@@ -63,6 +66,7 @@ impl Pool {
         event_queue: &Pubkey,
         asks: &Pubkey,
         bids: &Pubkey,
+        sure_market: u64,
     ) {
         self.bump = bump;
         self.bump_array = [bump; 1];
@@ -83,5 +87,6 @@ impl Pool {
         self.event_queue = *event_queue;
         self.bids = *bids;
         self.asks = *asks;
+        self.sure_market = sure_market
     }
 }
