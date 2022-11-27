@@ -21,26 +21,25 @@ pub struct Pool {
     /// in basis points
     pub insurance_fee: u16, // 4 bytes
 
-    /// The public key of the smart contract that is
-    /// insured
-    pub smart_contract: Pubkey, // 32 bytes
-
     // mint of vault holding collateral
-    pub token_mint: Pubkey, // 32 bytes
-    pub vault: Pubkey,      //32 bytes
+    //pub token_mint: Pubkey, // 32 bytes
+    pub vault: Pubkey, //32 bytes
 
     // serum data
-    pub market_orderbook: Pubkey,
+    pub orderbook_market: Pubkey,
     pub event_queue: Pubkey,
     pub asks: Pubkey,
     pub bids: Pubkey,
+
+    /// Sure underlying prediction market
+    pub sure_market: u64,
 }
 
 impl Seeds for Pool {
     fn seeds(&self) -> Box<[&[u8]]> {
         Box::new([
             &SURE_SHIELD.as_bytes() as &[u8],
-            self.smart_contract.as_ref(),
+            self.orderbook_market.as_ref(),
             self.bump_array.as_ref(),
         ])
     }
@@ -53,19 +52,18 @@ impl Pool {
     ///
     pub fn initialize(
         &mut self,
-        bump: u8,
+        bump: &u8,
         name: &str,
         founder: &Pubkey,
-        smart_contract: &Pubkey,
-        token_mint: &Pubkey,
         vault: &Pubkey,
-        market_orderbook: &Pubkey,
+        orderbook_market: &Pubkey,
         event_queue: &Pubkey,
         asks: &Pubkey,
         bids: &Pubkey,
+        sure_market: &u64,
     ) {
-        self.bump = bump;
-        self.bump_array = [bump; 1];
+        self.bump = *bump;
+        self.bump_array = [*bump; 1];
 
         self.name = String::from(name);
         self.founder = *founder;
@@ -74,14 +72,13 @@ impl Pool {
         self.founders_fee = 2;
         self.insurance_fee = 50;
 
-        self.smart_contract = *smart_contract;
-        self.token_mint = *token_mint;
         self.vault = *vault;
 
         // set serum data
-        self.market_orderbook = *market_orderbook;
+        self.orderbook_market = *orderbook_market;
         self.event_queue = *event_queue;
         self.bids = *bids;
         self.asks = *asks;
+        self.sure_market = *sure_market
     }
 }

@@ -11,3 +11,5 @@
 - [ ] reduce size of proposal and structure proposal methods
 - [ ] update unit tests for config
 - [ ] test reward calculation
+- [ ] Allow to prepare a vote without starting it
+- [ ] Id should be auto generated and returned

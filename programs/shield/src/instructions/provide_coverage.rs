@@ -67,6 +67,8 @@ pub struct ProvideCoverage<'info> {
     pub orderbook: OrderBook<'info>,
 
     /// === metaplex accounts ====
+    /// CHECK: Currently not in use, but will be
+    /// checked agains pk contraint
     #[account(mut)]
     pub metadata_account: UncheckedAccount<'info>,
 
@@ -81,14 +83,12 @@ pub struct ProvideCoverage<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-/// handler for selling coverage
+/// Provide coverage / Sell Option
 ///
-/// fx:
-/// - create bid order of base = inf, quote=1000, limit 1020
-/// - pays 1000, receive bond of 1020 given no breach
-/// - entitled to 20 over the lifetime of the shield
-/// - T: no breach -> receives 1020
-/// - T: breach -> receives 20
+/// Enter an ask order for the given market.
+/// Create a coverage positon and only update it if the order is accepted
+/// TODO: mint position
+/// Deposit enough margin
 pub fn handler(ctx: Context<ProvideCoverage>, order: OrderParams) -> Result<()> {
     // push to orderbook
     // TODO: move create new order to utils
@@ -98,7 +98,7 @@ pub fn handler(ctx: Context<ProvideCoverage>, order: OrderParams) -> Result<()> 
         u64::MAX,
         order.max_quote_qty,
         fp_from_float(1. / 1.02),
-        Side::Bid,
+        Side::Ask,
         &ctx.accounts.provider.key(),
         false,
         false,
@@ -112,15 +112,18 @@ pub fn handler(ctx: Context<ProvideCoverage>, order: OrderParams) -> Result<()> 
         order_summary.total_base_qty_posted,
     );
     let total_provided = order_summary.total_base_qty + order_summary.total_base_qty_posted;
-    coverage_position.provide_coverage(
-        order_summary.total_quote_qty,
-        order_summary.total_base_qty - order_summary.total_quote_qty,
-        order_summary.posted_order_id,
-    );
+    // only update coverage position if position is accepted
+    if total_provided > 0 {
+        coverage_position.provide_coverage(
+            order_summary.total_quote_qty,
+            order_summary.total_base_qty - order_summary.total_quote_qty,
+            order_summary.posted_order_id,
+        );
+    }
 
     // TODO: mint tokens to represent position
 
-    // transfer amount provided
+    // Deposit margin
     sure_common::token::deposit_into_vault(
         &ctx.accounts.provider,
         &ctx.accounts.vault,

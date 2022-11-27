@@ -1,6 +1,3 @@
-anchor_version = "0.24.2"
-solana_version = "1.9.29"
-
 [features]
 seeds = true
 
@@ -43,6 +40,10 @@ program = "./deps/govern.so"
 [[test.genesis]]
 address = "LocktDzaV1W2Bm9DeZeiyz4J9zs4fRqNiYqQyracRXw"
 program = "./deps/locked_voter.so"
+
+[[test.genesis]]
+address = "aaobKniTtDGvCZces7GH5UReLYP671bBkB96ahr9x3e"
+program = "./deps/agnostic_orderbook.so"
 
 
 

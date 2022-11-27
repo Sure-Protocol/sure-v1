@@ -79,7 +79,7 @@ pub fn handler(ctx: Context<BuyProtection>, order: OrderParams) -> Result<()> {
         order.max_base_qty,
         order.max_quote_qty,
         order.limit_price,
-        Side::Ask,
+        Side::Bid,
         &ctx.accounts.policy_holder.key(),
         false,
         false,

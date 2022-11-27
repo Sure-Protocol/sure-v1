@@ -18,18 +18,9 @@ RUN apk add git \
     && yarn install \
     && yarn setup \
     && yarn rebuild 
-    #&& (cd packages/oracle-app-spa && yarn && yarn build:oracle)
 
 
-
-# RUN echo "build oracle" \
-#     && ls -la \
-#     && yarn install \
-#     && yarn build:oracle \
-#     && echo "done"
-   
-
-# FROM nginx
-# COPY --from=build /dapp/packages/oracle-app-spa/dist/  /usr/share/nginx/html/
-# COPY --from=build /dapp/nginx/nginx.conf /etc/nginx/nginx.conf
-# EXPOSE 80
+FROM nginx
+COPY --from=build /dapp/packages/oracle-app-spa/dist/  /usr/share/nginx/html/
+COPY --from=build /dapp/nginx/nginx.conf /etc/nginx/nginx.conf
+EXPOSE 80

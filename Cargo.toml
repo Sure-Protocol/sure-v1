@@ -1,5 +1,7 @@
 [workspace]
 members = [
-    "programs/*",
+    "programs/shield",
+    "programs/oracle",
     "sure-common"
 ]
+exclude=[ "programs/pool"]
