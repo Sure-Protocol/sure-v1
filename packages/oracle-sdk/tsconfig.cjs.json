@@ -1,9 +1,11 @@
 {
   "extends": "@saberhq/tsconfig/tsconfig.cjs.json",
   "compilerOptions": {
-    "outDir": "dist/cjs/"
+    "outDir": "dist/cjs/",
+    "lib": ["ES2021.Promise", "ES2019"]
   },
   "include": ["src/"],
+  "module": "commonjs",
   "paths": {
     "@solana/spl-token": ["./../../node_modules/@solana/spl-token"] // This mapping is relative to "baseUrl"
   }
