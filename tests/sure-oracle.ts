@@ -3,23 +3,17 @@ import * as solana_contrib from '@saberhq/solana-contrib';
 import * as tribeca from '@tribecahq/tribeca-sdk';
 import * as goki from '@gokiprotocol/client';
 import * as web3 from '@solana/web3.js';
-import * as spl from '@solana/spl-token';
-import { Transaction } from '@solana/web3.js';
-import * as oracle from '../../packages/oracle-sdk/dist/esm/oracle-sdk/src';
+import * as oracle from './../packages/oracle-sdk/dist/esm/index';
 import {
 	createAssociatedTokenAccount,
-	transfer,
 	createMint,
 	mintTo,
 } from '@solana/spl-token';
-import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { Keypair } from '@solana/web3.js';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { createTestConfig, createTestProposal } from './setup';
-import { TransactionError } from '@solana/web3.js';
 import { SendTransactionError } from '@solana/web3.js';
 import { assert } from 'chai';
-import { SmartWalletWrapper } from '@gokiprotocol/client';
 
 describe('Test Sure Oracle', () => {
 	const provider = anchor.AnchorProvider.env();
@@ -120,17 +114,17 @@ describe('Test Sure Oracle', () => {
 		}
 
 		// create locker associated with governor
-	}),
-		it('Create oracle config', async () => {
-			try {
-				const txRec = await createTestConfig(smartWallet.key, oracleSdk, mint);
-			} catch (err) {
-				console.log('create config error: ', err);
+	});
+	it('Create oracle config', async () => {
+		try {
+			const txRec = await createTestConfig(smartWallet.key, oracleSdk, mint);
+		} catch (err) {
+			console.log('create config error: ', err);
 
-				throw new Error('failed to create proposal. cause: ' + err);
-				assert.fail();
-			}
-		});
+			throw new Error('failed to create proposal. cause: ' + err);
+			assert.fail();
+		}
+	});
 	it('Create a new proposal ', async () => {
 		try {
 			const txRceipt = await createTestProposal(
