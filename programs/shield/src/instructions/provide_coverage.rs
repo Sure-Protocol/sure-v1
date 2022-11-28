@@ -67,6 +67,7 @@ pub struct ProvideCoverage<'info> {
     pub orderbook: OrderBook<'info>,
 
     /// === metaplex accounts ====
+    /// CHECK: checked in instruction
     #[account(mut)]
     pub metadata_account: UncheckedAccount<'info>,
 

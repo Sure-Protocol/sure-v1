@@ -70,19 +70,18 @@ impl RevealedVoteArray {
     /// ### Returns
     /// * sum_i^n (w_i - x^bar)^2:  Q32.32
     pub fn calculate_sum_squared_difference(&self, consensus: i64) -> u64 {
-        let res = self.weighted_votes[..(self.last_index + 1) as usize]
-            .iter()
-            .map(|w| {
-                // i32.32 - i32.32  -> i32.32
-                let sub = w.sub(consensus) as i128;
-                // i32.32 x i32.32 -> i64.64
-                let sub_squared_ix64 = sub.mul(sub) as u128;
-                // Q64.64 >> 32 -> Q32.32
-                let sub_squared_ix32 = (sub_squared_ix64 >> 32) as u64;
-                sub_squared_ix32
-            })
-            .sum();
-        res
+        let mut ssd = 0;
+        let mut i = 0;
+        while i <= self.last_index + 1 {
+            let sub = self.weighted_votes[i as usize].sub(consensus) as i128;
+            // i32.32 x i32.32 -> i64.64
+            let sub_squared_ix64 = sub.mul(sub) as u128;
+            // Q64.64 >> 32 -> Q32.32
+            let sub_squared_ix32 = (sub_squared_ix64 >> 32) as u64;
+            ssd += sub_squared_ix32;
+            i += 1;
+        }
+        ssd
     }
 }
 
@@ -176,14 +175,16 @@ pub mod test_revealed_vote_array {
                 vote_array.reveal_vote(&vote).unwrap();
             }
 
+            let weighted_votes = vote_array.weighted_votes;
             assert_eq!(
-                vote_array.weighted_votes, test.expected_result.weighted_votes,
+                weighted_votes, test.expected_result.weighted_votes,
                 "{}: test_updated_weights",
                 test.name
             );
 
+            let last_index = vote_array.last_index;
             assert_eq!(
-                vote_array.last_index, test.expected_result.last_index,
+                last_index, test.expected_result.last_index,
                 "{}: test_last_index",
                 test.name
             );

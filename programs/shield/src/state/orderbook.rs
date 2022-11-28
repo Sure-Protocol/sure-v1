@@ -9,12 +9,16 @@ use crate::utils::{CallbackInfo, ShieldError};
 
 #[derive(Accounts)]
 pub struct OrderBook<'info> {
+    /// CHECK: checked in instruction
     #[account(mut)]
     pub market: AccountInfo<'info>,
+    /// CHECK: checked in instruction
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
+    /// CHECK: checked in instruction
     #[account(mut)]
     pub asks: AccountInfo<'info>,
+    /// CHECK: checked in instruction
     #[account(mut)]
     pub bids: AccountInfo<'info>,
 }

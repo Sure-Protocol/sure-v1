@@ -436,16 +436,20 @@ pub mod test_vote {
                     test.decimals,
                 )
                 .unwrap();
-            assert_eq!(vote_account.vote, 0);
-            assert_eq!(vote_account.vote_power, 2, "{}: test vote power", test.name);
+            let mut vote = vote_account.vote;
+            let expected_vote = 0;
+            let vote_power = vote_account.vote_power;
+            assert_eq!(vote, expected_vote);
+            assert_eq!(vote_power, 2, "{}: test vote power", test.name);
 
             let reveal_time = test.proposal.get_reveal_time();
             let proposal = test.proposal.set_in_reveal_state().build();
             vote_account
                 .reveal_vote(&proposal, &test.salt_provided, test.vote, reveal_time)
                 .unwrap();
+            vote = vote_account.vote;
             assert_eq!(
-                vote_account.vote, test.expected_value.vote,
+                vote, test.expected_value.vote,
                 "{}: reveal vote ",
                 test.name
             );
@@ -502,7 +506,8 @@ pub mod test_vote {
                     test.decimals,
                 )
                 .unwrap();
-            assert_eq!(vote_account.vote, 0);
+            let vote = vote_account.vote;
+            assert_eq!(vote, 0);
 
             let reveal_time = test.proposal.get_reveal_time();
             let proposal = test.proposal.set_in_reveal_state().build();
@@ -566,7 +571,9 @@ pub mod test_vote {
                     test.decimals,
                 )
                 .unwrap();
-            assert_eq!(vote_account.vote, 0, "{} vote equal to 0", test.name);
+            let expected_vote = 0;
+            let vote = vote_account.vote;
+            assert_eq!(vote, expected_vote, "{} vote equal to 0", test.name);
             let new_vote_hash = vote_account_proto::hash_vote(test.vote_updated, &test.salt_true);
             let reveal_time = test.proposal.get_reveal_time();
             let proposal = test.proposal.set_in_reveal_state().build();
@@ -582,11 +589,9 @@ pub mod test_vote {
                     reveal_time,
                 )
                 .unwrap();
-            assert_eq!(
-                vote_account.vote, test.expected_value.vote,
-                "{} updated vote",
-                test.name
-            );
+            let vote = vote_account.vote;
+            let expected_vote = test.expected_value.vote;
+            assert_eq!(vote, expected_vote, "{} updated vote", test.name);
         }
     }
 

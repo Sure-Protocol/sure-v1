@@ -25,7 +25,7 @@ pub struct InitializePool<'info> {
     )]
     pub pool: Box<Account<'info, Pool>>,
 
-    // smart contract to be insured
+    /// CHECK: checked in instruction
     #[account(
         constraint = smart_contract.executable == true
     )]
@@ -49,18 +49,22 @@ pub struct InitializePool<'info> {
 
     // === accounts for the AOB ===
     // market
+    /// CHECK: checked in instruction
     #[account(mut)]
     pub orderbook_market: AccountInfo<'info>,
 
     // event queue
+    /// CHECK: checked in instruction
     #[account(mut)]
     pub event_queue: AccountInfo<'info>,
 
     // bids
+    /// CHECK: checked in instruction
     #[account(mut)]
     pub bids: AccountInfo<'info>,
 
     // ask
+    /// CHECK: checked in instruction
     #[account(mut)]
     pub asks: AccountInfo<'info>,
 
