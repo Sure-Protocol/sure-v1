@@ -896,9 +896,6 @@ pub mod tick_array_pool_testing {
             let ta2 = TickArrayProto::new()
                 .set_start_tick_index(ta1.get_max_tick_index(tick_spacing))
                 .build();
-            println!("ta0 start: {}", ta0.start_tick_index);
-            println!("ta1 start: {}", ta1.start_tick_index);
-            println!("ta0 start: {}", ta2.start_tick_index);
             let mut tick_array_pool = Vec::with_capacity(3);
             tick_array_pool.push(RefCell::new(ta0));
             tick_array_pool.push(RefCell::new(ta1));

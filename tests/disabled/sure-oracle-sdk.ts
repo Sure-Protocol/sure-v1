@@ -1,3 +1,5 @@
+//! Primarily tests for the oracle sdk
+//!
 import * as anchor from '@project-serum/anchor';
 import * as solana_contrib from '@saberhq/solana-contrib';
 import * as tribeca from '@tribecahq/tribeca-sdk';
@@ -11,7 +13,7 @@ import {
 } from '@solana/spl-token';
 import { Keypair } from '@solana/web3.js';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
-import { createTestConfig, createTestProposal } from './setup';
+import { createTestConfig, createTestProposal } from '../setup';
 import { SendTransactionError } from '@solana/web3.js';
 import { assert } from 'chai';
 
