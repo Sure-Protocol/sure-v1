@@ -6,74 +6,25 @@ import * as goki from '@gokiprotocol/client';
 import * as web3 from '@solana/web3.js';
 import * as spl from '@solana/spl-token';
 import { createMint, mintTo, getMint } from '@solana/spl-token';
-import { Oracle } from '../target/types/oracle';
+import { Oracle } from '../../target/types/oracle';
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 import { SHAKE } from 'sha3';
-import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { assert } from 'chai';
-
-const findConfigPDA = (
-	tokenMint: web3.PublicKey,
-	programId: web3.PublicKey
-) => {
-	return findProgramAddressSync(
-		[Buffer.from('sure-oracle-config'), tokenMint.toBytes()],
-		programId
-	);
-};
-
-const findProposalPDA = (id: Buffer, programId: web3.PublicKey) => {
-	return findProgramAddressSync([Buffer.from('sure-oracle'), id], programId);
-};
-
-const findRevealVoteArrayPDA = (id: Buffer, programId: web3.PublicKey) => {
-	return findProgramAddressSync(
-		[Buffer.from('sure-oracle-reveal-array'), id],
-		programId
-	);
-};
-
-const findProposalVaultPDA = (id: Buffer, programId: web3.PublicKey) => {
-	return findProgramAddressSync(
-		[Buffer.from('sure-oracle-propsal-vault'), id],
-		programId
-	);
-};
-
-export const createProposalHash = ({ name }: { name: string }): Buffer => {
-	const hash = new SHAKE(128);
-	hash.update(name);
-	return hash.digest();
-};
-
-export const topUpAccount = async ({
-	connection,
-	pk,
-}: {
-	connection: web3.Connection;
-	pk: web3.PublicKey;
-}) => {
-	const airdrop = await connection.requestAirdrop(
-		pk,
-		10 * web3.LAMPORTS_PER_SOL
-	);
-	await connection.confirmTransaction(airdrop);
-};
-
-export const convertSureTokensToDecimals = async ({
-	connection,
-	tokenMint,
-	amount,
-}: {
-	connection: web3.Connection;
-	amount: number;
-	tokenMint: web3.PublicKey;
-}) => {
-	const mint = await getMint(connection, tokenMint);
-	return new anchor.BN(amount).mul(
-		new anchor.BN(10).pow(new anchor.BN(mint.decimals))
-	);
-};
+import {
+	convertSureTokensToDecimals,
+	createProposal,
+	createProposalHash,
+	createVoteHash,
+	findConfigPDA,
+	findProposalPDA,
+	findProposalVaultPDA,
+	findVoteAccount,
+	topUpAccount,
+	topUpSure,
+	topUpVeSure,
+	voteOnProposal,
+} from './utils';
+import { buffer } from 'stream/consumers';
 
 describe('Test Sure Prediction Market ', () => {
 	const provider = anchor.AnchorProvider.env();
@@ -92,6 +43,8 @@ describe('Test Sure Prediction Market ', () => {
 	const minterWallet = web3.Keypair.generate();
 	let sureMint: web3.PublicKey;
 	let minterWalletSureATA: web3.PublicKey;
+	let sureLocker: web3.PublicKey;
+	let governor: web3.PublicKey;
 	before(async () => {
 		const airdrop = await connection.requestAirdrop(
 			minterWallet.publicKey,
@@ -136,8 +89,8 @@ describe('Test Sure Prediction Market ', () => {
 		try {
 			// Setup Sure governance and token locking
 			const base = web3.Keypair.generate();
-			const governor = await tribeca.findGovernorAddress(base.publicKey);
-			const owners = [governor[0]];
+			const governorAddress = await tribeca.findGovernorAddress(base.publicKey);
+			const owners = [governorAddress[0]];
 			const pendingSmartWallet = await await gokiSDK.newSmartWallet({
 				owners,
 				threshold: new anchor.BN(1),
@@ -157,6 +110,7 @@ describe('Test Sure Prediction Market ', () => {
 			});
 			await govern.tx.confirm();
 
+			governor = govern.wrapper.governorKey;
 			// create a sure locker
 			const createLocker = await tribecaSDK.createLocker({
 				governor: govern.wrapper.governorKey,
@@ -164,7 +118,7 @@ describe('Test Sure Prediction Market ', () => {
 				baseKP: base,
 			});
 			await createLocker.tx.confirm();
-			const sureLockerPK = createLocker.locker;
+			sureLocker = createLocker.locker;
 		} catch (err) {
 			throw new Error(`Failed to create Sure governance. Cause: ${err}`);
 		}
@@ -193,77 +147,69 @@ describe('Test Sure Prediction Market ', () => {
 		}
 	});
 	it('Propose vote with required params', async () => {
+		const proposer = web3.Keypair.generate();
 		const id = createProposalHash({ name: '1' });
-		console.log('id lenght: ', id.byteLength);
-		const name = 'test123';
-		const description = 'This is a test proposal';
-		const stake = new anchor.BN(10).mul(new anchor.BN(1000000));
+		await topUpAccount({ connection, pk: proposer.publicKey });
+		await topUpSure({
+			connection,
+			mint: sureMint,
+			minterWallet,
+			to: proposer.publicKey,
+			amount: 100,
+		});
+		await createProposal({
+			id,
+			sureMint,
+			program,
+			proposer,
+		});
 
-		// get necessary accounts
+		// VOTE ON PROPOSAL
 		try {
-			const proposer1 = web3.Keypair.generate();
-			await topUpAccount({ connection, pk: proposer1.publicKey });
-			const proposer1Ata = await spl.createAssociatedTokenAccount(
+			const voter1 = web3.Keypair.generate();
+			await topUpAccount({ connection, pk: voter1.publicKey });
+			await topUpSure({
 				connection,
-				proposer1,
+				mint: sureMint,
+				minterWallet,
+				to: voter1.publicKey,
+				amount: 200,
+			});
+
+			const voterAccount = await spl.getAssociatedTokenAddress(
 				sureMint,
-				proposer1.publicKey
+				voter1.publicKey
 			);
-			console.log('proposer1Ata: ', proposer1Ata);
-			// mint sure tokens to wallet
-			const transferAmount = await convertSureTokensToDecimals({
-				connection,
-				tokenMint: sureMint,
+
+			// escrow some sure
+			await topUpVeSure({
+				program,
+				tribecaSDK,
+				sureLocker,
+				governor,
+				mint: sureMint,
+				voter: voter1,
 				amount: 100,
 			});
-			console.log('transferAmount: ', transferAmount);
-			const minterTokenAccount = await spl.getAccount(
-				connection,
-				minterWalletSureATA
-			);
-			console.log('minterTokenAccount: ', minterTokenAccount.amount.toString());
-			const res = await spl.transfer(
-				connection,
-				minterWallet,
-				minterWalletSureATA,
-				proposer1Ata,
-				minterWallet,
-				BigInt(transferAmount.toString())
-			);
-			const tokenAccount = await spl.getAccount(connection, proposer1Ata);
-			console.log('token balence: ', tokenAccount.amount.toString());
-			const [configPda] = findConfigPDA(sureMint, program.programId);
-			const [proposalPda] = findProposalPDA(id, program.programId);
-			const [revealVoteArray] = findRevealVoteArrayPDA(id, program.programId);
-			const [proposalVault] = findProposalVaultPDA(id, program.programId);
-			let tx = new web3.Transaction();
-			const instruction = await program.methods
-				.proposeVote(id, name, description, stake)
-				.accounts({
-					proposer: proposer1.publicKey,
-					config: configPda,
-					proposal: proposalPda,
-					revealVoteArray: revealVoteArray,
-					proposalVault,
-					proposerAccount: proposer1Ata,
-					proposalVaultMint: sureMint,
-				})
-				.instruction();
-			tx.add(instruction);
-			const signature = await web3.sendAndConfirmTransaction(
-				provider.connection,
-				tx,
-				[proposer1]
-			);
-			console.log('signature: ', signature);
 
-			// check proposal
-			const proposal = await program.account.proposal.fetch(proposalPda);
-			// start vote automatically
-			assert.equal(proposal.status, 2);
+			const lockerWrapper = await tribeca.LockerWrapper.load(
+				tribecaSDK,
+				sureLocker,
+				governor
+			);
+			const escrowRes = await lockerWrapper.getOrCreateEscrow(voter1.publicKey);
+
+			voteOnProposal({
+				voter: voter1,
+				proposalId: id,
+				program,
+				escrow: escrowRes.escrow,
+				mint: sureMint,
+				locker: sureLocker,
+			});
 		} catch (err) {
 			console.log('err: ', err);
-			throw new Error('Could not create proposal. Cause ' + err);
+			throw new Error(`failed to cast vote. Cause: ${err}`);
 		}
 	});
 });

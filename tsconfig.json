@@ -11,6 +11,7 @@
       "@solana/spl-token": ["./node_modules/@solana/spl-token"] // This mapping is relative to "baseUrl"
     }
   },
+  "exclude": ["tests/disabled"],
   "ts-node": {
     // Tell ts-node CLI to install the --loader automatically
     "esm": true
