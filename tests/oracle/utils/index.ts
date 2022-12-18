@@ -8,6 +8,7 @@ import * as anchor from '@project-serum/anchor';
 import { assert } from 'chai';
 import * as tribeca from '@tribecahq/tribeca-sdk';
 import * as solana_contrib from '@saberhq/solana-contrib';
+import { Idl } from '@project-serum/anchor/dist/esm';
 
 const SURE_ORACLE_VOTE_SEED = 'sure-oracle-vote';
 export const topUpAccount = async ({
@@ -73,7 +74,7 @@ export const topUpSure = async ({
  * topUpVeSure allows users to lock their tokens
  * @param param0
  */
-export const topUpVeSure = async ({
+export const topUpVeSure = async <T extends anchor.Idl>({
 	program,
 	tribecaSDK,
 	sureLocker,
@@ -82,7 +83,7 @@ export const topUpVeSure = async ({
 	voter,
 	amount,
 }: {
-	program: anchor.Program<Oracle>;
+	program: anchor.Program<T>;
 	tribecaSDK: tribeca.TribecaSDK;
 	sureLocker: web3.PublicKey;
 	governor: web3.PublicKey;
@@ -271,6 +272,10 @@ export const createProposal = async ({
 	}
 };
 
+/**
+ * voteOnProposal
+ * @param param0
+ */
 export const voteOnProposal = async ({
 	voter,
 	proposalId,

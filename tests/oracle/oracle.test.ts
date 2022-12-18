@@ -7,9 +7,6 @@ import * as web3 from '@solana/web3.js';
 import * as spl from '@solana/spl-token';
 import { createMint, mintTo, getMint } from '@solana/spl-token';
 import { Oracle } from '../../target/types/oracle';
-import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
-import { SHAKE } from 'sha3';
-import { assert } from 'chai';
 import {
 	convertSureTokensToDecimals,
 	createProposal,
@@ -25,6 +22,7 @@ import {
 	voteOnProposal,
 } from './utils';
 import { buffer } from 'stream/consumers';
+import { generateTestVoter } from './utils/oracle.utils';
 
 describe('Test Sure Prediction Market ', () => {
 	const provider = anchor.AnchorProvider.env();
@@ -166,44 +164,20 @@ describe('Test Sure Prediction Market ', () => {
 
 		// VOTE ON PROPOSAL
 		try {
-			const voter1 = web3.Keypair.generate();
-			await topUpAccount({ connection, pk: voter1.publicKey });
-			await topUpSure({
-				connection,
+			const [escrow, voter] = await generateTestVoter({
+				program,
 				mint: sureMint,
 				minterWallet,
-				to: voter1.publicKey,
-				amount: 200,
-			});
-
-			const voterAccount = await spl.getAssociatedTokenAddress(
-				sureMint,
-				voter1.publicKey
-			);
-
-			// escrow some sure
-			await topUpVeSure({
-				program,
 				tribecaSDK,
 				sureLocker,
 				governor,
-				mint: sureMint,
-				voter: voter1,
-				amount: 100,
 			});
 
-			const lockerWrapper = await tribeca.LockerWrapper.load(
-				tribecaSDK,
-				sureLocker,
-				governor
-			);
-			const escrowRes = await lockerWrapper.getOrCreateEscrow(voter1.publicKey);
-
 			voteOnProposal({
-				voter: voter1,
+				voter: voter,
 				proposalId: id,
 				program,
-				escrow: escrowRes.escrow,
+				escrow,
 				mint: sureMint,
 				locker: sureLocker,
 			});
