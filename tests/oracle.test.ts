@@ -10,6 +10,7 @@ import { Oracle } from '../target/types/oracle';
 import { findProgramAddressSync } from '@project-serum/anchor/dist/cjs/utils/pubkey';
 import { SHAKE } from 'sha3';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
+import { assert } from 'chai';
 
 const findConfigPDA = (
 	tokenMint: web3.PublicKey,
@@ -235,9 +236,11 @@ describe('Test Sure Prediction Market ', () => {
 			const [proposalPda] = findProposalPDA(id, program.programId);
 			const [revealVoteArray] = findRevealVoteArrayPDA(id, program.programId);
 			const [proposalVault] = findProposalVaultPDA(id, program.programId);
-			await program.methods
+			let tx = new web3.Transaction();
+			const instruction = await program.methods
 				.proposeVote(id, name, description, stake)
 				.accounts({
+					proposer: proposer1.publicKey,
 					config: configPda,
 					proposal: proposalPda,
 					revealVoteArray: revealVoteArray,
@@ -245,7 +248,19 @@ describe('Test Sure Prediction Market ', () => {
 					proposerAccount: proposer1Ata,
 					proposalVaultMint: sureMint,
 				})
-				.rpc();
+				.instruction();
+			tx.add(instruction);
+			const signature = await web3.sendAndConfirmTransaction(
+				provider.connection,
+				tx,
+				[proposer1]
+			);
+			console.log('signature: ', signature);
+
+			// check proposal
+			const proposal = await program.account.proposal.fetch(proposalPda);
+			// start vote automatically
+			assert.equal(proposal.status, 2);
 		} catch (err) {
 			console.log('err: ', err);
 			throw new Error('Could not create proposal. Cause ' + err);
