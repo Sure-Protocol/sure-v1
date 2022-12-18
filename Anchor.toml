@@ -22,10 +22,9 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-test-oracle = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/sure-oracle.*.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/*test.ts"
 
-[test]
+[test] 
 startup_wait = 20000
 
 [[test.genesis]]

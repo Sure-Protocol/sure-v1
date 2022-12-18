@@ -1,15 +1,19 @@
-use agnostic_orderbook::{
-    state::{OrderSummary, Side},
-    *,
-};
+use agnostic_orderbook::state::Side;
+
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 use sure_common::fp::fp_from_float;
 
 use crate::state::*;
-use crate::utils::{CallbackInfo, ShieldError, SURE_SHIELD};
+use crate::utils::SURE_SHIELD;
 
-#[derive(Clone, Copy, AnchorDeserialize, AnchorSerialize)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone)]
+pub enum OrderSide {
+    Bid,
+    Ask,
+}
+
+#[derive(Clone, AnchorDeserialize, AnchorSerialize)]
 pub struct OrderParams {
     /// The maximum quantity of base to be traded.
     pub max_base_qty: u64,
@@ -19,7 +23,7 @@ pub struct OrderParams {
     /// Must be rounded to the nearest tick size multiple (see [`round_price`][`crate::utils::round_price`])
     pub limit_price: u64,
 
-    pub side: Side,
+    pub side: OrderSide,
     /// The maximum number of orders to match against before performing a partial fill.
     ///
     /// It is then possible for a caller program to detect a partial fill by reading the [`OrderSummary`][`crate::orderbook::OrderSummary`]
@@ -131,12 +135,14 @@ pub fn handler(ctx: Context<ProvideCoverage>, order: OrderParams) -> Result<()> 
     )?;
 
     // emit event
-    emit!(ProvidedCoverage { order_summary });
+    emit!(ProvidedCoverage {
+        total_base_qty: order_summary.total_base_qty
+    });
 
     Ok(())
 }
 
 #[event]
 pub struct ProvidedCoverage {
-    order_summary: OrderSummary,
+    total_base_qty: u64,
 }

@@ -184,10 +184,8 @@ impl Proposal {
         description: &str,
         proposer: &Pubkey,
         proposed_staked: u64,
-        token_supply: u64,
         vault: &Pubkey,
         end_time_ts: Option<i64>,
-        decimals: u8,
     ) -> Result<()> {
         validate_stake(proposed_staked)?;
 

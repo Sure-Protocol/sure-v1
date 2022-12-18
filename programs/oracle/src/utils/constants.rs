@@ -4,6 +4,7 @@ use anchor_lang::solana_program::clock::SECONDS_PER_DAY;
 pub const SURE_ORACLE_SEED: &str = "sure-oracle";
 pub const SURE_ORACLE_VOTE_SEED: &str = "sure-oracle-vote";
 pub const SURE_ORACLE_REVEAL_ARRAY_SEED: &str = "sure-oracle-reveal-array";
+pub const SURE_ORACLE_PROPOSAL_VAULT_SEED: &str = "sure-oracle-propsal-vault";
 pub const SURE_ORACLE_CONFIG_SEED: &str = "sure-oracle-config";
 // voting fraction required in 1/x
 pub const VOTING_FRACTION_REQUIRED: u64 = 10;

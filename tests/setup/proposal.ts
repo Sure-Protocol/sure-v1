@@ -1,5 +1,5 @@
 import { web3 } from '@project-serum/anchor';
-import * as oracle from '../../packages/oracle-sdk/dist/esm/oracle-sdk/src';
+import * as oracle from '@surec/oracle';
 import * as anchor from '@project-serum/anchor';
 import { TransactionReceipt } from '@saberhq/solana-contrib';
 
