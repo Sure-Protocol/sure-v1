@@ -2050,6 +2050,7 @@ dependencies = [
  "locked-voter",
  "mpl-token-metadata",
  "sha3 0.10.2",
+ "solana-program",
  "solana-program-test",
  "spl-token",
  "uint",

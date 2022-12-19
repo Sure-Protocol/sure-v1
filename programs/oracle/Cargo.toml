@@ -15,6 +15,7 @@ no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
+test-bpf = []
 
 [dependencies]
 anchor-lang = "0.24.2"
@@ -28,5 +29,6 @@ mpl-token-metadata = {version ="1.2.7", features = ["no-entrypoint"] }
 [dev-dependencies]
 anchor-client = "0.24.2"
 solana-program-test = "1.9.15"
+solana-program = "1.9.15"
 spl-token = "3.2.0"
 
