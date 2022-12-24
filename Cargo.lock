@@ -2052,6 +2052,7 @@ dependencies = [
  "sha3 0.10.2",
  "solana-program",
  "solana-program-test",
+ "spl-associated-token-account",
  "spl-token",
  "uint",
 ]
