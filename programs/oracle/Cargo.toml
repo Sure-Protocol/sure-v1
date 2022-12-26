@@ -32,4 +32,5 @@ solana-program-test = "1.9.15"
 solana-program = "1.9.15"
 spl-token = "3.2.0"
 spl-associated-token-account = "1.0.3"
-
+govern = "0.5.8"
+smart-wallet = "0.11.1"

@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::*;
 use oracle::id;
 use oracle::utils::SURE_ORACLE_CONFIG_SEED;
+use smart_wallet;
 use solana_program::hash::Hash;
 use solana_program::program_pack::Pack;
 use solana_program_test::*;
@@ -80,7 +81,56 @@ fn mint_amount<T: Signer>(
 }
 
 #[tokio::test]
-async fn create_veSure() {}
+async fn create_veSure() {
+    let mut program_test = ProgramTest::new("oracle", id(), processor!(oracle::entry));
+    let protocol_owner = signature::Keypair::new();
+    initialize_account(&protocol_owner.pubkey(), &mut program_test);
+    let mut test_context = program_test.start_with_context().await;
+
+    let base = solana_sdk::signature::Keypair::new();
+    let (smart_wallet_pda, smart_wallet_bump) = Pubkey::find_program_address(
+        &["GokiSmartWallet".as_bytes(), &base.pubkey().to_bytes()],
+        &smart_wallet::id(),
+    );
+    // create smart locker - get goki sdk
+    // get required data
+    let create_smart_wallet_data = smart_wallet::instruction::CreateSmartWallet {
+        _bump: smart_wallet_bump,
+        max_owners: 5,
+        owners: [base.pubkey()].to_vec(),
+        threshold: 1,
+        minimum_delay: 1,
+    };
+
+    // get required accounts
+    let create_smart_wallet_account = smart_wallet::accounts::CreateSmartWallet {
+        base: base.pubkey(),
+        smart_wallet: smart_wallet_pda,
+        payer: protocol_owner.pubkey(),
+        system_program: anchor_lang::system_program::ID,
+    };
+
+    let create_smart_wallet_ix = instruction::Instruction {
+        program_id: smart_wallet::id(),
+        accounts: create_smart_wallet_account.to_account_metas(None),
+        data: create_smart_wallet_data.data(),
+    };
+
+    let create_smart_wallet_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &[create_smart_wallet_ix],
+        Some(&protocol_owner.pubkey()),
+        &[&protocol_owner],
+        test_context.last_blockhash,
+    );
+    test_context
+        .banks_client
+        .process_transaction(create_smart_wallet_tx)
+        .await
+        .unwrap();
+
+    // let governor_address  = solana_sdk::pubkey::Pubkey::find_program_address(&["TribecaGovernor".as_bytes(),&base.pubkey().to_bytes()], &govern::id());
+    // let gov = govern::instruction::CreateGovernor
+}
 
 #[tokio::test]
 async fn create_and_init() {
