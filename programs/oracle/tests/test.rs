@@ -2,13 +2,17 @@ use anchor_client::solana_sdk::signers::Signers;
 use anchor_client::{solana_sdk::signer::Signer, *};
 use anchor_lang::prelude::*;
 use anchor_lang::*;
+use govern;
+use locked_voter;
 use oracle::id;
 use oracle::utils::SURE_ORACLE_CONFIG_SEED;
 use smart_wallet;
 use solana_program::hash::Hash;
+use solana_program::instruction::Instruction;
 use solana_program::program_pack::Pack;
 use solana_program_test::*;
 use solana_sdk::*;
+use spl_associated_token_account::create_associated_token_account;
 use spl_token;
 
 fn initialize_account(address: &Pubkey, program_test: &mut ProgramTest) {
@@ -80,31 +84,145 @@ fn mint_amount<T: Signer>(
     ))
 }
 
-#[tokio::test]
-async fn create_veSure() {
-    let mut program_test = ProgramTest::new("oracle", id(), processor!(oracle::entry));
-    let protocol_owner = signature::Keypair::new();
-    initialize_account(&protocol_owner.pubkey(), &mut program_test);
-    let mut test_context = program_test.start_with_context().await;
+pub fn add_necessary_programs(ctx: &mut ProgramTest) {
+    ctx.add_program("smart_wallet", smart_wallet::id(), None);
+    ctx.add_program("govern", govern::id(), None);
+    ctx.add_program("locked_voter", locked_voter::id(), None);
+}
 
-    let base = solana_sdk::signature::Keypair::new();
+/// lock_tokens allows users to lock
+/// their tokens int the locker based on the mint
+///
+pub async fn lock_tokens(
+    ctx: &mut ProgramTestContext,
+    user: solana_sdk::signature::Keypair,
+    locker: &Pubkey,
+    mint: &Pubkey,
+    amount: u64,
+    duration: i64,
+) {
+    let source_token_account =
+        anchor_spl::associated_token::get_associated_token_address(&user.pubkey(), &mint);
+
+    let (escrow_pda, escrow_bump) = Pubkey::find_program_address(
+        &[
+            "Escrow".as_bytes(),
+            &locker.to_bytes(),
+            &user.pubkey().to_bytes(),
+        ],
+        &locked_voter::id(),
+    );
+    let mut ixs = Vec::new();
+    let escrow_token_account =
+        anchor_spl::associated_token::get_associated_token_address(&escrow_pda, &mint);
+    let create_escrow_token_account_ix =
+        create_associated_token_account(&user.pubkey(), &escrow_pda, &mint);
+    ixs.push(create_escrow_token_account_ix);
+
+    let escrow_account = ctx.banks_client.get_account(escrow_pda).await.unwrap();
+
+    // if escrow account does not exist - create it
+    if (escrow_account.is_none()) {
+        let create_escrow_accounts = locked_voter::accounts::NewEscrow {
+            locker: *locker,
+            escrow: escrow_pda,
+            escrow_owner: user.pubkey(),
+            payer: user.pubkey(),
+            system_program: anchor_lang::system_program::ID,
+        };
+
+        let create_escrow_data = locked_voter::instruction::NewEscrow { _bump: escrow_bump };
+
+        let create_escrow_ix = solana_sdk::instruction::Instruction {
+            program_id: locked_voter::id(),
+            accounts: create_escrow_accounts.to_account_metas(None),
+            data: create_escrow_data.data(),
+        };
+        ixs.push(create_escrow_ix)
+    }
+
+    // lock tokens
+    let lock_tokens_accounts = locked_voter::accounts::Lock {
+        locker: *locker,
+        escrow: escrow_pda,
+        escrow_owner: user.pubkey(),
+        escrow_tokens: escrow_token_account,
+        source_tokens: source_token_account,
+        token_program: anchor_spl::token::ID,
+    };
+
+    let lock_tokens_data = locked_voter::instruction::Lock { amount, duration };
+
+    let lock_tokens_ix = solana_sdk::instruction::Instruction {
+        program_id: locked_voter::id(),
+        accounts: lock_tokens_accounts.to_account_metas(None),
+        data: lock_tokens_data.data(),
+    };
+    ixs.append(&mut [lock_tokens_ix].to_vec());
+
+    let lock_tokens_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &ixs,
+        Some(&user.pubkey()),
+        &[&user],
+        ctx.last_blockhash,
+    );
+
+    ctx.banks_client
+        .process_transaction(lock_tokens_tx)
+        .await
+        .unwrap();
+}
+
+struct SetupLockerResult {
+    locker: Pubkey,
+}
+
+/// setup_sure_locker
+/// set ups
+///     - locker
+///     - governor
+///     - smart walle
+pub async fn setup_sure_locker(
+    ctx: &mut ProgramTestContext,
+    protocol_owner: &solana_sdk::signature::Keypair,
+    mint: &Pubkey,
+) -> Result<SetupLockerResult> {
+    // let mut program_test = ProgramTest::new("oracle", id(), processor!(oracle::entry));
+    // let protocol_owner = signature::Keypair::new();
+    // initialize_account(&protocol_owner.pubkey(), &mut program_test);
+
+    // let mut test_context = program_test.start_with_context().await;
+
+    //let base = solana_sdk::signature::Keypair::new();
     let (smart_wallet_pda, smart_wallet_bump) = Pubkey::find_program_address(
-        &["GokiSmartWallet".as_bytes(), &base.pubkey().to_bytes()],
+        &[
+            "GokiSmartWallet".as_bytes(),
+            &protocol_owner.pubkey().to_bytes(),
+        ],
         &smart_wallet::id(),
     );
     // create smart locker - get goki sdk
     // get required data
+    let (governor_pda, governor_bump) = solana_sdk::pubkey::Pubkey::find_program_address(
+        &[
+            "TribecaGovernor".as_bytes(),
+            &protocol_owner.pubkey().to_bytes(),
+        ],
+        &govern::id(),
+    );
+
+    // one of the owners of the smart wallet must be the governor
     let create_smart_wallet_data = smart_wallet::instruction::CreateSmartWallet {
         _bump: smart_wallet_bump,
         max_owners: 5,
-        owners: [base.pubkey()].to_vec(),
+        owners: [governor_pda].to_vec(),
         threshold: 1,
         minimum_delay: 1,
     };
 
     // get required accounts
     let create_smart_wallet_account = smart_wallet::accounts::CreateSmartWallet {
-        base: base.pubkey(),
+        base: protocol_owner.pubkey(),
         smart_wallet: smart_wallet_pda,
         payer: protocol_owner.pubkey(),
         system_program: anchor_lang::system_program::ID,
@@ -119,23 +237,105 @@ async fn create_veSure() {
     let create_smart_wallet_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
         &[create_smart_wallet_ix],
         Some(&protocol_owner.pubkey()),
-        &[&protocol_owner],
-        test_context.last_blockhash,
+        &[protocol_owner],
+        ctx.last_blockhash,
     );
-    test_context
-        .banks_client
+    ctx.banks_client
         .process_transaction(create_smart_wallet_tx)
         .await
         .unwrap();
 
-    // let governor_address  = solana_sdk::pubkey::Pubkey::find_program_address(&["TribecaGovernor".as_bytes(),&base.pubkey().to_bytes()], &govern::id());
-    // let gov = govern::instruction::CreateGovernor
+    // use smart wallet to create governor
+    let (locker_pda, locker_bump) = Pubkey::find_program_address(
+        &["Locker".as_bytes(), &protocol_owner.pubkey().to_bytes()],
+        &locked_voter::id(),
+    );
+
+    let governor_params = govern::GovernanceParameters {
+        voting_delay: 60 * 60 * 24,      // one hour voting delay
+        voting_period: 60 * 60 * 24 * 7, // 7 days voting period
+        quorum_votes: 100_000_000,
+        timelock_delay_seconds: 60 * 60 * 24,
+    };
+    let governor_data = govern::instruction::CreateGovernor {
+        _bump: governor_bump,
+        electorate: locker_pda,
+        params: governor_params,
+    };
+
+    let governor_accounts = govern::accounts::CreateGovernor {
+        base: protocol_owner.pubkey(),
+        governor: governor_pda,
+        smart_wallet: smart_wallet_pda,
+        payer: protocol_owner.pubkey(),
+        system_program: anchor_lang::system_program::ID,
+    };
+
+    let create_governor_ix = solana_sdk::instruction::Instruction {
+        program_id: govern::id(),
+        accounts: governor_accounts.to_account_metas(None),
+        data: governor_data.data(),
+    };
+
+    let create_governor_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &[create_governor_ix],
+        Some(&protocol_owner.pubkey()),
+        &[protocol_owner],
+        ctx.last_blockhash,
+    );
+    ctx.banks_client
+        .process_transaction(create_governor_tx)
+        .await
+        .unwrap();
+
+    //create locker
+    let locker_params = locked_voter::LockerParams {
+        whitelist_enabled: true,
+        max_stake_duration: 1,
+        max_stake_vote_multiplier: 1,
+        min_stake_duration: 30,
+        proposal_activation_min_votes: 100_000_000,
+    };
+    let create_locker_data = locked_voter::instruction::NewLocker {
+        _bump: locker_bump,
+        params: locker_params,
+    };
+
+    let create_locker_accounts = locked_voter::accounts::NewLocker {
+        base: protocol_owner.pubkey(),
+        locker: locker_pda,
+        token_mint: *mint,
+        governor: governor_pda,
+        payer: protocol_owner.pubkey(),
+        system_program: anchor_lang::system_program::ID,
+    };
+
+    let create_locker_ix = solana_sdk::instruction::Instruction {
+        program_id: locked_voter::id(),
+        accounts: create_locker_accounts.to_account_metas(None),
+        data: create_locker_data.data(),
+    };
+
+    let create_locker_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &[create_locker_ix],
+        Some(&protocol_owner.pubkey()),
+        &[protocol_owner],
+        ctx.last_blockhash,
+    );
+    ctx.banks_client
+        .process_transaction(create_locker_tx)
+        .await
+        .unwrap();
+
+    return Result::Ok(SetupLockerResult { locker: locker_pda });
 }
 
 #[tokio::test]
 async fn create_and_init() {
     let mut program_test = ProgramTest::new("oracle", id(), processor!(oracle::entry));
 
+    let protocol_owner = signature::Keypair::new();
+    initialize_account(&protocol_owner.pubkey(), &mut program_test);
     // create program oracle owner
     let oracle_owner = signature::Keypair::new();
     initialize_account(&oracle_owner.pubkey(), &mut program_test);
@@ -146,12 +346,16 @@ async fn create_and_init() {
     let proposer = signature::Keypair::new();
     initialize_account(&proposer.pubkey(), &mut program_test);
 
+    // add_necessary_programs
+    add_necessary_programs(&mut program_test);
+
     // start program
     let mut program_test_context = program_test.start_with_context().await;
     let rent = program_test_context.banks_client.get_rent().await.unwrap();
 
     // create mint instruction
     let mint = solana_sdk::signature::Keypair::new();
+
     let mint_tx = create_mint(&minter, &mint, rent, program_test_context.last_blockhash).unwrap();
     // sign and send transaction
     program_test_context
@@ -159,6 +363,12 @@ async fn create_and_init() {
         .process_transaction(mint_tx)
         .await
         .unwrap();
+
+    //  setup locker
+    let locker_result =
+        setup_sure_locker(&mut program_test_context, &protocol_owner, &mint.pubkey())
+            .await
+            .unwrap();
 
     // create ata
     let minter_ata = anchor_spl::associated_token::get_associated_token_address(
@@ -295,4 +505,15 @@ async fn create_and_init() {
     let config_account_d =
         oracle::states::Config::try_deserialize(&mut config_account.data.as_slice()).unwrap();
     assert_eq!(config_account_d.initialized, true);
+
+    // create proposa
+    lock_tokens(
+        &mut program_test_context,
+        proposer,
+        &locker_result.locker,
+        &mint.pubkey(),
+        100_000_000,
+        365,
+    )
+    .await;
 }
