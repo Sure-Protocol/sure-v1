@@ -1,4 +1,8 @@
-# Oracle
+# Sure Prediction market / oracle
+
+The Sure prediction market is meant to answer questions and bring new data on chain by using strong incentivization and stake to ensure the smallest possible attack surface.
+
+For a more detailed presentation please see the medium article [An oracle, a prediction market](https://medium.com/@0xksure/an-oracle-a-prediction-market-84e124db6e55)
 
 ### TODO
 
