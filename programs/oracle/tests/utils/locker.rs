@@ -19,7 +19,7 @@ pub struct SetupLockerResult {
 ///
 pub async fn lock_tokens(
     ctx: &mut ProgramTestContext,
-    user: solana_sdk::signature::Keypair,
+    user: &solana_sdk::signature::Keypair,
     locker: &Pubkey,
     mint: &Pubkey,
     amount: u64,
@@ -93,7 +93,7 @@ pub async fn lock_tokens(
     let lock_tokens_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
         &ixs,
         Some(&user.pubkey()),
-        &[&user],
+        &[user],
         ctx.last_blockhash,
     );
 

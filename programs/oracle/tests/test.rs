@@ -17,12 +17,14 @@ pub mod utils;
 use anchor_client::{solana_sdk::signer::Signer, *};
 use anchor_lang::prelude::*;
 use anchor_lang::*;
+use anchor_spl::associated_token;
 use govern;
 use locked_voter;
 use oracle::id;
 use oracle::utils::SURE_ORACLE_CONFIG_SEED;
 use smart_wallet;
 use solana_program::clock::SECONDS_PER_DAY;
+use solana_program::hash::Hash;
 use solana_program_test::*;
 use solana_sdk::*;
 use spl_token;
@@ -192,9 +194,10 @@ async fn create_and_init() {
         ],
         &oracle::id(),
     );
+    let config_account_PK = config_account.0.key();
     let config = oracle::accounts::InitializeConfig {
         signer: oracle_owner.pubkey(),
-        config: config_account.0.key(),
+        config: config_account_PK,
         token_mint: mint.pubkey(),
         system_program: anchor_lang::system_program::ID,
     };
@@ -234,14 +237,59 @@ async fn create_and_init() {
         oracle::states::Config::try_deserialize(&mut config_account.data.as_slice()).unwrap();
     assert_eq!(config_account_d.initialized, true);
 
-    // create proposa
+    // ==== create proposal ====
     lock_tokens(
         &mut program_test_context,
-        proposer,
+        &proposer,
         &locker_result.locker,
         &mint.pubkey(),
         100_000_000,
         (SECONDS_PER_DAY * 365) as i64, // lockup for a year
     )
     .await;
+
+    let (proposal_pda, proposal_bump) = Pubkey::find_program_address(&[], &oracle::id());
+    let (reveal_vote_array_pda, reveal_vote_array_bump) =
+        Pubkey::find_program_address(&[], &oracle::id());
+    let (proposal_vault_pda, proposal_vault_bump) =
+        Pubkey::find_program_address(&[], &oracle::id());
+
+    let create_proposal_accounts = oracle::accounts::ProposeVote {
+        proposer: proposer.pubkey(),
+        config: config_account_PK,
+        proposal: proposal_pda,
+        reveal_vote_array: reveal_vote_array_pda,
+        proposer_account: proposer_ata,
+        proposal_vault_mint: mint.pubkey(),
+        proposal_vault: proposal_vault_pda,
+        token_program: spl_token::id(),
+        associated_token_program: associated_token::ID,
+        rent: solana_program::sysvar::rent::ID,
+        system_program: anchor_lang::system_program::ID,
+    };
+
+    let proposal_id = Hash::new(b"1").to_bytes();
+
+    let create_proposal_data = oracle::instruction::ProposeVote {
+        id: proposal_id[..16].to_vec(),
+        name: "my test proposal".to_string(),
+        description: "hello".to_string(),
+        stake: 1_000_000,
+    };
+
+    let create_proposal_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &[solana_sdk::instruction::Instruction {
+            program_id: oracle::ID,
+            accounts: create_proposal_accounts.to_account_metas(None),
+            data: create_proposal_data.data(),
+        }],
+        Some(&proposer.pubkey()),
+        &[&proposer],
+        program_test_context.last_blockhash,
+    );
+    program_test_context
+        .banks_client
+        .process_transaction(create_proposal_tx)
+        .await
+        .unwrap();
 }
