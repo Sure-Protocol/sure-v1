@@ -1,4 +1,7 @@
+use std::io::Read;
+
 use anchor_client::solana_sdk::signers::Signers;
+use anchor_client::solana_sdk::timing::SECONDS_PER_YEAR;
 use anchor_client::{solana_sdk::signer::Signer, *};
 use anchor_lang::prelude::*;
 use anchor_lang::*;
@@ -7,6 +10,7 @@ use locked_voter;
 use oracle::id;
 use oracle::utils::SURE_ORACLE_CONFIG_SEED;
 use smart_wallet;
+use solana_program::clock::SECONDS_PER_DAY;
 use solana_program::hash::Hash;
 use solana_program::instruction::Instruction;
 use solana_program::program_pack::Pack;
@@ -90,6 +94,46 @@ pub fn add_necessary_programs(ctx: &mut ProgramTest) {
     ctx.add_program("locked_voter", locked_voter::id(), None);
 }
 
+pub async fn test_amount_balance(
+    ctx: &mut ProgramTestContext,
+    wallet: &Pubkey,
+    mint: &Pubkey,
+    expected_amount: u64,
+    tag: &str,
+) {
+    let account_balance = get_account_balance(ctx, wallet, mint).await.unwrap();
+    assert!(
+        account_balance > expected_amount,
+        "[{:?}] account balance is less than amount: balance = {} < {} = amount to be locked",
+        tag,
+        account_balance,
+        expected_amount
+    );
+}
+
+const SPL_AMOUNT_OFFSET: usize = 32 + 32;
+const U64_OFFSET: usize = 8;
+// @ checkpoint - must find mint token balance
+pub async fn get_account_balance(
+    ctx: &mut ProgramTestContext,
+    wallet: &Pubkey,
+    mint: &Pubkey,
+) -> Result<u64> {
+    let account_address = anchor_spl::associated_token::get_associated_token_address(wallet, mint);
+    let account = ctx
+        .banks_client
+        .get_account(account_address)
+        .await
+        .unwrap()
+        .unwrap();
+
+    let account_data = account.data.as_slice();
+
+    let amount: &u64 =
+        bytemuck::from_bytes(&account_data[SPL_AMOUNT_OFFSET..SPL_AMOUNT_OFFSET + U64_OFFSET]);
+    Ok(*amount)
+}
+
 /// lock_tokens allows users to lock
 /// their tokens int the locker based on the mint
 ///
@@ -101,6 +145,7 @@ pub async fn lock_tokens(
     amount: u64,
     duration: i64,
 ) {
+    test_amount_balance(ctx, &user.pubkey(), mint, amount, "lock_tokens").await;
     let source_token_account =
         anchor_spl::associated_token::get_associated_token_address(&user.pubkey(), &mint);
 
@@ -151,11 +196,16 @@ pub async fn lock_tokens(
         token_program: anchor_spl::token::ID,
     };
 
-    let lock_tokens_data = locked_voter::instruction::Lock { amount, duration };
+    let lock_tokens_with_whitelist_accounts = locked_voter::accounts::LockWithWhitelist {
+        lock: lock_tokens_accounts,
+        instructions_sysvar: solana_sdk::sysvar::instructions::id(),
+    };
+
+    let lock_tokens_data = locked_voter::instruction::LockWithWhitelist { amount, duration };
 
     let lock_tokens_ix = solana_sdk::instruction::Instruction {
         program_id: locked_voter::id(),
-        accounts: lock_tokens_accounts.to_account_metas(None),
+        accounts: lock_tokens_with_whitelist_accounts.to_account_metas(None),
         data: lock_tokens_data.data(),
     };
     ixs.append(&mut [lock_tokens_ix].to_vec());
@@ -289,11 +339,12 @@ pub async fn setup_sure_locker(
         .unwrap();
 
     //create locker
+
     let locker_params = locked_voter::LockerParams {
         whitelist_enabled: true,
-        max_stake_duration: 1,
+        max_stake_duration: SECONDS_PER_DAY * 365 * 4, // max 4 years
         max_stake_vote_multiplier: 1,
-        min_stake_duration: 30,
+        min_stake_duration: SECONDS_PER_DAY * 30, // min 30 days
         proposal_activation_min_votes: 100_000_000,
     };
     let create_locker_data = locked_voter::instruction::NewLocker {
@@ -413,7 +464,7 @@ async fn create_and_init() {
 
     // transfer token to proposer
     let proposer_ata = anchor_spl::associated_token::get_associated_token_address(
-        &minter.pubkey(),
+        &proposer.pubkey(),
         &mint.pubkey(),
     );
     let create_ata_ix = spl_associated_token_account::create_associated_token_account(
@@ -440,7 +491,7 @@ async fn create_and_init() {
         &proposer_ata,
         &minter.pubkey(),
         &[&minter.pubkey()],
-        1_000_000_000,
+        1_000_000_000_000,
     )
     .unwrap();
 
@@ -456,6 +507,14 @@ async fn create_and_init() {
         .await
         .unwrap();
 
+    test_amount_balance(
+        &mut program_test_context,
+        &proposer.pubkey(),
+        &mint.pubkey(),
+        1_000_000_000,
+        "main",
+    )
+    .await;
     // ======== ORACLE - INITIALIZE ORACLE =============
     let config_account = Pubkey::find_program_address(
         &[
@@ -513,7 +572,7 @@ async fn create_and_init() {
         &locker_result.locker,
         &mint.pubkey(),
         100_000_000,
-        365,
+        (SECONDS_PER_DAY * 365) as i64, // lockup for a year
     )
     .await;
 }
