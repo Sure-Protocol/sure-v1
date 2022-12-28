@@ -33,6 +33,7 @@ use solana_program_test::*;
 use solana_sdk::*;
 use spl_token;
 use std::hash;
+use std::time::Duration;
 use utils::locker::*;
 use utils::tokens::*;
 
@@ -54,6 +55,41 @@ pub fn add_necessary_programs(ctx: &mut ProgramTest) {
     ctx.add_program("smart_wallet", smart_wallet::id(), None);
     ctx.add_program("govern", govern::id(), None);
     ctx.add_program("locked_voter", locked_voter::id(), None);
+}
+
+async fn get_oracle_proposal(
+    ctx: &mut ProgramTestContext,
+    proposal: &Pubkey,
+) -> Result<oracle::states::Proposal> {
+    // check status
+    let proposal_data = ctx
+        .banks_client
+        .get_account(*proposal)
+        .await
+        .unwrap()
+        .unwrap();
+
+    Result::Ok(
+        oracle::states::Proposal::try_deserialize(&mut proposal_data.data.as_slice()).unwrap(),
+    )
+}
+
+async fn test_foward_time(ctx: &mut ProgramTestContext, add_time: i64) {
+    let clock_sysvar: Clock = ctx.banks_client.get_sysvar().await.unwrap();
+    println!(
+        "Original Time: epoch = {}, timestamp = {}",
+        clock_sysvar.epoch, clock_sysvar.unix_timestamp
+    );
+    let mut new_clock = clock_sysvar.clone();
+    new_clock.epoch = new_clock.epoch + 30;
+    new_clock.unix_timestamp += add_time;
+
+    ctx.set_sysvar(&new_clock);
+    let clock_sysvar: Clock = ctx.banks_client.get_sysvar().await.unwrap();
+    println!(
+        "New Time: epoch = {}, timestamp = {}",
+        clock_sysvar.epoch, clock_sysvar.unix_timestamp
+    );
 }
 
 /// Main integration test for the oracle / prediction market
@@ -408,4 +444,17 @@ async fn create_and_init() {
         .process_transaction(voter1_submit_vote_tx)
         .await
         .unwrap();
+
+    let proposal = get_oracle_proposal(&mut program_test_context, &proposal_pda)
+        .await
+        .unwrap();
+    assert!(
+        proposal.status == 2,
+        "[main] Assert failed. Proposal status is not 1 but {}",
+        proposal.status
+    );
+
+    // fast forward time
+    let time_add = Duration::from_secs(SECONDS_PER_DAY).as_secs() as i64;
+    test_foward_time(&mut program_test_context, time_add).await;
 }
