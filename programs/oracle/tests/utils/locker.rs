@@ -14,6 +14,15 @@ pub struct SetupLockerResult {
     pub locker: Pubkey,
 }
 
+/// get_user_escrow_pda finds the locker escrow pda and bump based
+/// on the locker pubkey and user pubkey
+pub fn get_user_escrow_pda(locker: &Pubkey, userPk: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &["Escrow".as_bytes(), &locker.to_bytes(), &userPk.to_bytes()],
+        &locked_voter::id(),
+    )
+}
+
 /// lock_tokens allows users to lock
 /// their tokens int the locker based on the mint
 ///
@@ -29,14 +38,7 @@ pub async fn lock_tokens(
     let source_token_account =
         anchor_spl::associated_token::get_associated_token_address(&user.pubkey(), &mint);
 
-    let (escrow_pda, escrow_bump) = Pubkey::find_program_address(
-        &[
-            "Escrow".as_bytes(),
-            &locker.to_bytes(),
-            &user.pubkey().to_bytes(),
-        ],
-        &locked_voter::id(),
-    );
+    let (escrow_pda, escrow_bump) = get_user_escrow_pda(locker, &user.pubkey());
     let mut ixs = Vec::new();
     let escrow_token_account =
         anchor_spl::associated_token::get_associated_token_address(&escrow_pda, &mint);

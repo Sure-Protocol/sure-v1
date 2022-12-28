@@ -73,6 +73,9 @@ async fn create_and_init() {
     let proposer = signature::Keypair::new();
     initialize_account(&proposer.pubkey(), &mut program_test);
 
+    let voter1 = signature::Keypair::new();
+    initialize_account(&voter1.pubkey(), &mut program_test);
+
     // add_necessary_programs
     add_necessary_programs(&mut program_test);
 
@@ -143,15 +146,25 @@ async fn create_and_init() {
         &proposer.pubkey(),
         &mint.pubkey(),
     );
-    let create_ata_ix = spl_associated_token_account::create_associated_token_account(
+    let voter1_ata = anchor_spl::associated_token::get_associated_token_address(
+        &voter1.pubkey(),
+        &mint.pubkey(),
+    );
+
+    let create_proposer_ata_ix = spl_associated_token_account::create_associated_token_account(
         &proposer.pubkey(),
         &proposer.pubkey(),
         &mint.pubkey(),
     );
+    let create_voter1_ata_ix = spl_associated_token_account::create_associated_token_account(
+        &voter1.pubkey(),
+        &voter1.pubkey(),
+        &mint.pubkey(),
+    );
     let create_ata_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-        &[create_ata_ix],
+        &[create_proposer_ata_ix, create_voter1_ata_ix],
         Some(&proposer.pubkey()),
-        &[&proposer],
+        &[&proposer, &voter1],
         program_test_context.last_blockhash,
     );
 
@@ -161,18 +174,28 @@ async fn create_and_init() {
         .await
         .unwrap();
 
-    let transfer_ix = spl_token::instruction::transfer(
+    let transfer_sure_to_proposer_ix = spl_token::instruction::transfer(
         &spl_token::ID,
         &minter_ata,
         &proposer_ata,
         &minter.pubkey(),
         &[&minter.pubkey()],
-        1_000_000_000_000,
+        500_000_000_000,
+    )
+    .unwrap();
+
+    let transfer_sure_to_voter1_ix = spl_token::instruction::transfer(
+        &spl_token::ID,
+        &minter_ata,
+        &voter1_ata,
+        &minter.pubkey(),
+        &[&minter.pubkey()],
+        100_000_000_000,
     )
     .unwrap();
 
     let transfer_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-        &[transfer_ix],
+        &[transfer_sure_to_proposer_ix, transfer_sure_to_voter1_ix],
         Some(&minter.pubkey()),
         &[&minter],
         program_test_context.last_blockhash,
@@ -186,6 +209,14 @@ async fn create_and_init() {
     test_amount_balance(
         &mut program_test_context,
         &proposer.pubkey(),
+        &mint.pubkey(),
+        1_000_000_000,
+        "main",
+    )
+    .await;
+    test_amount_balance(
+        &mut program_test_context,
+        &voter1.pubkey(),
         &mint.pubkey(),
         1_000_000_000,
         "main",
@@ -314,6 +345,67 @@ async fn create_and_init() {
     program_test_context
         .banks_client
         .process_transaction(create_proposal_tx)
+        .await
+        .unwrap();
+
+    // ====== VOTE ON PROPOSAL ======
+    // lock tokens
+    lock_tokens(
+        &mut program_test_context,
+        &voter1,
+        &locker_result.locker,
+        &mint.pubkey(),
+        100_000_000,
+        (SECONDS_PER_DAY * 365) as i64, // lockup for a year
+    )
+    .await;
+
+    let (voter1_account_pda, voter1_account_bump) = Pubkey::find_program_address(
+        &[
+            oracle::utils::SURE_ORACLE_VOTE_SEED.as_bytes(),
+            &proposal_pda.to_bytes(),
+            &voter1.pubkey().to_bytes(),
+        ],
+        &oracle::ID,
+    );
+
+    let (voter1_escrow_pda, voter1_escrow_bump) =
+        get_user_escrow_pda(&locker_result.locker, &voter1.pubkey());
+    let voter1_vote_accounts = oracle::accounts::SubmitVote {
+        voter: voter1.pubkey(),
+        voter_account: voter1_ata,
+        locker: locker_result.locker,
+        user_escrow: voter1_escrow_pda,
+        proposal: proposal_pda,
+        proposal_vault: proposal_vault_pda,
+        proposal_vault_mint: mint.pubkey(),
+        vote_account: voter1_account_pda,
+        token_program: spl_token::ID,
+        rent: solana_program::sysvar::rent::ID,
+        system_program: anchor_lang::system_program::ID,
+    };
+
+    let vote: i32 = 10;
+    let mut voter1_hasher = Sha3_256::new();
+    voter1_hasher.update(vote.to_le_bytes());
+    let vote_hash = voter1_hasher.finalize();
+    let voter1_vote_data = oracle::instruction::SubmitVote {
+        vote_hash: vote_hash.to_vec(),
+    };
+
+    let voter1_submit_vote_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &[solana_program::instruction::Instruction {
+            program_id: oracle::ID,
+            accounts: voter1_vote_accounts.to_account_metas(None),
+            data: voter1_vote_data.data(),
+        }],
+        Some(&voter1.pubkey()),
+        &[&voter1],
+        program_test_context.last_blockhash,
+    );
+    program_test_context
+        .banks_client
+        .process_transaction(voter1_submit_vote_tx)
         .await
         .unwrap();
 }
