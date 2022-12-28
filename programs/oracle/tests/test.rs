@@ -14,6 +14,8 @@
 
 pub mod utils;
 
+use hex_literal::hex;
+
 use anchor_client::{solana_sdk::signer::Signer, *};
 use anchor_lang::prelude::*;
 use anchor_lang::*;
@@ -21,13 +23,16 @@ use anchor_spl::associated_token;
 use govern;
 use locked_voter;
 use oracle::id;
+use oracle::program::Oracle;
 use oracle::utils::SURE_ORACLE_CONFIG_SEED;
+use sha3::{Digest, Sha3_256};
 use smart_wallet;
 use solana_program::clock::SECONDS_PER_DAY;
 use solana_program::hash::Hash;
 use solana_program_test::*;
 use solana_sdk::*;
 use spl_token;
+use std::hash;
 use utils::locker::*;
 use utils::tokens::*;
 
@@ -248,11 +253,32 @@ async fn create_and_init() {
     )
     .await;
 
-    let (proposal_pda, proposal_bump) = Pubkey::find_program_address(&[], &oracle::id());
-    let (reveal_vote_array_pda, reveal_vote_array_bump) =
-        Pubkey::find_program_address(&[], &oracle::id());
-    let (proposal_vault_pda, proposal_vault_bump) =
-        Pubkey::find_program_address(&[], &oracle::id());
+    // create proposal id
+    let mut hasher = Sha3_256::new();
+    hasher.update(b"a");
+    let proposal_id = hasher.finalize();
+
+    let (proposal_pda, proposal_bump) = Pubkey::find_program_address(
+        &[
+            oracle::utils::SURE_ORACLE_SEED.as_bytes(),
+            proposal_id.as_slice(),
+        ],
+        &oracle::id(),
+    );
+    let (reveal_vote_array_pda, reveal_vote_array_bump) = Pubkey::find_program_address(
+        &[
+            oracle::utils::SURE_ORACLE_REVEAL_ARRAY_SEED.as_bytes(),
+            proposal_id.as_slice(),
+        ],
+        &oracle::id(),
+    );
+    let (proposal_vault_pda, proposal_vault_bump) = Pubkey::find_program_address(
+        &[
+            oracle::utils::SURE_ORACLE_PROPOSAL_VAULT_SEED.as_bytes(),
+            proposal_id.as_slice(),
+        ],
+        &oracle::id(),
+    );
 
     let create_proposal_accounts = oracle::accounts::ProposeVote {
         proposer: proposer.pubkey(),
@@ -268,13 +294,11 @@ async fn create_and_init() {
         system_program: anchor_lang::system_program::ID,
     };
 
-    let proposal_id = Hash::new(b"1").to_bytes();
-
     let create_proposal_data = oracle::instruction::ProposeVote {
-        id: proposal_id[..16].to_vec(),
+        id: proposal_id.to_vec(),
         name: "my test proposal".to_string(),
         description: "hello".to_string(),
-        stake: 1_000_000,
+        stake: 100_000_000,
     };
 
     let create_proposal_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(

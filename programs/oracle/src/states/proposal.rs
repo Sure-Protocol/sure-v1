@@ -60,7 +60,7 @@ pub struct Proposal {
     pub name: String, // 4 + 4*64 bytes
 
     /// id - hashed name
-    pub id: [u8; 16], // 16 bytes
+    pub id: [u8; 32], // 32 bytes
 
     /// description of vote
     pub description: String, // 4 + 4*140 (140chars) bytes
@@ -132,7 +132,7 @@ impl Default for Proposal {
             bump: 0,
             bump_array: [0; 1],
             name: "test proposal".to_string(),
-            id: [0; 16],
+            id: [0; 32],
             optimistic: false,
             description: "test descr".to_string(),
             proposed_result: 0,
@@ -165,7 +165,7 @@ impl Default for Proposal {
 pub struct FinalizeVoteResult {}
 
 impl Proposal {
-    pub const SPACE: usize = 1 * 6 + 4 * 3 + 8 * 12 + 16 * 4 + 32 * 3 + 4 + 4 * 64 + 4 + 4 * 140;
+    pub const SPACE: usize = 1 * 6 + 4 * 3 + 8 * 12 + 32 * 4 + 32 * 3 + 4 + 4 * 64 + 4 + 4 * 140;
 
     pub fn seeds(&self) -> [&[u8]; 3] {
         [
@@ -180,7 +180,7 @@ impl Proposal {
         config: &Account<Config>,
         bump: u8,
         name: String,
-        id: &[u8; 16],
+        id: &[u8; 32],
         description: &str,
         proposer: &Pubkey,
         proposed_staked: u64,
@@ -632,7 +632,6 @@ impl Proposal {
 // Proto for proposal, a builder
 #[cfg(test)]
 pub mod test_proposal_proto {
-    use anchor_lang::solana_program::vote;
 
     use super::*;
 
@@ -642,7 +641,7 @@ pub mod test_proposal_proto {
         pub bump_array: [u8; 1],
         /// name of vote
         pub name: String, // 4 + 64 bytes
-        pub id: [u8; 16],
+        pub id: [u8; 32],
         /// description of vote
         pub description: String, // 4 + 200 bytes
 
@@ -701,7 +700,7 @@ pub mod test_proposal_proto {
                 bump: 0,
                 bump_array: [0; 1],
                 name: "test".to_string(),
-                id: [0; 16],
+                id: [0; 32],
                 description: "test".to_string(),
                 proposed_result: 0,
                 staked: 1_000_000,
