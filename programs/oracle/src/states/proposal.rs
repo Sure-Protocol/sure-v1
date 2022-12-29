@@ -13,7 +13,7 @@ use anchor_lang::{prelude::*, solana_program::clock};
 
 use super::{Config, RevealedVoteArray, VoteAccount};
 
-#[derive(Debug, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd)]
 #[repr(u8)]
 pub enum ProposalStatus {
     /// A vote has been proposed
@@ -28,7 +28,7 @@ pub enum ProposalStatus {
 }
 
 impl ProposalStatus {
-    fn get_id(self) -> u8 {
+    pub fn get_id(self) -> u8 {
         self as u8
     }
 }
@@ -231,14 +231,14 @@ impl Proposal {
 
     /// cast a vote if vote is active
     pub fn cast_vote_at_time(&mut self, vote: RefMut<VoteAccount>, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() == ProposalStatus::Voting {
+        if self.get_status(time) == ProposalStatus::Voting {
             self.votes += vote.vote_power as u64;
         }
         Ok(())
     }
 
     pub fn cancel_vote_at_time(&mut self, vote: RefMut<VoteAccount>, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() == ProposalStatus::Voting {
+        if self.get_status(time) == ProposalStatus::Voting {
             self.votes -= vote.vote_power as u64;
         }
         Ok(())
@@ -426,7 +426,7 @@ impl Proposal {
         revealed_votes: &RevealedVoteArray,
         time: i64,
     ) -> Result<()> {
-        if self.get_status(time).unwrap() == ProposalStatus::VoteRevealFinished {
+        if self.get_status(time) == ProposalStatus::VoteRevealFinished {
             // distribute reward to proposer
             let rewards = self.calculate_proposer_reward();
             self.earned_rewards = rewards;
@@ -444,7 +444,7 @@ impl Proposal {
     /// Only finalize vote if either the
     /// quorum is reached or if it timed out
     pub fn try_finalize_blind_vote(&mut self, time: i64) -> Result<u128> {
-        if self.get_status(time).unwrap() == ProposalStatus::RevealVote {
+        if self.get_status(time) == ProposalStatus::RevealVote {
             // distribute rewards
             let rewards = self.calculate_proposer_reward();
             self.earned_rewards = rewards;
@@ -462,7 +462,7 @@ impl Proposal {
     /// * decimals: number of decimals in the mint
     /// * time: current time used to check if it's possible to payout
     pub fn payout_earned_rewards_at_time(&mut self, decimals: u8, time: i64) -> Result<u64> {
-        if self.get_status(time).unwrap() > ProposalStatus::RevealVote {
+        if self.get_status(time) > ProposalStatus::RevealVote {
             // Q64.64 -> Q64.32
             let rewards_x32 = self.earned_rewards >> 32;
             if rewards_x32 > u64::MAX as u128 {
@@ -509,7 +509,7 @@ impl Proposal {
 
     /// Update status callback
     pub fn update_status(&mut self, time: i64) {
-        let status = self.get_status(time).unwrap();
+        let status = self.get_status(time);
         self.status = status.get_id();
     }
 
@@ -545,48 +545,48 @@ impl Proposal {
         self.votes >= self.required_votes
     }
 
-    pub fn get_status(&self, time: i64) -> Option<ProposalStatus> {
+    pub fn get_status(&self, time: i64) -> ProposalStatus {
         if self.is_blind_vote_ongoing_at_time(time) && !self.has_reached_quorum() {
-            return Some(ProposalStatus::Voting);
+            return ProposalStatus::Voting;
         } else if self.is_blind_vote_finished_at_time(time) && self.has_reached_quorum() {
-            return Some(ProposalStatus::ReachedQuorum);
+            return ProposalStatus::ReachedQuorum;
         } else if self.has_reached_quorum() && self.is_vote_reveal_ongoing_at_time(time) {
-            return Some(ProposalStatus::RevealVote);
+            return ProposalStatus::RevealVote;
         } else if self.is_vote_revealed_over(time) {
-            return Some(ProposalStatus::VoteRevealFinished);
+            return ProposalStatus::VoteRevealFinished;
         } else if self.scale_parameter_calculated {
-            return Some(ProposalStatus::RewardCalculation);
+            return ProposalStatus::RewardCalculation;
         } else if self.locked {
-            return Some(ProposalStatus::RewardPayout);
+            return ProposalStatus::RewardPayout;
         } else {
-            return Some(ProposalStatus::Failed);
+            return ProposalStatus::Failed;
         }
     }
 
     /// checks if a user can submit a vote
     pub fn can_submit_vote(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() > ProposalStatus::Voting {
+        if self.get_status(time) > ProposalStatus::Voting {
             return Err(SureError::VotingPeriodEnded.into());
         }
         Ok(())
     }
 
     pub fn can_reveal_vote(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() != ProposalStatus::RevealVote {
+        if self.get_status(time) != ProposalStatus::RevealVote {
             return Err(SureError::RevealPeriodNotActive.into());
         }
         Ok(())
     }
 
     pub fn can_finalize_vote(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() != ProposalStatus::RewardCalculation {
+        if self.get_status(time) != ProposalStatus::RewardCalculation {
             return Err(SureError::FailedToFinalizeVote.into());
         }
         Ok(())
     }
 
     pub fn can_finalize_vote_results(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() != ProposalStatus::VoteRevealFinished {
+        if self.get_status(time) != ProposalStatus::VoteRevealFinished {
             return Err(SureError::FailedToFinalizeVoteResult.into());
         }
         Ok(())
@@ -597,7 +597,7 @@ impl Proposal {
     /// a proposer can claim reward after the reveal period
     /// and the parameter is calculated
     pub fn can_collect_proposer_rewards(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() >= ProposalStatus::RewardCalculation
+        if self.get_status(time) >= ProposalStatus::RewardCalculation
             && self.scale_parameter_calculated
         {
             return Ok(());
@@ -607,7 +607,7 @@ impl Proposal {
     }
 
     pub fn can_collect_voter_reward(&self, time: i64) -> Result<()> {
-        let status = self.get_status(time).unwrap();
+        let status = self.get_status(time);
         if status == ProposalStatus::Failed {
             return Ok(());
         }
@@ -622,7 +622,7 @@ impl Proposal {
     ///
     /// a vote can be cancelled when in voting period
     pub fn can_cancel_vote(&self, time: i64) -> Result<()> {
-        if !(self.get_status(time).unwrap() == ProposalStatus::Voting) {
+        if !(self.get_status(time) == ProposalStatus::Voting) {
             return Err(SureError::FailedToCancelVote.into());
         }
         Ok(())

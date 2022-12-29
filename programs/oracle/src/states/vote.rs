@@ -143,7 +143,7 @@ impl VoteAccount {
         time: i64,
     ) -> Result<()> {
         // If blind voting is over
-        if !(proposal.get_status(time).unwrap() == ProposalStatus::Voting) {
+        if !(proposal.get_status(time) == ProposalStatus::Voting) {
             return Err(SureError::VotingPeriodEnded.into());
         }
         self.vote_hash = *new_vote_hash;
@@ -158,7 +158,7 @@ impl VoteAccount {
         vote: i64,
         time: i64,
     ) -> Result<()> {
-        if !(proposal.get_status(time).unwrap() == ProposalStatus::RevealVote) {
+        if !(proposal.get_status(time) == ProposalStatus::RevealVote) {
             return Err(SureError::RevealPeriodNotActive.into());
         }
         let mut hasher = Sha3_256::new();
@@ -209,7 +209,7 @@ impl VoteAccount {
         mint_decimals: u8,
         time: i64,
     ) -> Result<u64> {
-        let status = proposal.get_status(time).unwrap();
+        let status = proposal.get_status(time);
         if self.revealed_vote && self.vote_factor > 0 && status == ProposalStatus::RewardCalculation
         {
             self.calculate_token_reward_(self.vote_factor, mint_decimals)

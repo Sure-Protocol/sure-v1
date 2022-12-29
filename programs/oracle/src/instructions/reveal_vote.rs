@@ -23,7 +23,7 @@ pub struct RevealVote<'info> {
         mut,
         seeds = [
             SURE_ORACLE_REVEAL_ARRAY_SEED.as_bytes().as_ref(),
-            proposal.key().as_ref(),
+            proposal.id.as_ref(),
         ],
         bump = reveal_vote_array.load()?.bump,
     )]
@@ -47,6 +47,9 @@ pub struct RevealVote<'info> {
 /// reveal vote
 ///
 /// after the voting period is over the user can reveal their vote
+///
+/// TODO: consider not throwing error, but instead updating state and logging
+/// errors
 pub fn handler(ctx: Context<RevealVote>, salt: String, vote: i64) -> Result<()> {
     let mut vote_account = ctx.accounts.vote_account.load_mut()?;
     let mut reveal_vote_array = ctx.accounts.reveal_vote_array.load_mut()?;
