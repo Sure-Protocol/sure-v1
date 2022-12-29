@@ -13,6 +13,7 @@ pub fn create_mint<T: Signer>(
     mint: &T,
     rent: Rent,
     recent_blockhash: Hash,
+    decimals: u8,
 ) -> Result<solana_sdk::transaction::Transaction> {
     let mint_rent = rent.minimum_balance(spl_token::state::Mint::LEN);
     let token_program = spl_token::id();
@@ -28,7 +29,7 @@ pub fn create_mint<T: Signer>(
         &mint.pubkey(),
         &minter.pubkey(),
         Some(&minter.pubkey()),
-        6,
+        decimals,
     )
     .unwrap();
 

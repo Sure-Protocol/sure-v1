@@ -15,7 +15,6 @@
 pub mod utils;
 
 use anchor_client::solana_sdk::signature::Keypair;
-use hex_literal::hex;
 
 use anchor_client::{solana_sdk::signer::Signer, *};
 use anchor_lang::prelude::*;
@@ -122,6 +121,91 @@ pub fn get_voter_account_pda(proposal: &Pubkey, voter: &Pubkey) -> Result<(Pubke
     ))
 }
 
+pub fn get_proposal_pda(proposal_id: &Vec<u8>) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[oracle::utils::SURE_ORACLE_SEED.as_bytes(), proposal_id],
+        &oracle::id(),
+    )
+}
+
+pub fn get_proposal_vault_pda(proposal_id: &Vec<u8>) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            oracle::utils::SURE_ORACLE_PROPOSAL_VAULT_SEED.as_bytes(),
+            proposal_id,
+        ],
+        &oracle::id(),
+    )
+}
+
+pub fn get_reveal_vote_array_pda(proposal_id: &Vec<u8>) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[
+            oracle::utils::SURE_ORACLE_REVEAL_ARRAY_SEED.as_bytes(),
+            proposal_id,
+        ],
+        &oracle::id(),
+    )
+}
+
+pub fn create_proposal_id(val: &str) -> Vec<u8> {
+    let mut hasher = Sha3_256::new();
+    hasher.update(val.as_bytes());
+    let hasher_final = hasher.finalize();
+    hasher_final.as_slice().to_vec()
+}
+
+async fn propose_vote(
+    ctx: &mut ProgramTestContext,
+    proposal_id: &Vec<u8>,
+    proposer: &Keypair,
+    mint: &Pubkey,
+    config_account: &Pubkey,
+) {
+    let proposer_ata =
+        anchor_spl::associated_token::get_associated_token_address(&proposer.pubkey(), mint);
+
+    let (reveal_vote_array_pda, reveal_vote_array_bump) = get_reveal_vote_array_pda(proposal_id);
+    let (proposal_pda, proposal_bump) = get_proposal_pda(proposal_id);
+    let (proposal_vault_pda, proposal_vault_bump) = get_proposal_vault_pda(proposal_id);
+
+    let create_proposal_accounts = oracle::accounts::ProposeVote {
+        proposer: proposer.pubkey(),
+        config: *config_account,
+        proposal: proposal_pda,
+        reveal_vote_array: reveal_vote_array_pda,
+        proposer_account: proposer_ata,
+        proposal_vault_mint: *mint,
+        proposal_vault: proposal_vault_pda,
+        token_program: spl_token::id(),
+        associated_token_program: associated_token::ID,
+        rent: solana_program::sysvar::rent::ID,
+        system_program: anchor_lang::system_program::ID,
+    };
+
+    let create_proposal_data = oracle::instruction::ProposeVote {
+        id: proposal_id.to_vec(),
+        name: "my test proposal".to_string(),
+        description: "hello".to_string(),
+        stake: 100_000_000,
+    };
+
+    let create_proposal_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &[solana_sdk::instruction::Instruction {
+            program_id: oracle::ID,
+            accounts: create_proposal_accounts.to_account_metas(None),
+            data: create_proposal_data.data(),
+        }],
+        Some(&proposer.pubkey()),
+        &[proposer],
+        ctx.last_blockhash,
+    );
+    ctx.banks_client
+        .process_transaction(create_proposal_tx)
+        .await
+        .unwrap();
+}
+
 /// submit_vote submits a vote for the given user
 async fn submit_vote(
     ctx: &mut ProgramTestContext,
@@ -171,6 +255,22 @@ async fn submit_vote(
         .unwrap();
 }
 
+pub async fn test_create_mint(
+    ctx: &mut ProgramTestContext,
+    minter: &Keypair,
+    mint: &Keypair,
+    decimals: u8,
+) {
+    // create mint instruction
+    let rent = ctx.banks_client.get_rent().await.unwrap();
+
+    let mint_tx = create_mint(minter, &mint, rent, ctx.last_blockhash, decimals).unwrap();
+    // sign and send transaction
+    ctx.banks_client.process_transaction(mint_tx).await.unwrap();
+
+    return;
+}
+
 /// Main integration test for the oracle / prediction market
 #[tokio::test]
 async fn create_and_init() {
@@ -198,16 +298,17 @@ async fn create_and_init() {
     let mut program_test_context = program_test.start_with_context().await;
     let rent = program_test_context.banks_client.get_rent().await.unwrap();
 
-    // create mint instruction
-    let mint = solana_sdk::signature::Keypair::new();
+    // CONFIG
+    let SURE_MINT_AMOUNT = 100_000_000_000_000; // 100 000 000 sures
+    let ORACLE_VOTING_LENGTH = SECONDS_PER_DAY as i64;
+    let ORACLE_REVEAL_LENGTH = SECONDS_PER_DAY as i64;
+    let REQUIRED_VE_VOTES: i64 = 1_000_000_000_000; // 1 000 000 ve sure
+    let ORACLE_MIN_PROPOSER_STAKE = 100_000_000; // 100 sures
+    let ORACLE_VOTE_STAKE_RATE = 10; // need to stake 10% of all veSures
 
-    let mint_tx = create_mint(&minter, &mint, rent, program_test_context.last_blockhash).unwrap();
-    // sign and send transaction
-    program_test_context
-        .banks_client
-        .process_transaction(mint_tx)
-        .await
-        .unwrap();
+    // create sure mint
+    let mint = solana_sdk::signature::Keypair::new();
+    test_create_mint(&mut program_test_context, &minter, &mint, 6).await;
 
     //  setup locker
     let locker_result =
@@ -245,7 +346,7 @@ async fn create_and_init() {
         &mint,
         &minter_ata,
         &program_test_context.last_blockhash,
-        1_000_000_000_000,
+        SURE_MINT_AMOUNT,
     )
     .unwrap();
 
@@ -338,17 +439,16 @@ async fn create_and_init() {
     )
     .await;
     // ======== ORACLE - INITIALIZE ORACLE =============
-    let config_account = Pubkey::find_program_address(
+    let (config_account_pda, config_account_bump) = Pubkey::find_program_address(
         &[
             SURE_ORACLE_CONFIG_SEED.as_bytes().as_ref(),
             mint.pubkey().as_ref(),
         ],
         &oracle::id(),
     );
-    let config_account_PK = config_account.0.key();
     let config = oracle::accounts::InitializeConfig {
         signer: oracle_owner.pubkey(),
-        config: config_account_PK,
+        config: config_account_pda,
         token_mint: mint.pubkey(),
         system_program: anchor_lang::system_program::ID,
     };
@@ -378,7 +478,7 @@ async fn create_and_init() {
 
     let config_account = program_test_context
         .banks_client
-        .get_account(config_account.0.key())
+        .get_account(config_account_pda)
         .await
         .unwrap()
         .unwrap();
@@ -401,67 +501,17 @@ async fn create_and_init() {
 
     // create proposal id
     let mut hasher = Sha3_256::new();
-    hasher.update(b"a");
-    let proposal_id = hasher.finalize();
-
-    let (proposal_pda, proposal_bump) = Pubkey::find_program_address(
-        &[
-            oracle::utils::SURE_ORACLE_SEED.as_bytes(),
-            proposal_id.as_slice(),
-        ],
-        &oracle::id(),
-    );
-    let (reveal_vote_array_pda, reveal_vote_array_bump) = Pubkey::find_program_address(
-        &[
-            oracle::utils::SURE_ORACLE_REVEAL_ARRAY_SEED.as_bytes(),
-            proposal_id.as_slice(),
-        ],
-        &oracle::id(),
-    );
-    let (proposal_vault_pda, proposal_vault_bump) = Pubkey::find_program_address(
-        &[
-            oracle::utils::SURE_ORACLE_PROPOSAL_VAULT_SEED.as_bytes(),
-            proposal_id.as_slice(),
-        ],
-        &oracle::id(),
-    );
-
-    let create_proposal_accounts = oracle::accounts::ProposeVote {
-        proposer: proposer.pubkey(),
-        config: config_account_PK,
-        proposal: proposal_pda,
-        reveal_vote_array: reveal_vote_array_pda,
-        proposer_account: proposer_ata,
-        proposal_vault_mint: mint.pubkey(),
-        proposal_vault: proposal_vault_pda,
-        token_program: spl_token::id(),
-        associated_token_program: associated_token::ID,
-        rent: solana_program::sysvar::rent::ID,
-        system_program: anchor_lang::system_program::ID,
-    };
-
-    let create_proposal_data = oracle::instruction::ProposeVote {
-        id: proposal_id.to_vec(),
-        name: "my test proposal".to_string(),
-        description: "hello".to_string(),
-        stake: 100_000_000,
-    };
-
-    let create_proposal_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-        &[solana_sdk::instruction::Instruction {
-            program_id: oracle::ID,
-            accounts: create_proposal_accounts.to_account_metas(None),
-            data: create_proposal_data.data(),
-        }],
-        Some(&proposer.pubkey()),
-        &[&proposer],
-        program_test_context.last_blockhash,
-    );
-    program_test_context
-        .banks_client
-        .process_transaction(create_proposal_tx)
-        .await
-        .unwrap();
+    hasher.update("a".as_bytes());
+    let hasher_final = hasher.finalize();
+    let proposal_id = hasher_final.as_slice().to_vec();
+    propose_vote(
+        &mut program_test_context,
+        &proposal_id,
+        &proposer,
+        &mint.pubkey(),
+        &config_account_pda,
+    )
+    .await;
 
     // ====== VOTE ON PROPOSAL ======
     // lock tokens
@@ -476,6 +526,7 @@ async fn create_and_init() {
     .await;
 
     // VOTER1 vote
+
     let voter1_vote: i64 = 10;
     let mut voter1_hasher = Sha3_256::new();
     voter1_hasher.update(voter1_vote.to_le_bytes());
@@ -483,8 +534,8 @@ async fn create_and_init() {
     submit_vote(
         &mut program_test_context,
         vote_hash,
-        &proposal_pda,
-        &proposal_vault_pda,
+        &get_proposal_pda(&proposal_id).0,
+        &get_proposal_vault_pda(&proposal_id).0,
         &voter1,
         &voter1_ata,
         &mint.pubkey(),
@@ -492,9 +543,10 @@ async fn create_and_init() {
     )
     .await;
 
-    let proposal = get_oracle_proposal(&mut program_test_context, &proposal_pda)
-        .await
-        .unwrap();
+    let proposal =
+        get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
+            .await
+            .unwrap();
     assert!(
         proposal.status == 2,
         "[main] Assert failed. Proposal status is not 1 but {}",
@@ -508,9 +560,10 @@ async fn create_and_init() {
 
     // fast forward time beyond voting period
     test_foward_time(&mut program_test_context, proposal.vote_end_at + 1).await;
-    let proposal_account = get_oracle_proposal(&mut program_test_context, &proposal_pda)
-        .await
-        .unwrap();
+    let proposal_account =
+        get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
+            .await
+            .unwrap();
     let proposal_status = proposal_account.get_status(proposal.vote_end_at + 1);
     println!(
         "[Proposal status] Current status is {:?}",
@@ -518,15 +571,15 @@ async fn create_and_init() {
     );
     // try to reveal vote
     let (voter_account_pda, voter_account_bump) =
-        get_voter_account_pda(&proposal_pda, &voter1.pubkey()).unwrap();
+        get_voter_account_pda(&get_proposal_pda(&proposal_id).0, &voter1.pubkey()).unwrap();
     let reveal_vote_data = oracle::instruction::RevealVote {
         salt: "".to_string(),
         vote: voter1_vote,
     };
     let reveal_vote_acounts = oracle::accounts::RevealVote {
         voter: voter1.pubkey(),
-        proposal: proposal_pda,
-        reveal_vote_array: reveal_vote_array_pda,
+        proposal: get_proposal_pda(&proposal_id).0,
+        reveal_vote_array: get_reveal_vote_array_pda(&proposal_id).0,
         vote_account: voter_account_pda,
         system_program: anchor_lang::system_program::ID,
     };

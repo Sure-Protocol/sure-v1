@@ -80,6 +80,7 @@ describe('Test Sure Prediction Market ', () => {
 				BigInt(genesisMintAmount.toString())
 			);
 			await connection.confirmTransaction(mintPendingTransaction);
+			connection.getTokenAccountBalance();
 		} catch (err) {
 			throw new Error(`Failed to mint Sure tokens. Cause ${err}`);
 		}
