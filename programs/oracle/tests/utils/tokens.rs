@@ -77,8 +77,8 @@ pub async fn test_amount_balance(
 ) {
     let account_balance = get_token_account_balance(ctx, wallet, mint).await.unwrap();
     assert!(
-        account_balance > expected_amount,
-        "[{:?}] account balance is less than amount: balance = {} < {} = amount to be locked",
+        account_balance == expected_amount,
+        "[{:?}] account balance is less than amount: balance = {} != {} = amount to be locked",
         tag,
         account_balance,
         expected_amount

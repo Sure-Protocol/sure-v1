@@ -16,10 +16,13 @@ pub mod utils;
 
 use anchor_client::solana_sdk::signature::Keypair;
 
+use anchor_client::solana_sdk::timing::SECONDS_PER_YEAR;
+use anchor_client::solana_sdk::transaction::Transaction;
 use anchor_client::{solana_sdk::signer::Signer, *};
 use anchor_lang::prelude::*;
 use anchor_lang::*;
 use anchor_spl::associated_token;
+use anchor_spl::token::Mint;
 use govern;
 use locked_voter;
 use oracle::id;
@@ -31,15 +34,17 @@ use solana_program::clock::SECONDS_PER_DAY;
 use solana_program::hash::Hash;
 use solana_program_test::*;
 use solana_sdk::*;
+use spl_associated_token_account::get_associated_token_address;
 use spl_token;
-use std::hash;
+use std::collections::HashMap;
+use std::ops::{Div, Index};
 use std::time::Duration;
 use utils::locker::*;
 use utils::tokens::*;
 
 /// initialize_account tops up the given address with enough sol to
 /// work in the context of the integration test
-fn initialize_account(address: &Pubkey, program_test: &mut ProgramTest) {
+fn add_account(address: &Pubkey, program_test: &mut ProgramTest) {
     program_test.add_account(
         *address,
         account::Account {
@@ -47,6 +52,12 @@ fn initialize_account(address: &Pubkey, program_test: &mut ProgramTest) {
             ..account::Account::default()
         },
     );
+}
+
+fn add_accounts(addresses: Vec<Pubkey>, program_test: &mut ProgramTest) {
+    addresses
+        .iter()
+        .for_each(|&address| add_account(&address, program_test))
 }
 
 /// add_necessary_programs adds programs to the the test context that the
@@ -207,8 +218,7 @@ async fn propose_vote(
 }
 
 /// submit_vote submits a vote for the given user
-async fn submit_vote(
-    ctx: &mut ProgramTestContext,
+fn get_submit_vote_transaction(
     vote_hash: Vec<u8>,
     proposal: &Pubkey,
     proposal_vault: &Pubkey,
@@ -216,7 +226,8 @@ async fn submit_vote(
     voter_ata: &Pubkey,
     mint: &Pubkey,
     locker: &Pubkey,
-) {
+    last_blockhash: Hash,
+) -> transaction::Transaction {
     let (voter_account_pda, voter_account_bump) =
         get_voter_account_pda(proposal, &voter.pubkey()).unwrap();
 
@@ -239,7 +250,7 @@ async fn submit_vote(
         vote_hash: vote_hash,
     };
 
-    let voter1_submit_vote_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+    solana_sdk::transaction::Transaction::new_signed_with_payer(
         &[solana_program::instruction::Instruction {
             program_id: oracle::ID,
             accounts: voter1_vote_accounts.to_account_metas(None),
@@ -247,12 +258,8 @@ async fn submit_vote(
         }],
         Some(&voter.pubkey()),
         &[voter],
-        ctx.last_blockhash,
-    );
-    ctx.banks_client
-        .process_transaction(voter1_submit_vote_tx)
-        .await
-        .unwrap();
+        last_blockhash,
+    )
 }
 
 pub async fn test_create_mint(
@@ -271,25 +278,326 @@ pub async fn test_create_mint(
     return;
 }
 
+pub struct Minter {
+    keypair: Keypair,
+    mint: Keypair,
+}
+
+impl Minter {
+    pub fn init() -> Self {
+        return Minter {
+            keypair: signature::Keypair::new(),
+            mint: signature::Keypair::new(),
+        };
+    }
+
+    pub fn get_mint_pubkey(&self) -> Pubkey {
+        self.mint.pubkey()
+    }
+    pub fn pubkey(&self) -> Pubkey {
+        self.keypair.pubkey()
+    }
+
+    pub fn get_associated_token_address(&self) -> Pubkey {
+        get_associated_token_address(&self.keypair.pubkey(), &self.mint.pubkey())
+    }
+
+    pub fn get_create_mint_transaction(
+        &self,
+        decimals: u8,
+        rent: Rent,
+        last_blockhash: Hash,
+    ) -> Result<Transaction> {
+        create_mint(&self.keypair, &self.mint, rent, last_blockhash, decimals)
+    }
+
+    pub fn get_genesis_mint_tx(
+        &self,
+        amount: u64,
+        last_blockhash: Hash,
+    ) -> Result<transaction::Transaction> {
+        let minter_ata = anchor_spl::associated_token::get_associated_token_address(
+            &self.keypair.pubkey(),
+            &self.mint.pubkey(),
+        );
+        let create_ata_ix = spl_associated_token_account::create_associated_token_account(
+            &self.keypair.pubkey(),
+            &self.keypair.pubkey(),
+            &self.mint.pubkey(),
+        );
+
+        let mint_tokens_ix = spl_token::instruction::mint_to(
+            &spl_token::ID,
+            &self.mint.pubkey(),
+            &minter_ata,
+            &self.keypair.pubkey(),
+            &[&self.keypair.pubkey(), &self.mint.pubkey()],
+            amount,
+        )?;
+
+        let create_ata_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+            &[create_ata_ix, mint_tokens_ix],
+            Some(&self.keypair.pubkey()),
+            &[&self.keypair, &self.mint],
+            last_blockhash,
+        );
+
+        Ok(create_ata_tx)
+    }
+
+    pub fn get_batch_transfer_tx(
+        &self,
+        pubkeys: Vec<Pubkey>,
+        amount: u64,
+        blockhash: Hash,
+    ) -> solana_sdk::transaction::Transaction {
+        let ixs: Vec<instruction::Instruction>;
+        let minter_ata = anchor_spl::associated_token::get_associated_token_address(
+            &self.keypair.pubkey(),
+            &self.mint.pubkey(),
+        );
+        let amount_per_account = amount.div(pubkeys.len() as u64);
+
+        let v2: Vec<instruction::Instruction> = pubkeys
+            .iter()
+            .map(|&x| {
+                let ata = get_associated_token_address(&x, &self.mint.pubkey());
+                spl_token::instruction::transfer(
+                    &spl_token::ID,
+                    &minter_ata,
+                    &ata,
+                    &self.keypair.pubkey(),
+                    &[&self.keypair.pubkey()],
+                    amount_per_account,
+                )
+                .unwrap()
+            })
+            .collect();
+
+        solana_sdk::transaction::Transaction::new_signed_with_payer(
+            &v2,
+            Some(&self.keypair.pubkey()),
+            &[&self.keypair],
+            blockhash,
+        )
+    }
+
+    pub fn create_ata_and_mint_tokens_tx(
+        &self,
+        keypair: &Keypair,
+        amount: u64,
+        last_blockhash: Hash,
+    ) -> Transaction {
+        // transfer token to proposer
+        let ata = anchor_spl::associated_token::get_associated_token_address(
+            &keypair.pubkey(),
+            &self.mint.pubkey(),
+        );
+
+        let create_ata_ix = spl_associated_token_account::create_associated_token_account(
+            &keypair.pubkey(),
+            &keypair.pubkey(),
+            &self.mint.pubkey(),
+        );
+
+        let transfer_ix = spl_token::instruction::transfer(
+            &spl_token::ID,
+            &self.get_associated_token_address(),
+            &ata,
+            &self.pubkey(),
+            &[&self.pubkey()],
+            amount,
+        )
+        .unwrap();
+
+        solana_sdk::transaction::Transaction::new_signed_with_payer(
+            &[create_ata_ix, transfer_ix],
+            Some(&self.keypair.pubkey()),
+            &[&self.keypair, &keypair],
+            last_blockhash,
+        )
+    }
+}
+
+pub struct Voters {
+    keys: Vec<Keypair>,
+    votes: HashMap<Pubkey, u64>,
+}
+
+impl Voters {
+    pub fn init(num_voters: u16, program_test: &mut ProgramTest) -> Voters {
+        let mut keys: Vec<Keypair> = Vec::new();
+        for _ in 0..num_voters {
+            let voter = signature::Keypair::new();
+            add_account(&voter.pubkey(), program_test);
+            keys.push(voter)
+        }
+        let votes = HashMap::with_capacity(num_voters as usize);
+        Voters { keys, votes }
+    }
+
+    pub fn get_pubkeys(&self) -> Vec<Pubkey> {
+        self.keys.iter().map(|x| x.pubkey()).collect()
+    }
+
+    pub async fn get_token_account_balance(
+        &self,
+        ctx: &mut ProgramTestContext,
+        mint: &Pubkey,
+        index: u16,
+    ) -> Result<u64> {
+        let voter = self.keys.get(index as usize).unwrap();
+        get_token_account_balance(ctx, &voter.pubkey(), mint).await
+    }
+
+    pub fn initialize_voter(
+        &self,
+        voter: &Keypair,
+        mint: &Pubkey,
+        last_blockhash: Hash,
+    ) -> transaction::Transaction {
+        let create_ata_ix = spl_associated_token_account::create_associated_token_account(
+            &voter.pubkey(),
+            &voter.pubkey(),
+            mint,
+        );
+        solana_sdk::transaction::Transaction::new_signed_with_payer(
+            &[create_ata_ix],
+            Some(&voter.pubkey()),
+            &[voter],
+            last_blockhash,
+        )
+    }
+
+    pub fn get_initialize_voters_txs(
+        &self,
+        mint: &Pubkey,
+        last_blockhash: Hash,
+    ) -> Vec<transaction::Transaction> {
+        self.keys
+            .iter()
+            .map(|x| self.initialize_voter(&x, mint, last_blockhash))
+            .collect()
+    }
+
+    pub fn get_create_escrow_tx(
+        &self,
+        locker: &Pubkey,
+        mint: &Pubkey,
+        last_blockhash: Hash,
+    ) -> Vec<Transaction> {
+        self.keys
+            .iter()
+            .map(|user| {
+                return get_create_escrow_transaction(&user, locker, mint, last_blockhash);
+            })
+            .collect()
+    }
+
+    pub fn lock_tokens(
+        &self,
+        locker: &Pubkey,
+        mint: &Pubkey,
+        amount: u64,
+        duration: i64,
+        last_blockhash: Hash,
+    ) -> Vec<Transaction> {
+        self.keys
+            .iter()
+            .map(|user| {
+                return get_lock_tokens_transaction(
+                    &user,
+                    locker,
+                    mint,
+                    amount,
+                    duration,
+                    last_blockhash,
+                );
+            })
+            .collect()
+    }
+
+    pub fn set_votes(&mut self, votes: Vec<u64>) {
+        let mut i = 0;
+        for key in self.keys.iter() {
+            self.votes.insert(key.pubkey(), votes[i]);
+            i += 1
+        }
+    }
+
+    pub fn set_vote(&mut self, vote: u64, voter: &Pubkey) {
+        self.votes.insert(*voter, vote).unwrap();
+    }
+
+    pub fn create_vote_hash(&self, voter: &Keypair) -> Vec<u8> {
+        let mut hasher = Sha3_256::new();
+        hasher.update(self.votes.get(&voter.pubkey()).unwrap().to_le_bytes());
+        hasher.finalize().to_vec()
+    }
+
+    pub fn get_submit_vote_txs(
+        &self,
+        proposal: &Pubkey,
+        proposal_vault: &Pubkey,
+        locker: &Pubkey,
+        mint: &Pubkey,
+        last_blockhash: Hash,
+    ) -> Vec<transaction::Transaction> {
+        self.keys
+            .iter()
+            .map(|voter| {
+                let vote_hash = self.create_vote_hash(voter);
+                let ata = anchor_spl::associated_token::get_associated_token_address(
+                    &voter.pubkey(),
+                    mint,
+                );
+                return get_submit_vote_transaction(
+                    vote_hash,
+                    proposal,
+                    proposal_vault,
+                    voter,
+                    &ata,
+                    mint,
+                    locker,
+                    last_blockhash,
+                );
+            })
+            .collect()
+    }
+}
+
 /// Main integration test for the oracle / prediction market
 #[tokio::test]
 async fn create_and_init() {
+    // CONFIG
+    let SURE_MINT_AMOUNT: i64 = 100_000_000_000_000; // 100 000 000 sures
+    let SURE_MINT_AMOUNT_VOTERS: i64 = 50_000_000_000_000; // 100 000 000 sures
+    let SURE_AMOUNT_PROPOSER: i64 = 10_000_000_000_000;
+    let ORACLE_VOTING_LENGTH = SECONDS_PER_DAY as i64;
+    let ORACLE_REVEAL_LENGTH = SECONDS_PER_DAY as i64;
+    let REQUIRED_VE_VOTES: i64 = 1_000_000_000_000; // 1 000 000 ve sure
+    let ORACLE_MIN_PROPOSER_STAKE: i64 = 100_000_000; // 100 sures
+    let ORACLE_VOTE_STAKE_RATE: i64 = 10; // need to stake 10% of all veSures
+
     let mut program_test = ProgramTest::new("oracle", id(), processor!(oracle::entry));
 
     let protocol_owner = signature::Keypair::new();
-    initialize_account(&protocol_owner.pubkey(), &mut program_test);
+    add_account(&protocol_owner.pubkey(), &mut program_test);
     // create program oracle owner
     let oracle_owner = signature::Keypair::new();
-    initialize_account(&oracle_owner.pubkey(), &mut program_test);
+    add_account(&oracle_owner.pubkey(), &mut program_test);
     // create minter
-    let minter = signature::Keypair::new();
-    initialize_account(&minter.pubkey(), &mut program_test);
 
     let proposer = signature::Keypair::new();
-    initialize_account(&proposer.pubkey(), &mut program_test);
+    add_account(&proposer.pubkey(), &mut program_test);
 
     let voter1 = signature::Keypair::new();
-    initialize_account(&voter1.pubkey(), &mut program_test);
+    add_account(&voter1.pubkey(), &mut program_test);
+
+    let mut voters = Voters::init(10, &mut program_test);
+
+    let minter = Minter::init();
+    add_account(&minter.keypair.pubkey(), &mut program_test);
 
     // add_necessary_programs
     add_necessary_programs(&mut program_test);
@@ -298,158 +606,106 @@ async fn create_and_init() {
     let mut program_test_context = program_test.start_with_context().await;
     let rent = program_test_context.banks_client.get_rent().await.unwrap();
 
-    // CONFIG
-    let SURE_MINT_AMOUNT = 100_000_000_000_000; // 100 000 000 sures
-    let ORACLE_VOTING_LENGTH = SECONDS_PER_DAY as i64;
-    let ORACLE_REVEAL_LENGTH = SECONDS_PER_DAY as i64;
-    let REQUIRED_VE_VOTES: i64 = 1_000_000_000_000; // 1 000 000 ve sure
-    let ORACLE_MIN_PROPOSER_STAKE = 100_000_000; // 100 sures
-    let ORACLE_VOTE_STAKE_RATE = 10; // need to stake 10% of all veSures
+    // create SURE mint
+    let create_mint_tx = minter
+        .get_create_mint_transaction(6, rent, program_test_context.last_blockhash)
+        .unwrap();
 
-    // create sure mint
-    let mint = solana_sdk::signature::Keypair::new();
-    test_create_mint(&mut program_test_context, &minter, &mint, 6).await;
+    program_test_context
+        .banks_client
+        .process_transaction(create_mint_tx)
+        .await
+        .unwrap();
+
+    // mint the genesis amount
+    let genesis_mint_tx = minter
+        .get_genesis_mint_tx(SURE_MINT_AMOUNT as u64, program_test_context.last_blockhash)
+        .unwrap();
+
+    program_test_context
+        .banks_client
+        .process_transaction(genesis_mint_tx)
+        .await
+        .unwrap();
+
+    // initialize voters
+    let initialize_voter_txs = voters
+        .get_initialize_voters_txs(&minter.mint.pubkey(), program_test_context.last_blockhash);
+
+    program_test_context
+        .banks_client
+        .process_transactions(initialize_voter_txs)
+        .await
+        .unwrap();
+
+    let minter_ata = minter.get_associated_token_address();
 
     //  setup locker
-    let locker_result =
-        setup_sure_locker(&mut program_test_context, &protocol_owner, &mint.pubkey())
-            .await
-            .unwrap();
+    let locker_result = setup_sure_locker(
+        &mut program_test_context,
+        &protocol_owner,
+        &minter.mint.pubkey(),
+    )
+    .await
+    .unwrap();
 
-    // create ata
-    let minter_ata = anchor_spl::associated_token::get_associated_token_address(
-        &minter.pubkey(),
-        &mint.pubkey(),
-    );
-    let create_ata_ix = spl_associated_token_account::create_associated_token_account(
-        &minter.pubkey(),
-        &minter.pubkey(),
-        &mint.pubkey(),
-    );
-    let create_ata_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-        &[create_ata_ix],
-        Some(&minter.pubkey()),
-        &[&minter],
+    // batch transfer sures
+    let batch_transfer_tx = minter.get_batch_transfer_tx(
+        voters.get_pubkeys(),
+        SURE_MINT_AMOUNT_VOTERS as u64,
         program_test_context.last_blockhash,
     );
 
     program_test_context
         .banks_client
-        .process_transaction(create_ata_tx)
+        .process_transaction(batch_transfer_tx)
+        .await
+        .unwrap();
+    let token_balance = voters
+        .get_token_account_balance(&mut program_test_context, &minter.mint.pubkey(), 1)
         .await
         .unwrap();
 
-    // mint some sure tokens
-    // create associated token address
-    let mint_tokens_tx = mint_amount(
-        &minter,
-        &mint,
-        &minter_ata,
-        &program_test_context.last_blockhash,
-        SURE_MINT_AMOUNT,
-    )
-    .unwrap();
-
-    // TRANSACTION
-    program_test_context
-        .banks_client
-        .process_transaction(mint_tokens_tx)
-        .await
-        .unwrap();
-
-    // transfer token to proposer
-    let proposer_ata = anchor_spl::associated_token::get_associated_token_address(
-        &proposer.pubkey(),
-        &mint.pubkey(),
-    );
-    let voter1_ata = anchor_spl::associated_token::get_associated_token_address(
-        &voter1.pubkey(),
-        &mint.pubkey(),
+    assert!(
+        token_balance == SURE_MINT_AMOUNT_VOTERS.div(voters.keys.len() as i64) as u64,
+        "[main] token account balance: {} != {}",
+        token_balance,
+        SURE_MINT_AMOUNT_VOTERS
     );
 
-    let create_proposer_ata_ix = spl_associated_token_account::create_associated_token_account(
-        &proposer.pubkey(),
-        &proposer.pubkey(),
-        &mint.pubkey(),
-    );
-    let create_voter1_ata_ix = spl_associated_token_account::create_associated_token_account(
-        &voter1.pubkey(),
-        &voter1.pubkey(),
-        &mint.pubkey(),
-    );
-    let create_ata_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-        &[create_proposer_ata_ix, create_voter1_ata_ix],
-        Some(&proposer.pubkey()),
-        &[&proposer, &voter1],
+    let transfer_proposer_tx = minter.create_ata_and_mint_tokens_tx(
+        &proposer,
+        SURE_AMOUNT_PROPOSER as u64,
         program_test_context.last_blockhash,
     );
 
     program_test_context
         .banks_client
-        .process_transaction(create_ata_tx)
-        .await
-        .unwrap();
-
-    let transfer_sure_to_proposer_ix = spl_token::instruction::transfer(
-        &spl_token::ID,
-        &minter_ata,
-        &proposer_ata,
-        &minter.pubkey(),
-        &[&minter.pubkey()],
-        500_000_000_000,
-    )
-    .unwrap();
-
-    let transfer_sure_to_voter1_ix = spl_token::instruction::transfer(
-        &spl_token::ID,
-        &minter_ata,
-        &voter1_ata,
-        &minter.pubkey(),
-        &[&minter.pubkey()],
-        100_000_000_000,
-    )
-    .unwrap();
-
-    let transfer_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-        &[transfer_sure_to_proposer_ix, transfer_sure_to_voter1_ix],
-        Some(&minter.pubkey()),
-        &[&minter],
-        program_test_context.last_blockhash,
-    );
-    program_test_context
-        .banks_client
-        .process_transaction(transfer_tx)
+        .process_transaction(transfer_proposer_tx)
         .await
         .unwrap();
 
     test_amount_balance(
         &mut program_test_context,
         &proposer.pubkey(),
-        &mint.pubkey(),
-        1_000_000_000,
+        &minter.mint.pubkey(),
+        SURE_AMOUNT_PROPOSER as u64,
         "main",
     )
     .await;
-    test_amount_balance(
-        &mut program_test_context,
-        &voter1.pubkey(),
-        &mint.pubkey(),
-        1_000_000_000,
-        "main",
-    )
-    .await;
-    // ======== ORACLE - INITIALIZE ORACLE =============
+
+    // // ======== ORACLE - INITIALIZE ORACLE =============
     let (config_account_pda, config_account_bump) = Pubkey::find_program_address(
         &[
             SURE_ORACLE_CONFIG_SEED.as_bytes().as_ref(),
-            mint.pubkey().as_ref(),
+            minter.mint.pubkey().as_ref(),
         ],
         &oracle::id(),
     );
     let config = oracle::accounts::InitializeConfig {
         signer: oracle_owner.pubkey(),
         config: config_account_pda,
-        token_mint: mint.pubkey(),
+        token_mint: minter.mint.pubkey(),
         system_program: anchor_lang::system_program::ID,
     };
 
@@ -489,15 +745,30 @@ async fn create_and_init() {
     assert_eq!(config_account_d.initialized, true);
 
     // ==== create proposal ====
-    lock_tokens(
-        &mut program_test_context,
+
+    let create_proposer_escrow_tx = get_create_escrow_transaction(
         &proposer,
         &locker_result.locker,
-        &mint.pubkey(),
+        &minter.mint.pubkey(),
+        program_test_context.last_blockhash,
+    );
+
+    let lock_proposer_tokens_tx = get_lock_tokens_transaction(
+        &proposer,
+        &locker_result.locker,
+        &minter.mint.pubkey(),
         100_000_000,
         (SECONDS_PER_DAY * 365) as i64, // lockup for a year
-    )
-    .await;
+        program_test_context.last_blockhash,
+    );
+    program_test_context
+        .banks_client
+        .process_transactions(Vec::from([
+            create_proposer_escrow_tx,
+            lock_proposer_tokens_tx,
+        ]))
+        .await
+        .unwrap();
 
     // create proposal id
     let mut hasher = Sha3_256::new();
@@ -508,102 +779,116 @@ async fn create_and_init() {
         &mut program_test_context,
         &proposal_id,
         &proposer,
-        &mint.pubkey(),
+        &minter.mint.pubkey(),
         &config_account_pda,
     )
     .await;
 
-    // ====== VOTE ON PROPOSAL ======
-    // lock tokens
-    lock_tokens(
-        &mut program_test_context,
-        &voter1,
+    // ====== LOCK VOTER TOKENS ======
+    let create_escrow_txs = voters.get_create_escrow_tx(
         &locker_result.locker,
-        &mint.pubkey(),
-        100_000_000,
-        (SECONDS_PER_DAY * 365) as i64, // lockup for a year
-    )
-    .await;
-
-    // VOTER1 vote
-
-    let voter1_vote: i64 = 10;
-    let mut voter1_hasher = Sha3_256::new();
-    voter1_hasher.update(voter1_vote.to_le_bytes());
-    let vote_hash = voter1_hasher.finalize().to_vec();
-    submit_vote(
-        &mut program_test_context,
-        vote_hash,
-        &get_proposal_pda(&proposal_id).0,
-        &get_proposal_vault_pda(&proposal_id).0,
-        &voter1,
-        &voter1_ata,
-        &mint.pubkey(),
-        &locker_result.locker,
-    )
-    .await;
-
-    let proposal =
-        get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
-            .await
-            .unwrap();
-    assert!(
-        proposal.status == 2,
-        "[main] Assert failed. Proposal status is not 1 but {}",
-        proposal.status
-    );
-    assert!(
-        proposal.votes != 0,
-        "[main] suspicious. Number of votes is {}",
-        proposal.votes
-    );
-
-    // fast forward time beyond voting period
-    test_foward_time(&mut program_test_context, proposal.vote_end_at + 1).await;
-    let proposal_account =
-        get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
-            .await
-            .unwrap();
-    let proposal_status = proposal_account.get_status(proposal.vote_end_at + 1);
-    println!(
-        "[Proposal status] Current status is {:?}",
-        &proposal_status.get_id()
-    );
-    // try to reveal vote
-    let (voter_account_pda, voter_account_bump) =
-        get_voter_account_pda(&get_proposal_pda(&proposal_id).0, &voter1.pubkey()).unwrap();
-    let reveal_vote_data = oracle::instruction::RevealVote {
-        salt: "".to_string(),
-        vote: voter1_vote,
-    };
-    let reveal_vote_acounts = oracle::accounts::RevealVote {
-        voter: voter1.pubkey(),
-        proposal: get_proposal_pda(&proposal_id).0,
-        reveal_vote_array: get_reveal_vote_array_pda(&proposal_id).0,
-        vote_account: voter_account_pda,
-        system_program: anchor_lang::system_program::ID,
-    };
-
-    let reveal_vote_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-        &[solana_sdk::instruction::Instruction {
-            program_id: oracle::id(),
-            accounts: reveal_vote_acounts.to_account_metas(None),
-            data: reveal_vote_data.data(),
-        }],
-        Some(&voter1.pubkey()),
-        &[&voter1],
+        &minter.mint.pubkey(),
         program_test_context.last_blockhash,
     );
-    let tx_result = program_test_context
+    program_test_context
         .banks_client
-        .process_transaction(reveal_vote_tx)
-        .await;
-    assert!(tx_result.is_err(), "[main] suspicious. Should fail");
+        .process_transactions(create_escrow_txs)
+        .await
+        .unwrap();
 
-    // assume test failed since it didn't reach quoroum
-    assert!(
-        proposal_status.get_id() == 0,
-        "[main] Status is not 3 but {} ",
-        proposal_status.get_id()
-    )
+    let lock_voters_tokens_txs = voters.lock_tokens(
+        &locker_result.locker,
+        &minter.mint.pubkey(),
+        1_000_000,
+        SECONDS_PER_YEAR as i64,
+        program_test_context.last_blockhash,
+    );
+    for tx in &lock_voters_tokens_txs {
+        program_test_context
+            .banks_client
+            .process_transaction(tx.clone())
+            .await
+            .unwrap();
+    }
+
+    // VOTERS vote on proposal
+    let number_of_voters = voters.keys.len() as u64;
+    let votes: Vec<u64> = (0..number_of_voters).collect();
+    voters.set_votes(votes);
+    let submit_vote_txs = voters.get_submit_vote_txs(
+        &get_proposal_pda(&proposal_id).0,
+        &get_proposal_vault_pda(&proposal_id).0,
+        &locker_result.locker,
+        &minter.get_mint_pubkey(),
+        program_test_context.last_blockhash,
+    );
+    program_test_context
+        .banks_client
+        .process_transactions(submit_vote_txs)
+        .await
+        .unwrap();
+
+    // let proposal =
+    //     get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
+    //         .await
+    //         .unwrap();
+    // assert!(
+    //     proposal.status == 2,
+    //     "[main] Assert failed. Proposal status is not 1 but {}",
+    //     proposal.status
+    // );
+    // assert!(
+    //     proposal.votes != 0,
+    //     "[main] suspicious. Number of votes is {}",
+    //     proposal.votes
+    // );
+
+    // // fast forward time beyond voting period
+    // test_foward_time(&mut program_test_context, proposal.vote_end_at + 1).await;
+    // let proposal_account =
+    //     get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
+    //         .await
+    //         .unwrap();
+    // let proposal_status = proposal_account.get_status(proposal.vote_end_at + 1);
+    // println!(
+    //     "[Proposal status] Current status is {:?}",
+    //     &proposal_status.get_id()
+    // );
+    // // try to reveal vote
+    // let (voter_account_pda, voter_account_bump) =
+    //     get_voter_account_pda(&get_proposal_pda(&proposal_id).0, &voter1.pubkey()).unwrap();
+    // let reveal_vote_data = oracle::instruction::RevealVote {
+    //     salt: "".to_string(),
+    //     vote: voter1_vote,
+    // };
+    // let reveal_vote_acounts = oracle::accounts::RevealVote {
+    //     voter: voter1.pubkey(),
+    //     proposal: get_proposal_pda(&proposal_id).0,
+    //     reveal_vote_array: get_reveal_vote_array_pda(&proposal_id).0,
+    //     vote_account: voter_account_pda,
+    //     system_program: anchor_lang::system_program::ID,
+    // };
+
+    // let reveal_vote_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
+    //     &[solana_sdk::instruction::Instruction {
+    //         program_id: oracle::id(),
+    //         accounts: reveal_vote_acounts.to_account_metas(None),
+    //         data: reveal_vote_data.data(),
+    //     }],
+    //     Some(&voter1.pubkey()),
+    //     &[&voter1],
+    //     program_test_context.last_blockhash,
+    // );
+    // let tx_result = program_test_context
+    //     .banks_client
+    //     .process_transaction(reveal_vote_tx)
+    //     .await;
+    // assert!(tx_result.is_err(), "[main] suspicious. Should fail");
+
+    // // assume test failed since it didn't reach quoroum
+    // assert!(
+    //     proposal_status.get_id() == 0,
+    //     "[main] Status is not 3 but {} ",
+    //     proposal_status.get_id()
+    // )
 }

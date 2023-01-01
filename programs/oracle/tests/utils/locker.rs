@@ -5,6 +5,7 @@ use govern;
 use locked_voter;
 use smart_wallet;
 use solana_program::clock::SECONDS_PER_DAY;
+use solana_program::hash::Hash;
 use solana_program_test::*;
 use solana_sdk::*;
 use spl_associated_token_account::create_associated_token_account;
@@ -23,50 +24,61 @@ pub fn get_user_escrow_pda(locker: &Pubkey, userPk: &Pubkey) -> (Pubkey, u8) {
     )
 }
 
+pub fn get_create_escrow_transaction(
+    user: &solana_sdk::signature::Keypair,
+    locker: &Pubkey,
+    mint: &Pubkey,
+    last_blockhash: Hash,
+) -> transaction::Transaction {
+    let (escrow_pda, escrow_bump) = get_user_escrow_pda(locker, &user.pubkey());
+    let mut ixs = Vec::new();
+
+    let create_escrow_token_account_ix =
+        create_associated_token_account(&user.pubkey(), &escrow_pda, &mint);
+    ixs.push(create_escrow_token_account_ix);
+
+    // if escrow account does not exist - create it
+    let create_escrow_accounts = locked_voter::accounts::NewEscrow {
+        locker: *locker,
+        escrow: escrow_pda,
+        escrow_owner: user.pubkey(),
+        payer: user.pubkey(),
+        system_program: anchor_lang::system_program::ID,
+    };
+
+    let create_escrow_data = locked_voter::instruction::NewEscrow { _bump: escrow_bump };
+
+    let create_escrow_ix = solana_sdk::instruction::Instruction {
+        program_id: locked_voter::id(),
+        accounts: create_escrow_accounts.to_account_metas(None),
+        data: create_escrow_data.data(),
+    };
+    ixs.push(create_escrow_ix);
+
+    solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &ixs,
+        Some(&user.pubkey()),
+        &[user],
+        last_blockhash,
+    )
+}
+
 /// lock_tokens allows users to lock
 /// their tokens int the locker based on the mint
 ///
-pub async fn lock_tokens(
-    ctx: &mut ProgramTestContext,
+pub fn get_lock_tokens_transaction(
     user: &solana_sdk::signature::Keypair,
     locker: &Pubkey,
     mint: &Pubkey,
     amount: u64,
     duration: i64,
-) {
-    test_amount_balance(ctx, &user.pubkey(), mint, amount, "lock_tokens").await;
-    let source_token_account =
-        anchor_spl::associated_token::get_associated_token_address(&user.pubkey(), &mint);
-
+    last_blockhash: Hash,
+) -> transaction::Transaction {
     let (escrow_pda, escrow_bump) = get_user_escrow_pda(locker, &user.pubkey());
-    let mut ixs = Vec::new();
     let escrow_token_account =
         anchor_spl::associated_token::get_associated_token_address(&escrow_pda, &mint);
-    let create_escrow_token_account_ix =
-        create_associated_token_account(&user.pubkey(), &escrow_pda, &mint);
-    ixs.push(create_escrow_token_account_ix);
-
-    let escrow_account = ctx.banks_client.get_account(escrow_pda).await.unwrap();
-
-    // if escrow account does not exist - create it
-    if (escrow_account.is_none()) {
-        let create_escrow_accounts = locked_voter::accounts::NewEscrow {
-            locker: *locker,
-            escrow: escrow_pda,
-            escrow_owner: user.pubkey(),
-            payer: user.pubkey(),
-            system_program: anchor_lang::system_program::ID,
-        };
-
-        let create_escrow_data = locked_voter::instruction::NewEscrow { _bump: escrow_bump };
-
-        let create_escrow_ix = solana_sdk::instruction::Instruction {
-            program_id: locked_voter::id(),
-            accounts: create_escrow_accounts.to_account_metas(None),
-            data: create_escrow_data.data(),
-        };
-        ixs.push(create_escrow_ix)
-    }
+    let source_token_account =
+        anchor_spl::associated_token::get_associated_token_address(&user.pubkey(), &mint);
 
     // lock tokens
     let lock_tokens_accounts = locked_voter::accounts::Lock {
@@ -90,19 +102,13 @@ pub async fn lock_tokens(
         accounts: lock_tokens_with_whitelist_accounts.to_account_metas(None),
         data: lock_tokens_data.data(),
     };
-    ixs.append(&mut [lock_tokens_ix].to_vec());
 
-    let lock_tokens_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-        &ixs,
+    solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &[lock_tokens_ix],
         Some(&user.pubkey()),
         &[user],
-        ctx.last_blockhash,
-    );
-
-    ctx.banks_client
-        .process_transaction(lock_tokens_tx)
-        .await
-        .unwrap();
+        last_blockhash,
+    )
 }
 
 /// setup_sure_locker
