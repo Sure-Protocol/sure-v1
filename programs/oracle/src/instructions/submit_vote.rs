@@ -75,6 +75,10 @@ pub fn handler(ctx:Context<SubmitVote>,vote_hash: Vec<u8>) -> Result<()>{
     let proposal =  &mut ctx.accounts.proposal;
     let locker =&ctx.accounts.locker;
     let voting_power = ctx.accounts.user_escrow.voting_power(&locker.params)?;
+    msg!("Voting power: {}",voting_power);
+    if voting_power.eq(&0_u64){
+        return Result::Err(SureError::NoVotingPower.into());
+    }
     let decimals = ctx.accounts.proposal_vault_mint.decimals;
     
     // check f 

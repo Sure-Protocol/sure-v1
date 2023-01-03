@@ -55,7 +55,12 @@ pub fn handler(ctx: Context<RevealVote>, salt: String, vote: i64) -> Result<()> 
     let mut reveal_vote_array = ctx.accounts.reveal_vote_array.load_mut()?;
     let proposal = ctx.accounts.proposal.as_mut();
     let time = clock::Clock::get()?.unix_timestamp;
-
+    msg!(
+        "[reveal_vote] time {}, proposal end vote {}, status {:?}",
+        time,
+        proposal.vote_end_reveal_at,
+        proposal.get_status(time)
+    );
     // check if can reveal vote
     proposal.can_reveal_vote(time)?;
 
@@ -81,5 +86,5 @@ pub struct RevealedVoteEvent {
     pub proposal: Pubkey,
     pub time: i64,
     pub revealed_vote: i64,
-    pub vote_power: u32,
+    pub vote_power: u64,
 }

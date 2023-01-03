@@ -24,8 +24,9 @@ pub mod oracle {
     pub fn initialize_config(
         ctx: Context<InitializeConfig>,
         protocol_authority: Pubkey,
+        required_votes_fraction: u64,
     ) -> Result<()> {
-        instructions::initialize_config::handler(ctx, protocol_authority)
+        instructions::initialize_config::handler(ctx, protocol_authority, required_votes_fraction)
     }
 
     /// update config: voting period

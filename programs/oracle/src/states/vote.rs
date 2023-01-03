@@ -16,7 +16,6 @@ pub struct VoteAccountUpdate {
     pub increase_stake: bool,
 }
 #[account(zero_copy)]
-#[repr(packed)]
 #[derive(Debug, PartialEq)]
 pub struct VoteAccount {
     pub bump: u8,            //     1 byte
@@ -42,8 +41,8 @@ pub struct VoteAccount {
     pub earned_rewards: u64, //     8 bytes
 
     // how many votes put on the vote_hash
-    // Q32.0 - assume rounded
-    pub vote_power: u32, //         8  bytes
+    // Q68.0 - assume rounded
+    pub vote_power: u64, //         8  bytes
 
     pub revealed_vote: bool, //     1 bytes
 
@@ -72,7 +71,7 @@ impl Default for VoteAccount {
 }
 
 impl VoteAccount {
-    pub const SPACE: usize = 1 + 1 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1;
+    pub const SPACE: usize = 1 + 1 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 4 + 1 + 1;
 
     pub fn seeds(&self) -> [&[u8]; 4] {
         [
@@ -100,15 +99,10 @@ impl VoteAccount {
         self.vote_hash = *vote_hash;
 
         // f64
-        let vote_power_proto = (vote_power).div(10_u64.pow(decimals as u32));
-        if vote_power_proto > u32::MAX as u64 {
-            return Err(SureError::OverflowU32.into());
-        }
-        // convert to Q32.0
-        let vote_power = vote_power_proto as u32;
         self.vote_power = vote_power;
         self.stake_mint = stake_mint;
-        self.staked = calculate_stake((vote_power as u64) << 32, decimals, stake_rate);
+        self.staked = calculate_stake(vote_power, stake_rate);
+        msg!("[initialize.vote] staked: {}", self.staked);
         self.vote = 0;
         self.earned_rewards = 0;
         self.owner = *owner;
@@ -121,12 +115,12 @@ impl VoteAccount {
 
     /// Returns vote_power Q32.0
     /// NOTE: consider to be external
-    pub fn calculate_vote_power_x32_from_tokens(amount: u64, decimals: u32) -> Result<u32> {
+    pub fn calculate_vote_power_x32_from_tokens(amount: u64, decimals: u32) -> Result<u64> {
         let vote_power_proto = amount.div(10_u64.pow(decimals));
-        if vote_power_proto > u32::MAX as u64 {
+        if vote_power_proto > u64::MAX as u64 {
             return Err(SureError::OverflowU32.into());
         }
-        Ok(vote_power_proto as u32)
+        Ok(vote_power_proto)
     }
 
     /// Returns vote_power Q32.32
@@ -158,11 +152,9 @@ impl VoteAccount {
         vote: i64,
         time: i64,
     ) -> Result<()> {
-        if !(proposal.get_status(time) == ProposalStatus::RevealVote) {
-            return Err(SureError::RevealPeriodNotActive.into());
-        }
         let mut hasher = Sha3_256::new();
         let message = format!("{}{}", vote, salt);
+        msg!("[reveal_vote] message: {}, salt: {}", message, salt);
         hasher.update(message.as_bytes());
         let expected_hash: [u8; 32] = hasher.finalize().try_into().unwrap();
         let vec = expected_hash.to_vec();
@@ -294,7 +286,7 @@ pub mod vote_account_proto {
         pub earned_rewards: u64, // 8 bytes
 
         // how many votes put on the vote_hash
-        pub vote_power: u32, // 8  bytes
+        pub vote_power: u64, // 8  bytes
 
         pub revealed_vote: bool, // 1 bytes
 

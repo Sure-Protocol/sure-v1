@@ -209,21 +209,33 @@ impl Proposal {
         // set end of
         let current_time = Clock::get()?.unix_timestamp;
         self.vote_start_at = current_time;
+        msg!(
+            "[config_init] current_time: {}, voting length: {}",
+            current_time,
+            config.voting_length_seconds
+        );
         self.vote_end_at = match end_time_ts {
             Some(t) => t,
             None => current_time
                 .checked_add(config.voting_length_seconds)
                 .ok_or(SureError::InvalidVoteEndTime)?,
         };
+        msg!("[config_init] vote_end_at: {}", self.vote_end_at);
 
         self.vote_end_reveal_at = match end_time_ts {
             Some(t) => t,
-            None => current_time
-                .checked_add(self.vote_end_at + config.reveal_length_seconds)
+            None => self
+                .vote_end_at
+                .checked_add(config.reveal_length_seconds)
                 .ok_or(SureError::InvalidVoteEndTime)?,
         };
 
+        msg!(
+            "[config_init] vote_end_reveal_at: {}",
+            self.vote_end_reveal_at
+        );
         self.required_votes = config.default_required_votes;
+        msg!("[config_init] Required votes: {}", self.required_votes);
         self.votes = 0;
         self.protocol_fees = 0;
         Ok(())
@@ -548,7 +560,7 @@ impl Proposal {
     pub fn get_status(&self, time: i64) -> ProposalStatus {
         if self.is_blind_vote_ongoing_at_time(time) && !self.has_reached_quorum() {
             return ProposalStatus::Voting;
-        } else if self.is_blind_vote_finished_at_time(time) && self.has_reached_quorum() {
+        } else if self.has_reached_quorum() && self.is_blind_vote_ongoing_at_time(time) {
             return ProposalStatus::ReachedQuorum;
         } else if self.has_reached_quorum() && self.is_vote_reveal_ongoing_at_time(time) {
             return ProposalStatus::RevealVote;
@@ -571,8 +583,11 @@ impl Proposal {
         Ok(())
     }
 
+    /// can_reveal_vote if
     pub fn can_reveal_vote(&self, time: i64) -> Result<()> {
-        if self.get_status(time) != ProposalStatus::RevealVote {
+        if self.get_status(time) != ProposalStatus::RevealVote
+            && self.get_status(time) != ProposalStatus::ReachedQuorum
+        {
             return Err(SureError::RevealPeriodNotActive.into());
         }
         Ok(())

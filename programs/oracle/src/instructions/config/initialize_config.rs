@@ -34,9 +34,17 @@ pub struct InitializeConfig<'info> {
 /// * protocol_authority<Pubkey>: permissions
 ///     - update config
 ///     - collect protocol fees
-pub fn handler(ctx: Context<InitializeConfig>, protocol_authority: Pubkey) -> Result<()> {
+pub fn handler(
+    ctx: Context<InitializeConfig>,
+    protocol_authority: Pubkey,
+    required_votes_fraction: u64,
+) -> Result<()> {
     let config = ctx.accounts.config.as_mut();
-    config.initialize(ctx.accounts.token_mint.as_ref(), protocol_authority);
+    config.initialize(
+        ctx.accounts.token_mint.as_ref(),
+        protocol_authority,
+        required_votes_fraction,
+    );
 
     emit!(InitializedConfigEvent {});
     Ok(())

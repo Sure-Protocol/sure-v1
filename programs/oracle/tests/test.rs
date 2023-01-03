@@ -262,6 +262,50 @@ fn get_submit_vote_transaction(
     )
 }
 
+/// get_reveal_vote_transaction
+pub fn get_reveal_vote_transaction(
+    salt: &str,
+    vote: i64,
+    proposal_id: &Vec<u8>,
+    voter: &Keypair,
+    recent_blockhash: Hash,
+) -> transaction::Transaction {
+    let (proposal_pda, proposal_bump) = get_proposal_pda(proposal_id);
+    let (voter_account_pda, voter_account_bump) =
+        get_voter_account_pda(&proposal_pda, &voter.pubkey()).unwrap();
+    let (reveal_vote_array_pda, reveal_vote_array_bump) = get_reveal_vote_array_pda(proposal_id);
+
+    let reveal_vote_accounts = oracle::accounts::RevealVote {
+        voter: voter.pubkey(),
+        proposal: proposal_pda,
+        reveal_vote_array: reveal_vote_array_pda,
+        vote_account: voter_account_pda,
+        system_program: anchor_lang::system_program::ID,
+    };
+
+    let reveal_vote_data = oracle::instruction::RevealVote {
+        salt: salt.to_string(),
+        vote,
+    };
+
+    let reveal_vote_ix = solana_sdk::instruction::Instruction {
+        program_id: oracle::id(),
+        accounts: reveal_vote_accounts.to_account_metas(None),
+        data: reveal_vote_data.data(),
+    };
+
+    solana_sdk::transaction::Transaction::new_signed_with_payer(
+        &[solana_sdk::instruction::Instruction {
+            program_id: oracle::id(),
+            accounts: reveal_vote_accounts.to_account_metas(None),
+            data: reveal_vote_data.data(),
+        }],
+        Some(&voter.pubkey()),
+        &[voter],
+        recent_blockhash,
+    )
+}
+
 pub async fn test_create_mint(
     ctx: &mut ProgramTestContext,
     minter: &Keypair,
@@ -422,6 +466,7 @@ impl Minter {
 pub struct Voters {
     keys: Vec<Keypair>,
     votes: HashMap<Pubkey, u64>,
+    salt: String,
 }
 
 impl Voters {
@@ -433,7 +478,11 @@ impl Voters {
             keys.push(voter)
         }
         let votes = HashMap::with_capacity(num_voters as usize);
-        Voters { keys, votes }
+        Voters {
+            keys,
+            votes,
+            salt: "".to_string(),
+        }
     }
 
     pub fn get_pubkeys(&self) -> Vec<Pubkey> {
@@ -529,10 +578,42 @@ impl Voters {
         self.votes.insert(*voter, vote).unwrap();
     }
 
+    pub fn get_vote(&self, voter: &Pubkey) -> u64 {
+        self.votes.get(voter).unwrap().clone()
+    }
+
     pub fn create_vote_hash(&self, voter: &Keypair) -> Vec<u8> {
         let mut hasher = Sha3_256::new();
-        hasher.update(self.votes.get(&voter.pubkey()).unwrap().to_le_bytes());
+        hasher.update(
+            self.votes
+                .get(&voter.pubkey())
+                .unwrap()
+                .to_string()
+                .as_bytes(),
+        );
         hasher.finalize().to_vec()
+    }
+
+    pub async fn get_vote_account(
+        &self,
+        ctx: &mut ProgramTestContext,
+        voter: &Pubkey,
+        proposal: &Pubkey,
+    ) -> oracle::states::VoteAccount {
+        let (voter_account_pda, _) = get_voter_account_pda(proposal, voter).unwrap();
+        let vote_account = ctx
+            .banks_client
+            .get_account(voter_account_pda)
+            .await
+            .unwrap()
+            .unwrap();
+
+        println!(
+            "[get_vote_account] Vote account data length: {}",
+            vote_account.data.len()
+        );
+
+        oracle::states::VoteAccount::try_deserialize(&mut vote_account.data.as_slice()).unwrap()
     }
 
     pub fn get_submit_vote_txs(
@@ -560,6 +641,27 @@ impl Voters {
                     mint,
                     locker,
                     last_blockhash,
+                );
+            })
+            .collect()
+    }
+
+    /// get_reveal_vote_txs
+    pub fn get_reveal_vote_txs(
+        &self,
+        proposal_id: &Vec<u8>,
+        recent_blockhash: Hash,
+    ) -> Vec<transaction::Transaction> {
+        self.keys
+            .iter()
+            .map(|voter| {
+                let voter_vote = self.get_vote(&voter.pubkey());
+                return get_reveal_vote_transaction(
+                    &self.salt,
+                    voter_vote as i64,
+                    proposal_id,
+                    voter,
+                    recent_blockhash,
                 );
             })
             .collect()
@@ -638,8 +740,6 @@ async fn create_and_init() {
         .await
         .unwrap();
 
-    let minter_ata = minter.get_associated_token_address();
-
     //  setup locker
     let locker_result = setup_sure_locker(
         &mut program_test_context,
@@ -712,6 +812,7 @@ async fn create_and_init() {
     // create initialize config instruction
     let initialie_config_args = oracle::instruction::InitializeConfig {
         protocol_authority: oracle_owner.pubkey(),
+        required_votes_fraction: 10000, // 1/100 = 1% of all tokens
     };
     let intialize_config_ix = solana_sdk::instruction::Instruction {
         program_id: oracle::id(),
@@ -757,7 +858,7 @@ async fn create_and_init() {
         &proposer,
         &locker_result.locker,
         &minter.mint.pubkey(),
-        100_000_000,
+        1_000_000_000,
         (SECONDS_PER_DAY * 365) as i64, // lockup for a year
         program_test_context.last_blockhash,
     );
@@ -799,8 +900,8 @@ async fn create_and_init() {
     let lock_voters_tokens_txs = voters.lock_tokens(
         &locker_result.locker,
         &minter.mint.pubkey(),
-        1_000_000,
-        SECONDS_PER_YEAR as i64,
+        1_000_000_000,
+        (SECONDS_PER_DAY * 4 * 365) as i64, // lock in days
         program_test_context.last_blockhash,
     );
     for tx in &lock_voters_tokens_txs {
@@ -822,68 +923,79 @@ async fn create_and_init() {
         &minter.get_mint_pubkey(),
         program_test_context.last_blockhash,
     );
+    for tx in &submit_vote_txs {
+        program_test_context
+            .banks_client
+            .process_transaction(tx.clone())
+            .await
+            .unwrap();
+    }
+    let vote_account_data = voters
+        .get_vote_account(
+            &mut program_test_context,
+            &voters.keys[0].pubkey(),
+            &get_proposal_pda(&proposal_id).0,
+        )
+        .await;
+
+    assert!(
+        vote_account_data.vote_power != 0,
+        "[main] vote power for {} is {}",
+        vote_account_data.owner.to_string(),
+        vote_account_data.staked,
+    );
+
+    let proposal =
+        get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
+            .await
+            .unwrap();
+    assert!(
+        proposal.status == 3,
+        "[main] Assert failed. Proposal status is not 3 but {}",
+        proposal.status
+    );
+    assert!(
+        proposal.votes != 0,
+        "[main] suspicious. Number of votes is {}",
+        proposal.votes
+    );
+    println!(
+        "[main] number of votes: {} / {}",
+        proposal.votes, proposal.required_votes
+    );
+
+    // fast forward time beyond voting period
+    test_foward_time(&mut program_test_context, proposal.vote_end_at - 1).await;
+    let proposal_account =
+        get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
+            .await
+            .unwrap();
+    let proposal_status = proposal_account.get_status(proposal.vote_end_at - 1);
+    let can_reveal_vote = proposal_account.can_reveal_vote(proposal.vote_end_at - 1);
+    println!(
+        "[Proposal status] Has reached quorum {:?}, is blind voting {}",
+        proposal.has_reached_quorum(),
+        proposal.is_blind_vote_ongoing_at_time(proposal.vote_end_at - 1)
+    );
+    println!(
+        "[Proposal status] Current status is {:?}",
+        &proposal_status.get_id()
+    );
+    println!(
+        "[Proposal status] Can reveal vote: {:?}",
+        can_reveal_vote.unwrap()
+    );
+
+    // fast forward to
+    // try to reveal vote
+    let reveal_vote_txs =
+        voters.get_reveal_vote_txs(&proposal_id, program_test_context.last_blockhash);
+
     program_test_context
         .banks_client
-        .process_transactions(submit_vote_txs)
+        .process_transactions(reveal_vote_txs)
         .await
         .unwrap();
-
-    // let proposal =
-    //     get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
-    //         .await
-    //         .unwrap();
-    // assert!(
-    //     proposal.status == 2,
-    //     "[main] Assert failed. Proposal status is not 1 but {}",
-    //     proposal.status
-    // );
-    // assert!(
-    //     proposal.votes != 0,
-    //     "[main] suspicious. Number of votes is {}",
-    //     proposal.votes
-    // );
-
-    // // fast forward time beyond voting period
-    // test_foward_time(&mut program_test_context, proposal.vote_end_at + 1).await;
-    // let proposal_account =
-    //     get_oracle_proposal(&mut program_test_context, &get_proposal_pda(&proposal_id).0)
-    //         .await
-    //         .unwrap();
-    // let proposal_status = proposal_account.get_status(proposal.vote_end_at + 1);
-    // println!(
-    //     "[Proposal status] Current status is {:?}",
-    //     &proposal_status.get_id()
-    // );
-    // // try to reveal vote
-    // let (voter_account_pda, voter_account_bump) =
-    //     get_voter_account_pda(&get_proposal_pda(&proposal_id).0, &voter1.pubkey()).unwrap();
-    // let reveal_vote_data = oracle::instruction::RevealVote {
-    //     salt: "".to_string(),
-    //     vote: voter1_vote,
-    // };
-    // let reveal_vote_acounts = oracle::accounts::RevealVote {
-    //     voter: voter1.pubkey(),
-    //     proposal: get_proposal_pda(&proposal_id).0,
-    //     reveal_vote_array: get_reveal_vote_array_pda(&proposal_id).0,
-    //     vote_account: voter_account_pda,
-    //     system_program: anchor_lang::system_program::ID,
-    // };
-
-    // let reveal_vote_tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-    //     &[solana_sdk::instruction::Instruction {
-    //         program_id: oracle::id(),
-    //         accounts: reveal_vote_acounts.to_account_metas(None),
-    //         data: reveal_vote_data.data(),
-    //     }],
-    //     Some(&voter1.pubkey()),
-    //     &[&voter1],
-    //     program_test_context.last_blockhash,
-    // );
-    // let tx_result = program_test_context
-    //     .banks_client
-    //     .process_transaction(reveal_vote_tx)
-    //     .await;
-    // assert!(tx_result.is_err(), "[main] suspicious. Should fail");
 
     // // assume test failed since it didn't reach quoroum
     // assert!(
