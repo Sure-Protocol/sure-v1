@@ -82,6 +82,12 @@ pub enum SureError {
 
     #[msg("Unauthorized signer")]
     UnauthorizedSigner,
+
+    #[msg("No voting power")]
+    NoVotingPower,
+
+    #[msg("Failed to divide")]
+    DivideOperationFailure,
 }
 
 impl From<TryFromIntError> for SureError {

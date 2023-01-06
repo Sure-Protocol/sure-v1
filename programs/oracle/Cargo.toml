@@ -7,6 +7,7 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "lib"]
 name = "oracle"
+test-bpf = []
 
 [features]
 no-entrypoint = []
@@ -14,6 +15,7 @@ no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
+test-bpf = []
 
 [dependencies]
 anchor-lang = "0.24.2"
@@ -24,3 +26,14 @@ hex-literal = "0.3.4"
 uint = "=0.9.1"
 mpl-token-metadata = {version ="1.2.7", features = ["no-entrypoint"] }
 
+[dev-dependencies]
+anchor-client = "0.24.2"
+solana-program-test = "1.9.15"
+solana-program = "1.9.15"
+spl-token = "3.2.0"
+spl-associated-token-account = "1.0.3"
+govern = "0.5.8"
+smart-wallet = "0.11.1"
+locked-voter = "0.5.8"
+bytemuck = "1.12.3"
+sha3 = "0.10.6"

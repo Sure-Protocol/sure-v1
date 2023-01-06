@@ -112,7 +112,7 @@ pub fn handler(
     let time = clock::Clock::get()?.unix_timestamp;
 
     // TODO: might fail if not used hasher 
-    let id_hash: [u8; 16] = id.clone().try_into().unwrap();
+    let id_hash: [u8; 32] = id.clone().try_into().unwrap();
 
     // Initialize state
     proposal.initialize(

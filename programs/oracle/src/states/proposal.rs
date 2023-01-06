@@ -13,7 +13,7 @@ use anchor_lang::{prelude::*, solana_program::clock};
 
 use super::{Config, RevealedVoteArray, VoteAccount};
 
-#[derive(Debug, Eq, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd)]
 #[repr(u8)]
 pub enum ProposalStatus {
     /// A vote has been proposed
@@ -28,7 +28,7 @@ pub enum ProposalStatus {
 }
 
 impl ProposalStatus {
-    fn get_id(self) -> u8 {
+    pub fn get_id(self) -> u8 {
         self as u8
     }
 }
@@ -60,7 +60,7 @@ pub struct Proposal {
     pub name: String, // 4 + 4*64 bytes
 
     /// id - hashed name
-    pub id: [u8; 16], // 16 bytes
+    pub id: [u8; 32], // 32 bytes
 
     /// description of vote
     pub description: String, // 4 + 4*140 (140chars) bytes
@@ -94,7 +94,7 @@ pub struct Proposal {
     pub revealed_votes: u64, // 8
 
     // Q64.0
-    pub running_sum_weighted_vote: i64, // 8
+    pub running_sum_weighted_vote: i128, // 16
     // Q64.0
     pub running_weight: u64, // 8
 
@@ -132,7 +132,7 @@ impl Default for Proposal {
             bump: 0,
             bump_array: [0; 1],
             name: "test proposal".to_string(),
-            id: [0; 16],
+            id: [0; 32],
             optimistic: false,
             description: "test descr".to_string(),
             proposed_result: 0,
@@ -165,7 +165,8 @@ impl Default for Proposal {
 pub struct FinalizeVoteResult {}
 
 impl Proposal {
-    pub const SPACE: usize = 1 * 6 + 4 * 3 + 8 * 12 + 16 * 4 + 32 * 3 + 4 + 4 * 64 + 4 + 4 * 140;
+    pub const SPACE: usize =
+        1 * 6 + 4 * 3 + 8 * 11 + 16 + 32 * 4 + 32 * 3 + 4 + 4 * 64 + 4 + 4 * 140;
 
     pub fn seeds(&self) -> [&[u8]; 3] {
         [
@@ -180,7 +181,7 @@ impl Proposal {
         config: &Account<Config>,
         bump: u8,
         name: String,
-        id: &[u8; 16],
+        id: &[u8; 32],
         description: &str,
         proposer: &Pubkey,
         proposed_staked: u64,
@@ -209,21 +210,33 @@ impl Proposal {
         // set end of
         let current_time = Clock::get()?.unix_timestamp;
         self.vote_start_at = current_time;
+        msg!(
+            "[config_init] current_time: {}, voting length: {}",
+            current_time,
+            config.voting_length_seconds
+        );
         self.vote_end_at = match end_time_ts {
             Some(t) => t,
             None => current_time
                 .checked_add(config.voting_length_seconds)
                 .ok_or(SureError::InvalidVoteEndTime)?,
         };
+        msg!("[config_init] vote_end_at: {}", self.vote_end_at);
 
         self.vote_end_reveal_at = match end_time_ts {
             Some(t) => t,
-            None => current_time
-                .checked_add(self.vote_end_at + config.reveal_length_seconds)
+            None => self
+                .vote_end_at
+                .checked_add(config.reveal_length_seconds)
                 .ok_or(SureError::InvalidVoteEndTime)?,
         };
 
+        msg!(
+            "[config_init] vote_end_reveal_at: {}",
+            self.vote_end_reveal_at
+        );
         self.required_votes = config.default_required_votes;
+        msg!("[config_init] Required votes: {}", self.required_votes);
         self.votes = 0;
         self.protocol_fees = 0;
         Ok(())
@@ -231,14 +244,14 @@ impl Proposal {
 
     /// cast a vote if vote is active
     pub fn cast_vote_at_time(&mut self, vote: RefMut<VoteAccount>, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() == ProposalStatus::Voting {
+        if self.get_status(time) == ProposalStatus::Voting {
             self.votes += vote.vote_power as u64;
         }
         Ok(())
     }
 
     pub fn cancel_vote_at_time(&mut self, vote: RefMut<VoteAccount>, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() == ProposalStatus::Voting {
+        if self.get_status(time) == ProposalStatus::Voting {
             self.votes -= vote.vote_power as u64;
         }
         Ok(())
@@ -260,29 +273,46 @@ impl Proposal {
     /// - W_N = sum_i^n (w_i)
     pub fn update_running_sum_weighted_vote(&mut self, vote_account: VoteAccount) {
         if vote_account.revealed_vote {
-            // u32.0 x q32.32 -> q64.32
-            let update_x64 =
-                (vote_account.vote_power as u64).mul(vote_account.vote.abs() as u64) as u128;
-            let update = (update_x64 >> 32) as i64;
+            // u64.0 x q32.32 -> q96.32
+            msg!(
+                "[update_running_sum_weighted_vote] vote_power: {}, vote: {} ",
+                vote_account.vote_power,
+                vote_account.vote.abs() as u64
+            );
+            let update_x64 = (vote_account.vote_power as u128)
+                .checked_mul(vote_account.vote.abs() as u128)
+                .unwrap();
+            let update = (update_x64) as i128; // Q96.0
             if vote_account.vote > 0 {
                 self.running_sum_weighted_vote += update;
             } else {
                 self.running_sum_weighted_vote -= update;
             }
             self.running_weight += vote_account.vote_power as u64;
+            msg!("[update_running_sum_weighted_vote] vote: {},update_x64: {}, update: {}, running_sum_weighted_vote: {}, running_weight: {}",vote_account.vote,update_x64,update,self.running_sum_weighted_vote,self.running_weight);
         }
     }
-
-    pub fn calculate_consensus_(&self, running_sum_weighted_vote: i64, running_weight: u64) -> i64 {
-        // Convert i64 -> i64.64
+    // @ checkpoint: consensus needs to be calculates as an Q64.0
+    pub fn calculate_consensus_(
+        &self,
+        running_sum_weighted_vote: i128,
+        running_weight: u64,
+    ) -> i64 {
+        // Convert   i64 -> i64.64
         let positive = running_sum_weighted_vote > 0;
-        // convert u64 -> Q64.64
-        let wv_x64 = (running_sum_weighted_vote.abs() as u128) << 64;
-        // convert u64 -> Q64.64
-        let rw_x64 = (running_weight as u128);
+        // convert u128 -> Q128.128
+        let wv_x64 = U256::from(running_sum_weighted_vote.abs());
+        // convert u64 -> 256.0
+        let rw_x64 = U256::from(running_weight);
         // i64.64
-        let consensus = (wv_x64).div(rw_x64) as i128;
-        let consensus_ix32 = (consensus >> 32) as i64;
+        let consensus = (wv_x64).div(rw_x64);
+        msg!(
+            "[calculate_consensus_] consensus: {}/{} = {}",
+            wv_x64,
+            rw_x64,
+            (wv_x64).div(rw_x64)
+        );
+        let consensus_ix32 = consensus.as_u128() as i64;
         if positive {
             return consensus_ix32;
         } else {
@@ -313,9 +343,9 @@ impl Proposal {
         let sum_squared = revealed_votes.calculate_sum_squared_difference(consensus);
 
         // Q32.32 -> Q64.64
-        let running_weight_Q64 = (self.running_weight as u128) << 32;
+        let running_weight_q64 = (self.running_weight as u128) << 32;
         // Q64.64
-        let lambda = running_weight_Q64.div(sum_squared as u128);
+        let lambda = running_weight_q64.div(sum_squared as u128);
         // get rid of precision: Q64.64 >> 48 -> Q16.16
         let lambda_q16 = (lambda >> 48) as u32;
         lambda_q16
@@ -415,7 +445,12 @@ impl Proposal {
     /// Calculate and update the scale parameter
     pub fn update_scale_parameter(&mut self, revealed_votes: &RevealedVoteArray) -> Result<()> {
         let consensus = self.calculate_consensus();
+        msg!("[update_scale_parameter] consensus: {}", consensus);
         self.scale_parameter = self.estimate_scale_parameter(consensus, revealed_votes);
+        msg!(
+            "[update_scale_parameter] scale_parameter: {}",
+            self.scale_parameter
+        );
         self.consensus = consensus;
         Ok(())
     }
@@ -426,16 +461,18 @@ impl Proposal {
         revealed_votes: &RevealedVoteArray,
         time: i64,
     ) -> Result<()> {
-        if self.get_status(time).unwrap() == ProposalStatus::VoteRevealFinished {
+        if self.get_status(time) == ProposalStatus::VoteRevealFinished || self.all_votes_revealed()
+        {
             // distribute reward to proposer
             let rewards = self.calculate_proposer_reward();
+            msg!("[try_finalize_vote_after_reveal] rewards: {}", rewards);
             self.earned_rewards = rewards;
 
             // calculate scale parameter
             self.update_scale_parameter(revealed_votes)?;
             self.scale_parameter_calculated = true;
         } else {
-            return Err(SureError::RevealPeriodNotActive.into());
+            return Err(SureError::FailedToFinalizeVoteResult.into());
         }
         Ok(())
     }
@@ -444,7 +481,7 @@ impl Proposal {
     /// Only finalize vote if either the
     /// quorum is reached or if it timed out
     pub fn try_finalize_blind_vote(&mut self, time: i64) -> Result<u128> {
-        if self.get_status(time).unwrap() == ProposalStatus::RevealVote {
+        if self.get_status(time) == ProposalStatus::RevealVote {
             // distribute rewards
             let rewards = self.calculate_proposer_reward();
             self.earned_rewards = rewards;
@@ -462,7 +499,7 @@ impl Proposal {
     /// * decimals: number of decimals in the mint
     /// * time: current time used to check if it's possible to payout
     pub fn payout_earned_rewards_at_time(&mut self, decimals: u8, time: i64) -> Result<u64> {
-        if self.get_status(time).unwrap() > ProposalStatus::RevealVote {
+        if self.get_status(time) > ProposalStatus::RevealVote {
             // Q64.64 -> Q64.32
             let rewards_x32 = self.earned_rewards >> 32;
             if rewards_x32 > u64::MAX as u128 {
@@ -485,6 +522,11 @@ impl Proposal {
         self.protocol_fees += protocol_fee as u128;
     }
 
+    // @ checkpoint
+    pub fn update_on_vote_reveal(&mut self, voter_revealed_votes: u64) {
+        self.revealed_votes += voter_revealed_votes
+    }
+
     /// payout protocol fees
     ///
     /// get the accrued protocol fees and
@@ -504,12 +546,12 @@ impl Proposal {
     ///
     /// Returns Q64.64
     fn calculate_reward_from_revealed_votes(&self) -> u128 {
-        (calculate_stake_x32(self.revealed_votes, self.stake_rate) as u128) << 64
+        (calculate_stake_x32(self.revealed_votes, self.stake_rate).unwrap() as u128) << 64
     }
 
     /// Update status callback
     pub fn update_status(&mut self, time: i64) {
-        let status = self.get_status(time).unwrap();
+        let status = self.get_status(time);
         self.status = status.get_id();
     }
 
@@ -545,48 +587,56 @@ impl Proposal {
         self.votes >= self.required_votes
     }
 
-    pub fn get_status(&self, time: i64) -> Option<ProposalStatus> {
+    pub fn all_votes_revealed(&self) -> bool {
+        self.revealed_votes == self.votes
+    }
+
+    pub fn get_status(&self, time: i64) -> ProposalStatus {
         if self.is_blind_vote_ongoing_at_time(time) && !self.has_reached_quorum() {
-            return Some(ProposalStatus::Voting);
-        } else if self.is_blind_vote_finished_at_time(time) && self.has_reached_quorum() {
-            return Some(ProposalStatus::ReachedQuorum);
+            return ProposalStatus::Voting;
+        } else if self.has_reached_quorum() && self.is_blind_vote_ongoing_at_time(time) {
+            return ProposalStatus::ReachedQuorum;
         } else if self.has_reached_quorum() && self.is_vote_reveal_ongoing_at_time(time) {
-            return Some(ProposalStatus::RevealVote);
-        } else if self.is_vote_revealed_over(time) {
-            return Some(ProposalStatus::VoteRevealFinished);
+            return ProposalStatus::RevealVote;
+        } else if self.all_votes_revealed() || self.is_vote_revealed_over(time) {
+            return ProposalStatus::VoteRevealFinished;
         } else if self.scale_parameter_calculated {
-            return Some(ProposalStatus::RewardCalculation);
+            return ProposalStatus::RewardCalculation;
         } else if self.locked {
-            return Some(ProposalStatus::RewardPayout);
+            return ProposalStatus::RewardPayout;
         } else {
-            return Some(ProposalStatus::Failed);
+            return ProposalStatus::Failed;
         }
     }
 
     /// checks if a user can submit a vote
     pub fn can_submit_vote(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() > ProposalStatus::Voting {
+        if self.get_status(time) > ProposalStatus::Voting {
             return Err(SureError::VotingPeriodEnded.into());
         }
         Ok(())
     }
 
+    /// can_reveal_vote if
     pub fn can_reveal_vote(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() != ProposalStatus::RevealVote {
+        if self.get_status(time) != ProposalStatus::RevealVote
+            && self.get_status(time) != ProposalStatus::ReachedQuorum
+        {
             return Err(SureError::RevealPeriodNotActive.into());
         }
         Ok(())
     }
 
     pub fn can_finalize_vote(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() != ProposalStatus::RewardCalculation {
+        if self.get_status(time) != ProposalStatus::RewardCalculation {
             return Err(SureError::FailedToFinalizeVote.into());
         }
         Ok(())
     }
 
     pub fn can_finalize_vote_results(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() != ProposalStatus::VoteRevealFinished {
+        if self.get_status(time) != ProposalStatus::VoteRevealFinished && !self.all_votes_revealed()
+        {
             return Err(SureError::FailedToFinalizeVoteResult.into());
         }
         Ok(())
@@ -597,7 +647,7 @@ impl Proposal {
     /// a proposer can claim reward after the reveal period
     /// and the parameter is calculated
     pub fn can_collect_proposer_rewards(&self, time: i64) -> Result<()> {
-        if self.get_status(time).unwrap() >= ProposalStatus::RewardCalculation
+        if self.get_status(time) >= ProposalStatus::RewardCalculation
             && self.scale_parameter_calculated
         {
             return Ok(());
@@ -607,7 +657,7 @@ impl Proposal {
     }
 
     pub fn can_collect_voter_reward(&self, time: i64) -> Result<()> {
-        let status = self.get_status(time).unwrap();
+        let status = self.get_status(time);
         if status == ProposalStatus::Failed {
             return Ok(());
         }
@@ -622,7 +672,7 @@ impl Proposal {
     ///
     /// a vote can be cancelled when in voting period
     pub fn can_cancel_vote(&self, time: i64) -> Result<()> {
-        if !(self.get_status(time).unwrap() == ProposalStatus::Voting) {
+        if !(self.get_status(time) == ProposalStatus::Voting) {
             return Err(SureError::FailedToCancelVote.into());
         }
         Ok(())
@@ -632,7 +682,6 @@ impl Proposal {
 // Proto for proposal, a builder
 #[cfg(test)]
 pub mod test_proposal_proto {
-    use anchor_lang::solana_program::vote;
 
     use super::*;
 
@@ -642,7 +691,7 @@ pub mod test_proposal_proto {
         pub bump_array: [u8; 1],
         /// name of vote
         pub name: String, // 4 + 64 bytes
-        pub id: [u8; 16],
+        pub id: [u8; 32],
         /// description of vote
         pub description: String, // 4 + 200 bytes
 
@@ -661,7 +710,7 @@ pub mod test_proposal_proto {
         pub revealed_votes: u64,
 
         // Q64.0
-        pub running_sum_weighted_vote: i64,
+        pub running_sum_weighted_vote: i128,
         // Q64.0
         pub running_weight: u64,
 
@@ -701,7 +750,7 @@ pub mod test_proposal_proto {
                 bump: 0,
                 bump_array: [0; 1],
                 name: "test".to_string(),
-                id: [0; 16],
+                id: [0; 32],
                 description: "test".to_string(),
                 proposed_result: 0,
                 staked: 1_000_000,
@@ -848,7 +897,7 @@ pub mod test_propose_vote {
     pub fn test_calculate_consensus() {
         pub struct Test {
             name: String,
-            weighted_votes: i64,
+            weighted_votes: i128,
             weight: u64,
             expected_consensus: f64,
         }

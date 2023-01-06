@@ -3,8 +3,6 @@ use std::ops::{Div, Mul};
 use anchor_lang::{prelude::*, solana_program::clock::SECONDS_PER_DAY};
 use anchor_spl::token::Mint;
 
-use crate::utils::VOTING_FRACTION_REQUIRED;
-
 #[account]
 pub struct Config {
     pub bump: u8, //                        1 byte
@@ -44,7 +42,12 @@ pub struct Config {
 impl Config {
     pub const SPACE: usize = 1 + 4 * 8 + 2 * 4 + 2 * 32 + 1;
 
-    pub fn initialize(&mut self, token_mint: &Account<Mint>, protocol_authority: Pubkey) {
+    pub fn initialize(
+        &mut self,
+        token_mint: &Account<Mint>,
+        protocol_authority: Pubkey,
+        required_votes_fraction: u64,
+    ) {
         let mint = token_mint.key();
         let token_supply = token_mint.supply;
         let decimals = token_mint.decimals;
@@ -53,11 +56,17 @@ impl Config {
         self.voting_length_seconds = SECONDS_PER_DAY as i64;
         self.reveal_length_seconds = SECONDS_PER_DAY as i64;
 
-        self.default_required_votes = token_supply.div(VOTING_FRACTION_REQUIRED);
+        self.default_required_votes = token_supply.div(required_votes_fraction);
+        msg!(
+            "[Config] default_required_votes {}, token_supply = {}, required_votes_fraction={}",
+            token_supply.div(required_votes_fraction),
+            token_supply,
+            required_votes_fraction
+        );
         self.minimum_proposal_stake = 10_u64.mul(10_u64.pow(decimals as u32));
 
-        // default to 1%
-        self.vote_stake_rate = 100;
+        // default to 0.1% of vote
+        self.vote_stake_rate = 1_000;
 
         // default to 0.02 of vote pool
         self.protocol_fee_rate = 50;

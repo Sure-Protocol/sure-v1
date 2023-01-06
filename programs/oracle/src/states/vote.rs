@@ -16,7 +16,6 @@ pub struct VoteAccountUpdate {
     pub increase_stake: bool,
 }
 #[account(zero_copy)]
-#[repr(packed)]
 #[derive(Debug, PartialEq)]
 pub struct VoteAccount {
     pub bump: u8,            //     1 byte
@@ -42,8 +41,8 @@ pub struct VoteAccount {
     pub earned_rewards: u64, //     8 bytes
 
     // how many votes put on the vote_hash
-    // Q32.0 - assume rounded
-    pub vote_power: u32, //         8  bytes
+    // Q68.0 - assume rounded
+    pub vote_power: u64, //         8  bytes
 
     pub revealed_vote: bool, //     1 bytes
 
@@ -72,7 +71,7 @@ impl Default for VoteAccount {
 }
 
 impl VoteAccount {
-    pub const SPACE: usize = 1 + 1 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 1 + 1;
+    pub const SPACE: usize = 1 + 1 + 32 + 32 + 32 + 32 + 8 + 8 + 8 + 8 + 8 + 8 + 4 + 1 + 1;
 
     pub fn seeds(&self) -> [&[u8]; 4] {
         [
@@ -100,15 +99,10 @@ impl VoteAccount {
         self.vote_hash = *vote_hash;
 
         // f64
-        let vote_power_proto = (vote_power).div(10_u64.pow(decimals as u32));
-        if vote_power_proto > u32::MAX as u64 {
-            return Err(SureError::OverflowU32.into());
-        }
-        // convert to Q32.0
-        let vote_power = vote_power_proto as u32;
         self.vote_power = vote_power;
         self.stake_mint = stake_mint;
-        self.staked = calculate_stake((vote_power as u64) << 32, decimals, stake_rate);
+        self.staked = calculate_stake(vote_power, stake_rate);
+        msg!("[initialize.vote] staked: {}", self.staked);
         self.vote = 0;
         self.earned_rewards = 0;
         self.owner = *owner;
@@ -121,12 +115,12 @@ impl VoteAccount {
 
     /// Returns vote_power Q32.0
     /// NOTE: consider to be external
-    pub fn calculate_vote_power_x32_from_tokens(amount: u64, decimals: u32) -> Result<u32> {
+    pub fn calculate_vote_power_x32_from_tokens(amount: u64, decimals: u32) -> Result<u64> {
         let vote_power_proto = amount.div(10_u64.pow(decimals));
-        if vote_power_proto > u32::MAX as u64 {
+        if vote_power_proto > u64::MAX as u64 {
             return Err(SureError::OverflowU32.into());
         }
-        Ok(vote_power_proto as u32)
+        Ok(vote_power_proto)
     }
 
     /// Returns vote_power Q32.32
@@ -143,7 +137,7 @@ impl VoteAccount {
         time: i64,
     ) -> Result<()> {
         // If blind voting is over
-        if !(proposal.get_status(time).unwrap() == ProposalStatus::Voting) {
+        if !(proposal.get_status(time) == ProposalStatus::Voting) {
             return Err(SureError::VotingPeriodEnded.into());
         }
         self.vote_hash = *new_vote_hash;
@@ -151,18 +145,10 @@ impl VoteAccount {
     }
 
     /// reveal vote by proving salt
-    pub fn reveal_vote(
-        &mut self,
-        proposal: &Proposal,
-        salt: &str,
-        vote: i64,
-        time: i64,
-    ) -> Result<()> {
-        if !(proposal.get_status(time).unwrap() == ProposalStatus::RevealVote) {
-            return Err(SureError::RevealPeriodNotActive.into());
-        }
+    pub fn reveal_vote(&mut self, salt: &str, vote: i64) -> Result<()> {
         let mut hasher = Sha3_256::new();
         let message = format!("{}{}", vote, salt);
+        msg!("[reveal_vote] message: {}, salt: {}", message, salt);
         hasher.update(message.as_bytes());
         let expected_hash: [u8; 32] = hasher.finalize().try_into().unwrap();
         let vec = expected_hash.to_vec();
@@ -209,7 +195,7 @@ impl VoteAccount {
         mint_decimals: u8,
         time: i64,
     ) -> Result<u64> {
-        let status = proposal.get_status(time).unwrap();
+        let status = proposal.get_status(time);
         if self.revealed_vote && self.vote_factor > 0 && status == ProposalStatus::RewardCalculation
         {
             self.calculate_token_reward_(self.vote_factor, mint_decimals)
@@ -294,7 +280,7 @@ pub mod vote_account_proto {
         pub earned_rewards: u64, // 8 bytes
 
         // how many votes put on the vote_hash
-        pub vote_power: u32, // 8  bytes
+        pub vote_power: u64, // 8  bytes
 
         pub revealed_vote: bool, // 1 bytes
 
@@ -442,10 +428,8 @@ pub mod test_vote {
             assert_eq!(vote, expected_vote);
             assert_eq!(vote_power, 2, "{}: test vote power", test.name);
 
-            let reveal_time = test.proposal.get_reveal_time();
-            let proposal = test.proposal.set_in_reveal_state().build();
             vote_account
-                .reveal_vote(&proposal, &test.salt_provided, test.vote, reveal_time)
+                .reveal_vote(&test.salt_true, test.vote)
                 .unwrap();
             vote = vote_account.vote;
             assert_eq!(
@@ -512,7 +496,7 @@ pub mod test_vote {
             let reveal_time = test.proposal.get_reveal_time();
             let proposal = test.proposal.set_in_reveal_state().build();
             let err = vote_account
-                .reveal_vote(&proposal, &test.salt_provided, test.vote, reveal_time)
+                .reveal_vote(&test.salt_true, test.vote)
                 .unwrap_err();
             let expected_err: anchor_lang::error::Error = test.expected_error.into();
             println!("err: {}", err.to_string());
@@ -582,12 +566,7 @@ pub mod test_vote {
                 .unwrap();
 
             vote_account
-                .reveal_vote(
-                    &proposal,
-                    &test.salt_provided,
-                    test.vote_updated,
-                    reveal_time,
-                )
+                .reveal_vote(&test.salt_provided, test.vote_updated)
                 .unwrap();
             let vote = vote_account.vote;
             let expected_vote = test.expected_value.vote;
@@ -666,7 +645,7 @@ pub mod test_vote {
             let reveal_time = test.proposal.get_reveal_time();
             let proposal = test.proposal.set_in_reveal_state().build();
             vote_account
-                .reveal_vote(&proposal, &test.salt_true, test.vote, reveal_time)
+                .reveal_vote(&test.salt_true, test.vote)
                 .unwrap();
             let reward = vote_account
                 .calculate_token_reward_(
