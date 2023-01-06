@@ -94,7 +94,7 @@ pub struct Proposal {
     pub revealed_votes: u64, // 8
 
     // Q64.0
-    pub running_sum_weighted_vote: i64, // 8
+    pub running_sum_weighted_vote: i128, // 16
     // Q64.0
     pub running_weight: u64, // 8
 
@@ -165,7 +165,8 @@ impl Default for Proposal {
 pub struct FinalizeVoteResult {}
 
 impl Proposal {
-    pub const SPACE: usize = 1 * 6 + 4 * 3 + 8 * 12 + 32 * 4 + 32 * 3 + 4 + 4 * 64 + 4 + 4 * 140;
+    pub const SPACE: usize =
+        1 * 6 + 4 * 3 + 8 * 11 + 16 + 32 * 4 + 32 * 3 + 4 + 4 * 64 + 4 + 4 * 140;
 
     pub fn seeds(&self) -> [&[u8]; 3] {
         [
@@ -272,29 +273,46 @@ impl Proposal {
     /// - W_N = sum_i^n (w_i)
     pub fn update_running_sum_weighted_vote(&mut self, vote_account: VoteAccount) {
         if vote_account.revealed_vote {
-            // u32.0 x q32.32 -> q64.32
-            let update_x64 =
-                (vote_account.vote_power as u64).mul(vote_account.vote.abs() as u64) as u128;
-            let update = (update_x64 >> 32) as i64;
+            // u64.0 x q32.32 -> q96.32
+            msg!(
+                "[update_running_sum_weighted_vote] vote_power: {}, vote: {} ",
+                vote_account.vote_power,
+                vote_account.vote.abs() as u64
+            );
+            let update_x64 = (vote_account.vote_power as u128)
+                .checked_mul(vote_account.vote.abs() as u128)
+                .unwrap();
+            let update = (update_x64) as i128; // Q96.0
             if vote_account.vote > 0 {
                 self.running_sum_weighted_vote += update;
             } else {
                 self.running_sum_weighted_vote -= update;
             }
             self.running_weight += vote_account.vote_power as u64;
+            msg!("[update_running_sum_weighted_vote] vote: {},update_x64: {}, update: {}, running_sum_weighted_vote: {}, running_weight: {}",vote_account.vote,update_x64,update,self.running_sum_weighted_vote,self.running_weight);
         }
     }
-
-    pub fn calculate_consensus_(&self, running_sum_weighted_vote: i64, running_weight: u64) -> i64 {
-        // Convert i64 -> i64.64
+    // @ checkpoint: consensus needs to be calculates as an Q64.0
+    pub fn calculate_consensus_(
+        &self,
+        running_sum_weighted_vote: i128,
+        running_weight: u64,
+    ) -> i64 {
+        // Convert   i64 -> i64.64
         let positive = running_sum_weighted_vote > 0;
-        // convert u64 -> Q64.64
-        let wv_x64 = (running_sum_weighted_vote.abs() as u128) << 64;
-        // convert u64 -> Q64.64
-        let rw_x64 = (running_weight as u128);
+        // convert u128 -> Q128.128
+        let wv_x64 = U256::from(running_sum_weighted_vote.abs());
+        // convert u64 -> 256.0
+        let rw_x64 = U256::from(running_weight);
         // i64.64
-        let consensus = (wv_x64).div(rw_x64) as i128;
-        let consensus_ix32 = (consensus >> 32) as i64;
+        let consensus = (wv_x64).div(rw_x64);
+        msg!(
+            "[calculate_consensus_] consensus: {}/{} = {}",
+            wv_x64,
+            rw_x64,
+            (wv_x64).div(rw_x64)
+        );
+        let consensus_ix32 = consensus.as_u128() as i64;
         if positive {
             return consensus_ix32;
         } else {
@@ -325,9 +343,9 @@ impl Proposal {
         let sum_squared = revealed_votes.calculate_sum_squared_difference(consensus);
 
         // Q32.32 -> Q64.64
-        let running_weight_Q64 = (self.running_weight as u128) << 32;
+        let running_weight_q64 = (self.running_weight as u128) << 32;
         // Q64.64
-        let lambda = running_weight_Q64.div(sum_squared as u128);
+        let lambda = running_weight_q64.div(sum_squared as u128);
         // get rid of precision: Q64.64 >> 48 -> Q16.16
         let lambda_q16 = (lambda >> 48) as u32;
         lambda_q16
@@ -427,7 +445,12 @@ impl Proposal {
     /// Calculate and update the scale parameter
     pub fn update_scale_parameter(&mut self, revealed_votes: &RevealedVoteArray) -> Result<()> {
         let consensus = self.calculate_consensus();
+        msg!("[update_scale_parameter] consensus: {}", consensus);
         self.scale_parameter = self.estimate_scale_parameter(consensus, revealed_votes);
+        msg!(
+            "[update_scale_parameter] scale_parameter: {}",
+            self.scale_parameter
+        );
         self.consensus = consensus;
         Ok(())
     }
@@ -438,16 +461,18 @@ impl Proposal {
         revealed_votes: &RevealedVoteArray,
         time: i64,
     ) -> Result<()> {
-        if self.get_status(time) == ProposalStatus::VoteRevealFinished {
+        if self.get_status(time) == ProposalStatus::VoteRevealFinished || self.all_votes_revealed()
+        {
             // distribute reward to proposer
             let rewards = self.calculate_proposer_reward();
+            msg!("[try_finalize_vote_after_reveal] rewards: {}", rewards);
             self.earned_rewards = rewards;
 
             // calculate scale parameter
             self.update_scale_parameter(revealed_votes)?;
             self.scale_parameter_calculated = true;
         } else {
-            return Err(SureError::RevealPeriodNotActive.into());
+            return Err(SureError::FailedToFinalizeVoteResult.into());
         }
         Ok(())
     }
@@ -497,6 +522,11 @@ impl Proposal {
         self.protocol_fees += protocol_fee as u128;
     }
 
+    // @ checkpoint
+    pub fn update_on_vote_reveal(&mut self, voter_revealed_votes: u64) {
+        self.revealed_votes += voter_revealed_votes
+    }
+
     /// payout protocol fees
     ///
     /// get the accrued protocol fees and
@@ -516,7 +546,7 @@ impl Proposal {
     ///
     /// Returns Q64.64
     fn calculate_reward_from_revealed_votes(&self) -> u128 {
-        (calculate_stake_x32(self.revealed_votes, self.stake_rate) as u128) << 64
+        (calculate_stake_x32(self.revealed_votes, self.stake_rate).unwrap() as u128) << 64
     }
 
     /// Update status callback
@@ -557,6 +587,10 @@ impl Proposal {
         self.votes >= self.required_votes
     }
 
+    pub fn all_votes_revealed(&self) -> bool {
+        self.revealed_votes == self.votes
+    }
+
     pub fn get_status(&self, time: i64) -> ProposalStatus {
         if self.is_blind_vote_ongoing_at_time(time) && !self.has_reached_quorum() {
             return ProposalStatus::Voting;
@@ -564,7 +598,7 @@ impl Proposal {
             return ProposalStatus::ReachedQuorum;
         } else if self.has_reached_quorum() && self.is_vote_reveal_ongoing_at_time(time) {
             return ProposalStatus::RevealVote;
-        } else if self.is_vote_revealed_over(time) {
+        } else if self.all_votes_revealed() || self.is_vote_revealed_over(time) {
             return ProposalStatus::VoteRevealFinished;
         } else if self.scale_parameter_calculated {
             return ProposalStatus::RewardCalculation;
@@ -601,7 +635,8 @@ impl Proposal {
     }
 
     pub fn can_finalize_vote_results(&self, time: i64) -> Result<()> {
-        if self.get_status(time) != ProposalStatus::VoteRevealFinished {
+        if self.get_status(time) != ProposalStatus::VoteRevealFinished && !self.all_votes_revealed()
+        {
             return Err(SureError::FailedToFinalizeVoteResult.into());
         }
         Ok(())
@@ -675,7 +710,7 @@ pub mod test_proposal_proto {
         pub revealed_votes: u64,
 
         // Q64.0
-        pub running_sum_weighted_vote: i64,
+        pub running_sum_weighted_vote: i128,
         // Q64.0
         pub running_weight: u64,
 
@@ -862,7 +897,7 @@ pub mod test_propose_vote {
     pub fn test_calculate_consensus() {
         pub struct Test {
             name: String,
-            weighted_votes: i64,
+            weighted_votes: i128,
             weight: u64,
             expected_consensus: f64,
         }

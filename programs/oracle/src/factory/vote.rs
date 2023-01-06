@@ -1,6 +1,7 @@
+use anchor_lang::prelude::*;
 use std::ops::Div;
 
-use crate::utils::{convert_x32_to_u64, VOTE_STAKE_RATE};
+use crate::utils::{convert_x32_to_u64, SureError, VOTE_STAKE_RATE};
 
 /// Calculate the necessary stake
 ///
@@ -13,7 +14,7 @@ use crate::utils::{convert_x32_to_u64, VOTE_STAKE_RATE};
 /// ### Result
 ///
 pub fn calculate_stake(vote_power: u64, vote_stake_rate: u32) -> u64 {
-    calculate_stake_x32(vote_power, vote_stake_rate)
+    calculate_stake_x32(vote_power, vote_stake_rate).unwrap()
 }
 
 /// calculate stake based on vote power
@@ -23,6 +24,10 @@ pub fn calculate_stake(vote_power: u64, vote_stake_rate: u32) -> u64 {
 ///
 /// ### Returns
 /// vote_power  / 100
-pub fn calculate_stake_x32(vote_power: u64, vote_stake_rate: u32) -> u64 {
-    vote_power.div(vote_stake_rate as u64)
+pub fn calculate_stake_x32(vote_power: u64, vote_stake_rate: u32) -> Result<u64> {
+    let res = match vote_power.checked_div(vote_stake_rate as u64) {
+        Some(val) => val,
+        None => return Err(SureError::DivideOperationFailure.into()),
+    };
+    Ok(res)
 }

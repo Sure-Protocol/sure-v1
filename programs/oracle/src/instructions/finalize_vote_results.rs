@@ -28,10 +28,15 @@ pub struct FinalizeVoteResults<'info> {
 /// anyone can finalize the vote
 pub fn handler(ctx: Context<FinalizeVoteResults>) -> Result<()> {
     let proposal = ctx.accounts.proposal.as_mut();
-
     let revealed_votes = ctx.accounts.revealed_votes.load()?;
     let time = clock::Clock::get()?.unix_timestamp;
 
+    msg!(
+        "[finalize_vote_results] reveal_votes / votes = {} /{}, revealed votes array last_index {:?}",
+        proposal.revealed_votes,
+        proposal.votes,
+        revealed_votes.revealed_votes
+    );
     // check if it's possible to finalie vote result
     proposal.can_finalize_vote_results(time)?;
 

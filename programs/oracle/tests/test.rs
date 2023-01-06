@@ -566,16 +566,16 @@ impl Voters {
             .collect()
     }
 
-    pub fn set_votes(&mut self, votes: Vec<u64>) {
+    pub fn set_votes(&mut self, votes: Vec<u32>) {
         let mut i = 0;
         for key in self.keys.iter() {
-            self.votes.insert(key.pubkey(), votes[i]);
+            self.votes.insert(key.pubkey(), (votes[i] as u64) << 32);
             i += 1
         }
     }
-
-    pub fn set_vote(&mut self, vote: u64, voter: &Pubkey) {
-        self.votes.insert(*voter, vote).unwrap();
+    pub fn set_vote(&mut self, vote: u32, voter: &Pubkey) {
+        // convert vote Q32.0 -> Q32.32
+        self.votes.insert(*voter, (vote as u64) << 32).unwrap();
     }
 
     pub fn get_vote(&self, voter: &Pubkey) -> u64 {
@@ -913,8 +913,8 @@ async fn create_and_init() {
     }
 
     // VOTERS vote on proposal
-    let number_of_voters = voters.keys.len() as u64;
-    let votes: Vec<u64> = (0..number_of_voters).collect();
+    let number_of_voters = voters.keys.len() as u32;
+    let votes: Vec<u32> = (0..number_of_voters).collect();
     voters.set_votes(votes);
     let submit_vote_txs = voters.get_submit_vote_txs(
         &get_proposal_pda(&proposal_id).0,
@@ -991,16 +991,37 @@ async fn create_and_init() {
     let reveal_vote_txs =
         voters.get_reveal_vote_txs(&proposal_id, program_test_context.last_blockhash);
 
+    for tx in &reveal_vote_txs {
+        program_test_context
+            .banks_client
+            .process_transaction(tx.clone())
+            .await
+            .unwrap();
+    }
+
+    // Finalize the vote
+    let finalize_vote_accounts = oracle::accounts::FinalizeVoteResults {
+        finalizer: proposer.pubkey(),
+        proposal: get_proposal_pda(&proposal_id).0,
+        revealed_votes: get_reveal_vote_array_pda(&proposal_id).0,
+        system_program: anchor_lang::system_program::ID,
+    };
+
+    let finalize_vote_data = oracle::instruction::FinalizeVoteResults {};
+    let finalize_vote_tx = transaction::Transaction::new_signed_with_payer(
+        &[instruction::Instruction {
+            program_id: oracle::id(),
+            accounts: finalize_vote_accounts.to_account_metas(None),
+            data: finalize_vote_data.data(),
+        }],
+        Some(&proposer.pubkey()),
+        &[&proposer],
+        program_test_context.last_blockhash,
+    );
+
     program_test_context
         .banks_client
-        .process_transactions(reveal_vote_txs)
+        .process_transaction(finalize_vote_tx)
         .await
         .unwrap();
-
-    // // assume test failed since it didn't reach quoroum
-    // assert!(
-    //     proposal_status.get_id() == 0,
-    //     "[main] Status is not 3 but {} ",
-    //     proposal_status.get_id()
-    // )
 }

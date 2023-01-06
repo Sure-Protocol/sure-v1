@@ -48,6 +48,9 @@ pub struct RevealVote<'info> {
 ///
 /// after the voting period is over the user can reveal their vote
 ///
+/// ## Args
+/// * vote<i64>: needs to be represented as a Q32.32
+///
 /// TODO: consider not throwing error, but instead updating state and logging
 /// errors
 pub fn handler(ctx: Context<RevealVote>, salt: String, vote: i64) -> Result<()> {
@@ -56,18 +59,21 @@ pub fn handler(ctx: Context<RevealVote>, salt: String, vote: i64) -> Result<()> 
     let proposal = ctx.accounts.proposal.as_mut();
     let time = clock::Clock::get()?.unix_timestamp;
     msg!(
-        "[reveal_vote] time {}, proposal end vote {}, status {:?}",
+        "[reveal_vote] time {}, proposal end vote {}, status {:?}, vote: {}",
         time,
         proposal.vote_end_reveal_at,
-        proposal.get_status(time)
+        proposal.get_status(time),
+        vote
     );
     // check if can reveal vote
     proposal.can_reveal_vote(time)?;
 
     // reveal vote in vote account
-    vote_account.reveal_vote(proposal, &salt, vote, time)?;
+    vote_account.reveal_vote(&salt, vote)?;
 
     proposal.update_protocol_fee(vote_account.staked);
+    proposal.update_on_vote_reveal(vote_account.vote_power);
+    proposal.update_running_sum_weighted_vote(vote_account.clone());
 
     // reveal vote in reveal vote list
     reveal_vote_array.reveal_vote(&vote_account)?;

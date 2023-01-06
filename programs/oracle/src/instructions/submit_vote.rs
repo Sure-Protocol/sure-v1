@@ -95,8 +95,8 @@ pub fn handler(ctx:Context<SubmitVote>,vote_hash: Vec<u8>) -> Result<()>{
     // Update proposal with vote 
     proposal.cast_vote_at_time(vote_account, time)?;
 
-     // cb: update status of proposal
-     proposal.update_status(time);
+    // cb: update status of proposal
+    proposal.update_status(time);
 
     // deposit Sure tokens into proposal vote 
     deposit_into_vault(&ctx.accounts.voter, &ctx.accounts.proposal_vault, &ctx.accounts.voter_account, &ctx.accounts.token_program, vote_update.stake_change)?;

@@ -145,13 +145,7 @@ impl VoteAccount {
     }
 
     /// reveal vote by proving salt
-    pub fn reveal_vote(
-        &mut self,
-        proposal: &Proposal,
-        salt: &str,
-        vote: i64,
-        time: i64,
-    ) -> Result<()> {
+    pub fn reveal_vote(&mut self, salt: &str, vote: i64) -> Result<()> {
         let mut hasher = Sha3_256::new();
         let message = format!("{}{}", vote, salt);
         msg!("[reveal_vote] message: {}, salt: {}", message, salt);
@@ -434,10 +428,8 @@ pub mod test_vote {
             assert_eq!(vote, expected_vote);
             assert_eq!(vote_power, 2, "{}: test vote power", test.name);
 
-            let reveal_time = test.proposal.get_reveal_time();
-            let proposal = test.proposal.set_in_reveal_state().build();
             vote_account
-                .reveal_vote(&proposal, &test.salt_provided, test.vote, reveal_time)
+                .reveal_vote(&test.salt_true, test.vote)
                 .unwrap();
             vote = vote_account.vote;
             assert_eq!(
@@ -504,7 +496,7 @@ pub mod test_vote {
             let reveal_time = test.proposal.get_reveal_time();
             let proposal = test.proposal.set_in_reveal_state().build();
             let err = vote_account
-                .reveal_vote(&proposal, &test.salt_provided, test.vote, reveal_time)
+                .reveal_vote(&test.salt_true, test.vote)
                 .unwrap_err();
             let expected_err: anchor_lang::error::Error = test.expected_error.into();
             println!("err: {}", err.to_string());
@@ -574,12 +566,7 @@ pub mod test_vote {
                 .unwrap();
 
             vote_account
-                .reveal_vote(
-                    &proposal,
-                    &test.salt_provided,
-                    test.vote_updated,
-                    reveal_time,
-                )
+                .reveal_vote(&test.salt_provided, test.vote_updated)
                 .unwrap();
             let vote = vote_account.vote;
             let expected_vote = test.expected_value.vote;
@@ -658,7 +645,7 @@ pub mod test_vote {
             let reveal_time = test.proposal.get_reveal_time();
             let proposal = test.proposal.set_in_reveal_state().build();
             vote_account
-                .reveal_vote(&proposal, &test.salt_true, test.vote, reveal_time)
+                .reveal_vote(&test.salt_true, test.vote)
                 .unwrap();
             let reward = vote_account
                 .calculate_token_reward_(
